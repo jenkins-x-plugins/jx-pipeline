@@ -8,8 +8,10 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/version"
 	"github.com/jenkins-x/jx-pipeline/pkg/rootcmd"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/clients"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/get"
+	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
+	"github.com/jenkins-x/jx/v2/pkg/cmd/start"
+	"github.com/jenkins-x/jx/v2/pkg/cmd/stop"
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +38,14 @@ func Main() *cobra.Command {
 	g = get.NewCmdGetPipeline(commonOpts)
 	g.Short = "Display one or more pipelines"
 	g.Use = "get"
+	cmd.AddCommand(g)
+
+	g = start.NewCmdStartPipeline(commonOpts)
+	g.Use = "start"
+	cmd.AddCommand(g)
+
+	g = stop.NewCmdStopPipeline(commonOpts)
+	g.Use = "stop"
 	cmd.AddCommand(g)
 
 	cmd.AddCommand(get.NewCmdGetBuildLogs(commonOpts))
