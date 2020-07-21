@@ -130,11 +130,6 @@ darwin: ## Build for OSX
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=darwin GOARCH=amd64 $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/darwin/$(BINARY_NAME) $(MAIN_SRC_FILE)
 	chmod +x build/darwin/$(BINARY_NAME)
 
-.PHONY: release
-release: clean linux test
-
-release-all: release linux win darwin
-
 .PHONY: goreleaser
 goreleaser:
 	step-go-releaser --organisation=$(ORG) --revision=$(REV) --branch=$(BRANCH) --build-date=$(BUILD_DATE) --go-version=$(GO_VERSION) --root-package=$(ROOT_PACKAGE) --version=$(VERSION)
