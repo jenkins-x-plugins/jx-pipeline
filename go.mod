@@ -5,7 +5,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/jenkins-x/go-scm v1.5.143 // indirect
 	github.com/jenkins-x/jx-helpers v1.0.22
-	github.com/jenkins-x/jx-logging v0.0.10
+	github.com/jenkins-x/jx-logging v0.0.11
 	github.com/jenkins-x/jx/v2 v2.1.99
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/spf13/cobra v1.0.0
