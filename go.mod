@@ -2,16 +2,12 @@ module github.com/jenkins-x/jx-pipeline
 
 require (
 	github.com/cpuguy83/go-md2man v1.0.10
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/jenkins-x/go-scm v1.5.143 // indirect
 	github.com/jenkins-x/jx-helpers v1.0.22
 	github.com/jenkins-x/jx-logging v0.0.10
-	github.com/jenkins-x/jx/v2 v2.1.99
+	github.com/jenkins-x/jx/v2 v2.1.121
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/crypto v0.0.0-20200219234226-1ad67e1f0ef4 // indirect
-	sigs.k8s.io/yaml v1.2.0 // indirect
 
 )
 
