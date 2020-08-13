@@ -3,8 +3,7 @@ module github.com/jenkins-x/jx-pipeline
 require (
 	github.com/cpuguy83/go-md2man v1.0.10
 	github.com/jenkins-x/go-scm v1.5.153 // indirect
-	github.com/jenkins-x/jx-api v0.0.17 // indirect
-	github.com/jenkins-x/jx-helpers v1.0.34
+	github.com/jenkins-x/jx-helpers v1.0.41
 	github.com/jenkins-x/jx-logging v0.0.11
 	github.com/jenkins-x/jx/v2 v2.1.121
 	github.com/mattn/go-colorable v0.1.6 // indirect
