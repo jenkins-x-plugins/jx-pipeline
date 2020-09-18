@@ -2,21 +2,20 @@ package start
 
 import (
 	"fmt"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/jenkins-x/jx-pipeline/pkg/constants"
+	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/jenkins-x/jx/v2/pkg/tekton/metapipeline"
+	"github.com/jenkins-x/lighthouse/pkg/config"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkins-x/jx/v2/pkg/cmd/helper"
-	"github.com/jenkins-x/jx/v2/pkg/jenkins"
 	"github.com/jenkins-x/jx/v2/pkg/kube"
-
-	gojenkins "github.com/jenkins-x/golang-jenkins"
-	"github.com/jenkins-x/jx/v2/pkg/prow"
 
 	"github.com/spf13/cobra"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/templates"
 	"github.com/jenkins-x/jx/v2/pkg/util"
-	prowjobv1 "k8s.io/test-infra/prow/apis/prowjobs/v1"
 )
 
 const (
@@ -35,16 +33,15 @@ const (
 type Options struct {
 	*opts.CommonOptions
 
-	Output          string
-	Tail            bool
-	Filter          string
-	Branch          string
-	PipelineKind    string
-	JenkinsSelector opts.JenkinsSelectorOptions
-
-	Jobs map[string]gojenkins.Job
-
-	ProwOptions prow.Options
+	Output              string
+	Filter              string
+	Branch              string
+	PipelineKind        string
+	LighthouseConfigMap string
+	Wait                bool
+	Tail                bool
+	WaitDuration        time.Duration
+	PollPeriod          time.Duration
 
 	// meta pipeline options
 	Context      string
@@ -95,10 +92,12 @@ func NewCmdPipelineStart(commonOpts *opts.CommonOptions) (*cobra.Command, *Optio
 	cmd.Flags().StringVarP(&o.Branch, "branch", "", "", "The branch to start. If not specified defaults to master")
 	cmd.Flags().StringVarP(&o.PipelineKind, "kind", "", "", "The kind of pipeline such as release or pullrequest")
 	cmd.Flags().StringVar(&o.ServiceAccount, "service-account", tekton.DefaultPipelineSA, "The Kubernetes ServiceAccount to use to run the meta pipeline")
+	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
 	cmd.Flags().StringArrayVarP(&o.CustomLabels, "label", "l", nil, "List of custom labels to be applied to the generated PipelineRun (can be use multiple times)")
 	cmd.Flags().StringArrayVarP(&o.CustomEnvs, "env", "e", nil, "List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)")
-
-	o.JenkinsSelector.AddFlags(cmd)
+	cmd.Flags().BoolVarP(&o.Wait, "wait", "", false, "Waits until the trigger has been setup in Lighthouse for when a new repository is being imported via GitOps")
+	cmd.Flags().DurationVarP(&o.WaitDuration, "duration", "", time.Minute*20, "Maximum duration to wait for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
+	cmd.Flags().DurationVarP(&o.PollPeriod, "poll-period", "", time.Second*2, "Poll period when waiting for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
 
 	return cmd, o
 }
@@ -114,38 +113,11 @@ func (o *Options) Run() error {
 		return err
 	}
 
-	devEnv, _, err := o.DevEnvAndTeamSettings()
-	if err != nil {
-		return err
-	}
-
-	isProw := devEnv.Spec.IsProwOrLighthouse()
-
 	args := o.Args
-	names := []string{}
-	o.ProwOptions = prow.Options{
-		KubeClient: kubeClient,
-		NS:         currentNamespace,
-	}
-	if o.JenkinsSelector.IsCustom() {
-		isProw = false
-	}
-	if isProw {
-		names, err = o.ProwOptions.GetReleaseJobs()
-		if err != nil {
-			return err
-		}
-		names = util.StringsContaining(names, o.Filter)
-	} else {
-		jobMap, err := o.GetJenkinsJobs(&o.JenkinsSelector, o.Filter)
-		if err != nil {
-			return err
-		}
-		o.Jobs = jobMap
 
-		for k := range o.Jobs {
-			names = append(names, k)
-		}
+	names, err := o.getFilteredTriggerNames(kubeClient, currentNamespace)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get trigger names")
 	}
 
 	if len(args) == 0 {
@@ -168,36 +140,59 @@ func (o *Options) Run() error {
 		args = []string{name}
 	}
 	for _, a := range args {
-		if devEnv.Spec.IsLighthouse() {
-			err = o.createMetaPipeline(a)
-			if err != nil {
-				return err
-			}
-		} else if isProw {
-			err = o.createProwJob(a)
-			if err != nil {
-				return err
-			}
-		} else {
-			err = o.startJenkinsJob(a)
-			if err != nil {
-				return err
-			}
+		err = o.createMetaPipeline(a)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
+func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns string) ([]string, error) {
+	end := time.Now().Add(o.WaitDuration)
+	name := o.LighthouseConfigMap
+	logWaiting := false
+
+	for {
+		cfg, err := triggers.LoadLighthouseConfig(kubeClient, ns, name, o.Wait)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load lighthouse config")
+		}
+		names := o.pipelineNames(cfg)
+		names = util.StringsContaining(names, o.Filter)
+
+		if len(names) > 0 || !o.Wait {
+			return names, nil
+		}
+
+		if time.Now().After(end) {
+			return nil, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s matching filter: '%s' within %s", name, ns, o.Filter, o.WaitDuration.String())
+		}
+
+		if !logWaiting {
+			logWaiting = true
+			log.Logger().Infof("waiting up to %s for a trigger to be added to the lighthouse configuration in ConfigMap %s in namespace %s matching filter: '%s'", o.WaitDuration.String(), name, ns, o.Filter)
+		}
+		time.Sleep(o.PollPeriod)
+	}
+}
+
 func (o *Options) createMetaPipeline(jobName string) error {
 	parts := strings.Split(jobName, "/")
-	if len(parts) != 3 {
+	if len(parts) < 2 {
 		return fmt.Errorf("job name [%s] does not match org/repo/branch format", jobName)
 	}
 	owner := parts[0]
 	repo := parts[1]
-	branch := parts[2]
+	branch := ""
+	if len(parts) > 2 {
+		branch = parts[2]
+	}
 	if o.Branch != "" {
 		branch = o.Branch
+	}
+	if branch == "" {
+		branch = "master"
 	}
 
 	jxClient, ns, err := o.JXClientAndDevNamespace()
@@ -266,109 +261,6 @@ func (o *Options) createMetaPipeline(jobName string) error {
 	return nil
 }
 
-func (o *Options) createProwJob(jobname string) error {
-	parts := strings.Split(jobname, "/")
-	if len(parts) != 3 {
-		return fmt.Errorf("job name [%s] does not match org/repo/branch format", jobname)
-	}
-	org := parts[0]
-	repo := parts[1]
-	branch := parts[2]
-
-	agent := prowjobv1.ProwJobAgent(prow.TektonAgent)
-	jobSpec := prowjobv1.ProwJobSpec{
-		Agent: agent,
-	}
-	jobSpec.Type = prowjobv1.PostsubmitJob
-
-	// TODO prow only supports github.com
-	// if you want to use anything but github.com you should use
-	// lighthouse: https://jenkins-x.io/docs/reference/components/lighthouse/
-	sourceURL := fmt.Sprintf("https://github.com/%s/%s.git", org, repo)
-
-	provider, _, err := o.CreateGitProviderForURLWithoutKind(sourceURL)
-	if err != nil {
-		return errors.Wrapf(err, "creating git provider for %s", sourceURL)
-	}
-	gitBranch, err := provider.GetBranch(org, repo, branch)
-	if err != nil {
-		return errors.Wrapf(err, "getting branch %s on %s/%s", branch, org, repo)
-	}
-
-	if gitBranch != nil && gitBranch.Commit != nil {
-		if jobSpec.Refs == nil {
-			jobSpec.Refs = &prowjobv1.Refs{}
-		}
-		jobSpec.Refs.BaseSHA = gitBranch.Commit.SHA
-		jobSpec.Refs.Repo = repo
-		jobSpec.Refs.Org = org
-		jobSpec.Refs.BaseRef = branch
-	}
-
-	p := prow.NewProwJob(jobSpec, nil)
-	p.Status = prowjobv1.ProwJobStatus{
-		State: prowjobv1.PendingState,
-	}
-	p.Spec.Refs = &prowjobv1.Refs{
-		BaseRef: branch,
-		Org:     org,
-		Repo:    repo,
-	}
-
-	if gitBranch != nil && gitBranch.Commit != nil {
-		p.Spec.Refs.BaseSHA = gitBranch.Commit.SHA
-	}
-
-	client, currentNamespace, err := o.KubeClientAndNamespace()
-	if err != nil {
-		return err
-	}
-	_, err = prow.CreateProwJob(client, currentNamespace, p)
-	return err
-}
-
-func (o *Options) startJenkinsJob(name string) error {
-	job := o.Jobs[name]
-
-	jenkinsClient, err := o.CreateCustomJenkinsClient(&o.JenkinsSelector)
-	if err != nil {
-		return err
-	}
-	job.Url = jenkins.SwitchJenkinsBaseURL(job.Url, jenkinsClient.BaseURL())
-
-	// ignore errors as it could be there's no last build yet
-	previous, _ := jenkinsClient.GetLastBuild(job)
-
-	params := url.Values{}
-	err = jenkinsClient.Build(job, params)
-	if err != nil {
-		return err
-	}
-
-	i := 0
-	for {
-		last, err := jenkinsClient.GetLastBuild(job)
-
-		// lets ignore the first query in case there's no build yet
-		if i > 0 && err != nil {
-			return err
-		}
-		i++
-
-		if last.Number != previous.Number {
-			last.Url = jenkins.SwitchJenkinsBaseURL(last.Url, jenkinsClient.BaseURL())
-
-			log.Logger().Infof("Started build of %s at %s", util.ColorInfo(name), util.ColorInfo(last.Url))
-			log.Logger().Infof("%s %s", util.ColorStatus("view the log at:"), util.ColorInfo(util.UrlJoin(last.Url, "/console")))
-			if o.Tail {
-				return o.TailJenkinsBuildLog(&o.JenkinsSelector, name, &last)
-			}
-			return nil
-		}
-		time.Sleep(time.Second)
-	}
-}
-
 func (o *Options) determinePipelineKind(branch string) metapipeline.PipelineKind {
 	if o.PipelineKind != "" {
 		return metapipeline.StringToPipelineKind(o.PipelineKind)
@@ -383,4 +275,14 @@ func (o *Options) determinePipelineKind(branch string) metapipeline.PipelineKind
 		kind = metapipeline.FeaturePipeline
 	}
 	return kind
+}
+
+// pipelineNames returns the pipeline names to trigger
+func (o *Options) pipelineNames(cfg *config.Config) []string {
+	var answer []string
+	for k := range cfg.Postsubmits {
+		answer = append(answer, k)
+	}
+	sort.Strings(answer)
+	return answer
 }

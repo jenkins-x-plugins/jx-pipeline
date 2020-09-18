@@ -12,6 +12,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/table"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
@@ -68,7 +69,7 @@ func NewCmdPipelineGet() (*cobra.Command, *Options) {
 
 	cmd.Flags().StringVarP(&o.Format, "format", "f", "", "The output format such as 'yaml' or 'json'")
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "The kubernetes namespace to use. If not specified the default namespace is used")
-	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", "config", "The name of the Lighthouse ConfigMap to find the trigger configurations")
+	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
 	cmd.Flags().BoolVarP(&o.ViewPostsubmits, "postsubmit", "", false, "Views the available lighthouse postsubmit triggers rather than just the current PipelineRuns")
 	cmd.Flags().BoolVarP(&o.ViewPresubmits, "presubmit", "", false, "Views the available lighthouse presubmit triggers rather than just the current PipelineRuns")
 	return cmd, o
@@ -116,7 +117,7 @@ func (o *Options) Run() error {
 
 // renderPostsubmits renders the current Lighthouse postsubmit triggers
 func (o *Options) renderPostsubmits() error {
-	cfg, err := triggers.LoadLighthouseConfig(o.KubeClient, o.Namespace, o.LighthouseConfigMap)
+	cfg, err := triggers.LoadLighthouseConfig(o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load lighthouse config")
 	}
@@ -136,7 +137,7 @@ func (o *Options) renderPostsubmits() error {
 
 // renderPresubmits renders the current Lighthouse presubmit triggers
 func (o *Options) renderPresubmits() error {
-	cfg, err := triggers.LoadLighthouseConfig(o.KubeClient, o.Namespace, o.LighthouseConfigMap)
+	cfg, err := triggers.LoadLighthouseConfig(o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load lighthouse config")
 	}
