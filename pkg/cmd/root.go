@@ -5,13 +5,14 @@ import (
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras"
 	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/start"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/stop"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/version"
 	"github.com/jenkins-x/jx-pipeline/pkg/rootcmd"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/clients"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/get"
+	getold "github.com/jenkins-x/jx/v2/pkg/cmd/get"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/start"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/stop"
 	"github.com/spf13/cobra"
 )
 
@@ -31,27 +32,16 @@ func Main() *cobra.Command {
 	commonOpts := opts.NewCommonOptionsWithTerm(f, os.Stdin, os.Stdout, os.Stderr)
 	commonOpts.AddBaseFlags(cmd)
 
-	g := get.NewCmdGetActivity(commonOpts)
+	g := getold.NewCmdGetActivity(commonOpts)
 	g.Short = "Display one or more pipeline activities"
 	cmd.AddCommand(g)
 
-	g = get.NewCmdGetPipeline(commonOpts)
-	g.Short = "Display one or more pipelines"
-	g.Use = "get"
-	cmd.AddCommand(g)
+	cmd.AddCommand(getold.NewCmdGetBuildLogs(commonOpts))
+	cmd.AddCommand(getold.NewCmdGetBuildPods(commonOpts))
 
-	g = start.NewCmdStartPipeline(commonOpts)
-	g.Use = "start"
-	cmd.AddCommand(g)
-
-	g = stop.NewCmdStopPipeline(commonOpts)
-	g.Use = "stop"
-	cmd.AddCommand(g)
-
-	cmd.AddCommand(get.NewCmdGetBuildLogs(commonOpts))
-	cmd.AddCommand(get.NewCmdGetBuildPods(commonOpts))
-	cmd.AddCommand(get.NewCmdGetPreview(commonOpts))
-
+	cmd.AddCommand(cobras.SplitCommand(get.NewCmdPipelineGet()))
+	cmd.AddCommand(cobras.SplitCommand(start.NewCmdPipelineStart(commonOpts)))
+	cmd.AddCommand(cobras.SplitCommand(stop.NewCmdPipelineStop(commonOpts)))
 	cmd.AddCommand(cobras.SplitCommand(version.NewCmdVersion()))
 	return cmd
 }
