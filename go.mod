@@ -8,7 +8,7 @@ require (
 	github.com/jenkins-x/jx-kube-client v0.0.8
 	github.com/jenkins-x/jx-logging v0.0.11
 	github.com/jenkins-x/jx/v2 v2.1.148
-	github.com/jenkins-x/lighthouse v0.0.826
+	github.com/jenkins-x/lighthouse v0.0.832
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
