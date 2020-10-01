@@ -40,7 +40,7 @@ pipelineConfig:
                     memory: 6072Mi
                   requests:
                     cpu: 2
-                    memory: 4048Mi
+                    memory: 5048Mi
             steps:
               - name: test
                 command: make test

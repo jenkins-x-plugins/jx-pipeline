@@ -12,6 +12,7 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/start"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/stop"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/version"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/wait"
 	"github.com/jenkins-x/jx-pipeline/pkg/rootcmd"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/clients"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
@@ -40,6 +41,7 @@ func Main() *cobra.Command {
 	cmd.AddCommand(cobras.SplitCommand(pod.NewCmdGetBuildPods()))
 	cmd.AddCommand(cobras.SplitCommand(start.NewCmdPipelineStart(commonOpts)))
 	cmd.AddCommand(cobras.SplitCommand(stop.NewCmdPipelineStop(commonOpts)))
+	cmd.AddCommand(cobras.SplitCommand(wait.NewCmdPipelineWait()))
 	cmd.AddCommand(cobras.SplitCommand(version.NewCmdVersion()))
 	return cmd
 }
