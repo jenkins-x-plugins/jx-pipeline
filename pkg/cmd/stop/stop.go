@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-logging/pkg/log"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/get"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/helper"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
 
@@ -17,8 +17,8 @@ import (
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/templates"
 	"github.com/jenkins-x/jx/v2/pkg/util"
 )
 

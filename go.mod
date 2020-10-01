@@ -1,24 +1,30 @@
 module github.com/jenkins-x/jx-pipeline
 
 require (
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/cpuguy83/go-md2man v1.0.10
+	github.com/fatih/color v1.9.0
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/jenkins-x/golang-jenkins v0.0.0-20180919102630-65b83ad42314
-	github.com/jenkins-x/jx-api v0.0.20 // indirect
-	github.com/jenkins-x/jx-helpers v1.0.70
+	github.com/jenkins-x/jx-api v0.0.24
+	github.com/jenkins-x/jx-helpers v1.0.86
 	github.com/jenkins-x/jx-kube-client v0.0.8
 	github.com/jenkins-x/jx-logging v0.0.11
-	github.com/jenkins-x/jx/v2 v2.1.148
-	github.com/jenkins-x/lighthouse v0.0.826
+	github.com/jenkins-x/jx/v2 v2.1.150
+	github.com/jenkins-x/lighthouse v0.0.841
 	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/onsi/ginkgo v1.11.0
+	github.com/onsi/gomega v1.8.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tektoncd/pipeline v0.14.2
+	k8s.io/api v0.18.1
 	k8s.io/apimachinery v0.18.1
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
-	k8s.io/test-infra v0.0.0-20200514184223-ba32c8aae783
+	knative.dev/pkg v0.0.0-20200702222342-ea4d6e985ba0
 
 )
 
