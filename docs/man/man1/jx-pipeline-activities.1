@@ -5,7 +5,7 @@
 
 .SH NAME
 .PP
-jx\-pipeline\-activities \- Display one or more pipeline activities
+jx\-pipeline\-activities \- Display one or more Activities on projects
 
 
 .SH SYNOPSIS
@@ -32,6 +32,10 @@ Display the current activities for one or more projects.
     help for activities
 
 .PP
+\fB\-\-log\-level\fP=""
+    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
+
+.PP
 \fB\-s\fP, \fB\-\-sort\fP[=false]
     Sort activities by timestamp
 
@@ -53,15 +57,15 @@ Display the current activities for one or more projects.
 .SH EXAMPLE
 .PP
 # List the current activities for all applications in the current team
-  jx get activities
+  jx pipeline activities
 
 .PP
 # List the current activities for application 'foo'
-  jx get act \-f foo
+  jx pipeline act \-f foo
 
 .PP
 # Watch the activities for application 'foo'
-  jx get act \-f foo \-w
+  jx pipeline act \-f foo \-w
 
 
 .SH SEE ALSO

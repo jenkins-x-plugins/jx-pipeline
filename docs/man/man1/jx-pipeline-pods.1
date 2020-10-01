@@ -44,6 +44,10 @@ Display the Tekton build pods
     help for pods
 
 .PP
+\fB\-\-log\-level\fP=""
+    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
+
+.PP
 \fB\-n\fP, \fB\-\-namespace\fP=""
     The namespace to look for the build pods. Defaults to the current namespace
 
@@ -73,23 +77,23 @@ Display the Tekton build pods
 .SH EXAMPLE
 .PP
 # List all the Tekton build pods
-  jx get build pods
+  jx pipeline pods
 
 .PP
 # List all the pending Tekton build pods
-  jx get build pods \-p
+  jx pipeline pods \-p
 
 .PP
 # List all the Tekton build pods for a given repository
-  jx get build pods \-\-repo cheese
+  jx pipeline pods \-\-repo cheese
 
 .PP
 # List all the pending Tekton build pods for a given repository
-  jx get build pods \-\-repo cheese \-p
+  jx pipeline pods \-\-repo cheese \-p
 
 .PP
 # List all the Tekton build pods for a given Pull Request
-  jx get build pods \-\-repo cheese \-\-branch PR\-1234
+  jx pipeline pods \-\-repo cheese \-\-branch PR\-1234
 
 
 .SH SEE ALSO

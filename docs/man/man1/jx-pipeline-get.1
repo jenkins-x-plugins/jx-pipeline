@@ -20,20 +20,32 @@ Display one or more pipelines.
 
 .SH OPTIONS
 .PP
-\fB\-m\fP, \fB\-\-custom\fP[=false]
-    List the pipelines in custom Jenkins App instead of the default execution engine in Jenkins X
+\fB\-\-configmap\fP="config"
+    The name of the Lighthouse ConfigMap to find the trigger configurations
+
+.PP
+\fB\-f\fP, \fB\-\-format\fP=""
+    The output format such as 'yaml' or 'json'
 
 .PP
 \fB\-h\fP, \fB\-\-help\fP[=false]
     help for get
 
 .PP
-\fB\-n\fP, \fB\-\-name\fP=""
-    The name of the custom Jenkins App if you don't wish to list the pipelines in the default execution engine in Jenkins X
+\fB\-\-log\-level\fP=""
+    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
 
 .PP
-\fB\-o\fP, \fB\-\-output\fP=""
-    The output format such as 'yaml'
+\fB\-n\fP, \fB\-\-namespace\fP=""
+    The kubernetes namespace to use. If not specified the default namespace is used
+
+.PP
+\fB\-\-postsubmit\fP[=false]
+    Views the available lighthouse postsubmit triggers rather than just the current PipelineRuns
+
+.PP
+\fB\-\-presubmit\fP[=false]
+    Views the available lighthouse presubmit triggers rather than just the current PipelineRuns
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
@@ -49,11 +61,7 @@ Display one or more pipelines.
 .SH EXAMPLE
 .PP
 # list all pipelines
-  jx get pipeline
-
-.PP
-# Lists all the pipelines in a custom Jenkins App
-  jx get pipeline \-m
+  jx pipeline get
 
 
 .SH SEE ALSO

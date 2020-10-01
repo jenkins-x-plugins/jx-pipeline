@@ -52,6 +52,10 @@ Display a build log
     help for log
 
 .PP
+\fB\-\-log\-level\fP=""
+    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
+
+.PP
 \fB\-o\fP, \fB\-\-owner\fP=""
     Filters the owner (person/organisation) of the repository
 
@@ -93,27 +97,27 @@ Display a build log
 .SH EXAMPLE
 .PP
 # Display a build log \- with the user choosing which repo + build to view
-  jx get build log
+  jx pipeline log
 
 .PP
 # Pick a build to view the log based on the repo cheese
-  jx get build log \-\-repo cheese
+  jx pipeline log \-\-repo cheese
 
 .PP
 # Pick a pending Tekton build to view the log based
-  jx get build log \-p
+  jx pipeline log \-p
 
 .PP
 # Pick a pending Tekton build to view the log based on the repo cheese
-  jx get build log \-\-repo cheese \-p
+  jx pipeline log \-\-repo cheese \-p
 
 .PP
 # Pick a Tekton build for the 1234 Pull Request on the repo cheese
-  jx get build log \-\-repo cheese \-\-branch PR\-1234
+  jx pipeline log \-\-repo cheese \-\-branch PR\-1234
 
 .PP
 # View the build logs for a specific tekton build pod
-  jx get build log \-\-pod my\-pod\-name
+  jx pipeline log \-\-pod my\-pod\-name
 
 
 .SH SEE ALSO

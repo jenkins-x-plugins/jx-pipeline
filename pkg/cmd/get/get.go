@@ -8,6 +8,7 @@ import (
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-helpers/pkg/outputformat"
 	"github.com/jenkins-x/jx-helpers/pkg/table"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
@@ -23,13 +24,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jenkins-x/jx/v2/pkg/cmd/templates"
+	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 )
 
 // PipelineOptions is the start of the data required to perform the operation.
 // As new fields are added, add them here instead of
 // referencing the cmd.Flags()
 type Options struct {
+	options.BaseOptions
+
 	KubeClient          kubernetes.Interface
 	TektonClient        tektonclient.Interface
 	Format              string
@@ -40,12 +43,12 @@ type Options struct {
 }
 
 var (
-	getPipelineLong = templates.LongDesc(`
+	cmdLong = templates.LongDesc(`
 		Display one or more pipelines.
 
 `)
 
-	getPipelineExample = templates.Examples(`
+	cmdExample = templates.Examples(`
 		# list all pipelines
 		jx pipeline get
 	`)
@@ -58,8 +61,8 @@ func NewCmdPipelineGet() (*cobra.Command, *Options) {
 	cmd := &cobra.Command{
 		Use:     "get",
 		Short:   "Display one or more pipelines",
-		Long:    getPipelineLong,
-		Example: getPipelineExample,
+		Long:    cmdLong,
+		Example: cmdExample,
 		Aliases: []string{"list", "ls"},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
@@ -72,6 +75,8 @@ func NewCmdPipelineGet() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
 	cmd.Flags().BoolVarP(&o.ViewPostsubmits, "postsubmit", "", false, "Views the available lighthouse postsubmit triggers rather than just the current PipelineRuns")
 	cmd.Flags().BoolVarP(&o.ViewPresubmits, "presubmit", "", false, "Views the available lighthouse presubmit triggers rather than just the current PipelineRuns")
+
+	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
 }
 
