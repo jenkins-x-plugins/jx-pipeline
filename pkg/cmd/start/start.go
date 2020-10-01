@@ -14,14 +14,14 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/jenkins-x/jx/v2/pkg/cmd/helper"
+	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
 	"github.com/jenkins-x/jx/v2/pkg/kube"
 
 	"github.com/spf13/cobra"
 
+	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-logging/pkg/log"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/templates"
 	"github.com/jenkins-x/jx/v2/pkg/util"
 )
 
@@ -282,6 +282,16 @@ func (o *Options) pipelineNames(cfg *config.Config) []string {
 	var answer []string
 	for k := range cfg.Postsubmits {
 		answer = append(answer, k)
+	}
+
+	// lets handle in repo configurations
+	if cfg.InRepoConfig.Enabled != nil {
+		for k := range cfg.InRepoConfig.Enabled {
+			// lets ignore orgs or *
+			if strings.Contains(k, "/") {
+				answer = append(answer, k)
+			}
+		}
 	}
 	sort.Strings(answer)
 	return answer
