@@ -30,7 +30,7 @@ pipelineConfig:
       pipeline:
         stages:
           - agent:
-              image: gcr.io/jenkinsxio-labs-private/jxl
+              image: gcr.io/jenkinsxio/builder-go
             name: chart
             options:
               containerOptions:
