@@ -6,7 +6,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-helpers/pkg/input"
+	"github.com/jenkins-x/jx-helpers/pkg/input/inputfactory"
+	"github.com/jenkins-x/jx-helpers/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/pkg/options"
+	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
+	"github.com/jenkins-x/jx-pipeline/pkg/sourcerepos"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/jenkins-x/jx/v2/pkg/tekton/metapipeline"
@@ -15,14 +23,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
-	"github.com/jenkins-x/jx/v2/pkg/kube"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
-	"github.com/jenkins-x/jx/v2/pkg/util"
 )
 
 const (
@@ -31,17 +36,23 @@ const (
 
 // Options contains the command line options
 type Options struct {
-	*opts.CommonOptions
+	options.BaseOptions
 
+	Args                []string
 	Output              string
 	Filter              string
 	Branch              string
 	PipelineKind        string
 	LighthouseConfigMap string
+	ServiceAccount      string
+	Namespace           string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
 	PollPeriod          time.Duration
+	KubeClient          kubernetes.Interface
+	JXClient            versioned.Interface
+	Input               input.Interface
 
 	// meta pipeline options
 	Context      string
@@ -68,10 +79,8 @@ var (
 )
 
 // NewCmdPipelineStart creates the command
-func NewCmdPipelineStart(commonOpts *opts.CommonOptions) (*cobra.Command, *Options) {
-	o := &Options{
-		CommonOptions: commonOpts,
-	}
+func NewCmdPipelineStart() (*cobra.Command, *Options) {
+	o := &Options{}
 
 	cmd := &cobra.Command{
 		Use:     "start",
@@ -80,7 +89,6 @@ func NewCmdPipelineStart(commonOpts *opts.CommonOptions) (*cobra.Command, *Optio
 		Example: startPipelineExample,
 		Aliases: []string{"build", "run"},
 		Run: func(cmd *cobra.Command, args []string) {
-			o.Cmd = cmd
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -102,20 +110,34 @@ func NewCmdPipelineStart(commonOpts *opts.CommonOptions) (*cobra.Command, *Optio
 	return cmd, o
 }
 
+// Validate verifies things are setup correctly
+func (o *Options) Validate() error {
+	var err error
+	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create kube client")
+	}
+	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the jx client")
+	}
+
+	if o.Input == nil {
+		o.Input = inputfactory.NewInput(&o.BaseOptions)
+	}
+	return nil
+}
+
 // Run implements this command
 func (o *Options) Run() error {
-	kubeClient, currentNamespace, err := o.KubeClientAndNamespace()
+	err := o.Validate()
 	if err != nil {
-		return err
-	}
-	_, _, err = o.JXClient()
-	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to validate options")
 	}
 
 	args := o.Args
 
-	names, err := o.getFilteredTriggerNames(kubeClient, currentNamespace)
+	names, err := o.getFilteredTriggerNames(o.KubeClient, o.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get trigger names")
 	}
@@ -134,7 +156,7 @@ func (o *Options) Run() error {
 			}
 		}
 		name := ""
-		name, err = util.PickNameWithDefault(names, "Which pipeline do you want to start: ", defaultName, "", o.GetIOFileHandles())
+		name, err = o.Input.PickNameWithDefault(names, "Which pipeline do you want to start: ", defaultName, "")
 		if err != nil {
 			return err
 		}
@@ -160,7 +182,7 @@ func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns st
 			return nil, errors.Wrapf(err, "failed to load lighthouse config")
 		}
 		names := o.pipelineNames(cfg)
-		names = util.StringsContaining(names, o.Filter)
+		names = stringhelpers.StringsContaining(names, o.Filter)
 
 		if len(names) > 0 || !o.Wait {
 			return names, nil
@@ -196,12 +218,11 @@ func (o *Options) createMetaPipeline(jobName string) error {
 		branch = "master"
 	}
 
-	jxClient, ns, err := o.JXClientAndDevNamespace()
-	if err != nil {
-		return errors.Wrap(err, "failed to create JX client")
-	}
+	var err error
+	jxClient := o.JXClient
+	ns := o.Namespace
 
-	sr, err := kube.FindSourceRepositoryWithoutProvider(jxClient, ns, owner, repo)
+	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(jxClient, ns, owner, repo)
 	if err != nil {
 		return errors.Wrap(err, "cannot determine git source URL")
 	}
@@ -209,7 +230,7 @@ func (o *Options) createMetaPipeline(jobName string) error {
 		return fmt.Errorf("could not find existing SourceRepository for owner %s and repo %s", owner, repo)
 	}
 
-	sourceURL, err := kube.GetRepositoryGitURL(sr)
+	sourceURL, err := sourcerepos.GetRepositoryGitURL(sr)
 	if err != nil {
 		return errors.Wrapf(err, "cannot generate the git URL from SourceRepository %s", sr.Name)
 	}
@@ -225,12 +246,12 @@ func (o *Options) createMetaPipeline(jobName string) error {
 
 	pullRef := metapipeline.NewPullRef(sourceURL, branch, "")
 	pipelineKind := o.determinePipelineKind(branch)
-	envVarMap, err := util.ExtractKeyValuePairs(o.CustomEnvs, "=")
+	envVarMap, err := stringhelpers.ExtractKeyValuePairs(o.CustomEnvs, "=")
 	if err != nil {
 		return errors.Wrap(err, "unable to parse env variables")
 	}
 
-	labelMap, err := util.ExtractKeyValuePairs(o.CustomLabels, "=")
+	labelMap, err := stringhelpers.ExtractKeyValuePairs(o.CustomLabels, "=")
 	if err != nil {
 		return errors.Wrap(err, "unable to parse label variables")
 	}

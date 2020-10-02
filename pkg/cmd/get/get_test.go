@@ -3,28 +3,24 @@
 package get_test
 
 import (
-	"os"
 	"testing"
 
-	"github.com/jenkins-x/jx/v2/pkg/cmd/clients"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/get"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/testhelpers"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/jenkins-x/jx/v2/pkg/tekton/syntax"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
+	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
+	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const testDevNameSpace = "jx-test"
 
-func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tektonv1alpha1.PipelineRun {
-	return &v1alpha1.PipelineRun{
+func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tektonv1beta1.PipelineRun {
+	return &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
@@ -35,8 +31,8 @@ func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tekt
 				tekton.LabelContext: context,
 			},
 		},
-		Spec: v1alpha1.PipelineRunSpec{
-			Params: []v1alpha1.Param{
+		Spec: v1beta1.PipelineRunSpec{
+			Params: []v1beta1.Param{
 				{
 					Name:  "version",
 					Value: syntax.StringParamValue("v1"),
@@ -47,7 +43,7 @@ func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tekt
 				},
 			},
 		},
-		Status: v1alpha1.PipelineRunStatus{
+		Status: v1beta1.PipelineRunStatus{
 			PipelineRunStatusFields: tektonv1beta1.PipelineRunStatusFields{
 				CompletionTime: &now,
 			},
@@ -70,22 +66,15 @@ var pipelineCases = []struct {
 func TestExecuteGetPipelines(t *testing.T) {
 	for _, v := range pipelineCases {
 		t.Run(v.desc, func(t *testing.T) {
-			// fakeout the output for the tests
-			out := &testhelpers.FakeOut{}
-			commonOpts := opts.NewCommonOptionsWithTerm(clients.NewFactory(), os.Stdin, out, os.Stderr)
 
-			// Set batchmode to true for tests
-			commonOpts.BatchMode = true
+			_, o := get.NewCmdPipelineGet()
 
-			// Set dev namespace
-			commonOpts.SetDevNamespace(v.namespace)
+			o.KubeClient = fake.NewSimpleClientset()
+			o.TektonClient = faketekton.NewSimpleClientset(pipelineRun(v.namespace, v.repo, v.branch, v.owner, v.context, metav1.Now()))
+			o.Namespace = v.namespace
+			o.BatchMode = true
 
-			// Fake tekton client
-			client := fake.NewSimpleClientset(pipelineRun(v.namespace, v.repo, v.branch, v.owner, v.context, metav1.Now()))
-
-			commonOpts.SetTektonClient(client)
-			command := get.NewCmdGetPipeline(commonOpts)
-			err := command.Execute()
+			err := o.Run()
 
 			// Execution should not error out
 			assert.NoError(t, err, "execute get pipelines")

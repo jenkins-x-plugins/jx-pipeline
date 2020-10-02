@@ -5,30 +5,46 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/pkg/input"
+	"github.com/jenkins-x/jx-helpers/pkg/input/inputfactory"
+	"github.com/jenkins-x/jx-helpers/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/pkg/options"
+	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
+	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
+	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/get"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
+	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/cobra"
 
 	gojenkins "github.com/jenkins-x/golang-jenkins"
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
-	"github.com/jenkins-x/jx/v2/pkg/util"
 )
 
 // StopPipelineOptions contains the command line options
 type Options struct {
-	get.Options
+	options.BaseOptions
 
+	Args            []string
 	Build           int
 	Filter          string
+	Namespace       string
 	JenkinsSelector opts.JenkinsSelectorOptions
+	Input           input.Interface
+	KubeClient      kubernetes.Interface
+	JXClient        versioned.Interface
+	TektonClient    tektonclient.Interface
 
 	Jobs map[string]gojenkins.Job
 }
@@ -49,12 +65,8 @@ var (
 )
 
 // NewCmdPipelineStop creates the command
-func NewCmdPipelineStop(commonOpts *opts.CommonOptions) (*cobra.Command, *Options) {
-	o := &Options{
-		Options: get.Options{
-			CommonOptions: commonOpts,
-		},
-	}
+func NewCmdPipelineStop() (*cobra.Command, *Options) {
+	o := &Options{}
 
 	cmd := &cobra.Command{
 		Use:     "stop",
@@ -63,7 +75,6 @@ func NewCmdPipelineStop(commonOpts *opts.CommonOptions) (*cobra.Command, *Option
 		Example: stopPipelineExample,
 		Aliases: []string{"kill"},
 		Run: func(cmd *cobra.Command, args []string) {
-			o.Cmd = cmd
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -77,17 +88,52 @@ func NewCmdPipelineStop(commonOpts *opts.CommonOptions) (*cobra.Command, *Option
 	return cmd, o
 }
 
+// Validate verifies things are setup correctly
+func (o *Options) Validate() error {
+	var err error
+	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create kube client")
+	}
+	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the jx client")
+	}
+
+	if o.TektonClient != nil {
+		return nil
+	}
+
+	f := kubeclient.NewFactory()
+	cfg, err := f.CreateKubeConfig()
+	if err != nil {
+		return errors.Wrap(err, "failed to get kubernetes config")
+	}
+	o.TektonClient, err = tektonclient.NewForConfig(cfg)
+	if err != nil {
+		return errors.Wrap(err, "error building tekton client")
+	}
+
+	if o.Input == nil {
+		o.Input = inputfactory.NewInput(&o.BaseOptions)
+	}
+	return nil
+}
+
 // Run implements this command
 func (o *Options) Run() error {
+	err := o.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "failed to validate options")
+	}
+
 	return o.cancelPipelineRun()
 }
 
 func (o *Options) cancelPipelineRun() error {
-	tektonClient, ns, err := o.TektonClient()
-	if err != nil {
-		return errors.Wrap(err, "could not create tekton client")
-	}
-	pipelines := tektonClient.TektonV1alpha1().PipelineRuns(ns)
+	tektonClient := o.TektonClient
+	ns := o.Namespace
+	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
 	prList, err := pipelines.List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
@@ -100,7 +146,7 @@ func (o *Options) cancelPipelineRun() error {
 	m := map[string]*pipelineapi.PipelineRun{}
 	for k := range prList.Items {
 		pr := prList.Items[k]
-		if tekton.PipelineRunIsComplete(&pr) {
+		if tektonlog.PipelineRunIsComplete(&pr) {
 			continue
 		}
 		labels := pr.Labels
@@ -140,7 +186,7 @@ func (o *Options) cancelPipelineRun() error {
 	sort.Strings(allNames)
 	names := allNames
 	if o.Filter != "" {
-		names = util.StringsContaining(allNames, o.Filter)
+		names = stringhelpers.StringsContaining(allNames, o.Filter)
 		if len(names) == 0 {
 			log.Logger().Warnf("no PipelineRuns are still running which match the filter %s from all"+
 				" possible names %s", o.Filter, strings.Join(allNames, ", "))
@@ -151,16 +197,15 @@ func (o *Options) cancelPipelineRun() error {
 	args := o.Args
 	if len(args) == 0 {
 		var name string
-		name, err = util.PickName(names, "Which pipeline do you want to stop: ",
-			"select a pipeline to cancel", o.GetIOFileHandles())
+		name, err = o.Input.PickNameWithDefault(names, "Which pipeline do you want to stop: ",
+			name, "select a pipeline to cancel")
 		if err != nil {
 			return err
 		}
 
 		var answer bool
-		if answer, err = util.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
-			"you can always restart a cancelled pipeline with 'jx start pipeline'",
-			o.GetIOFileHandles()); !answer {
+		if answer, err = o.Input.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
+			"you can always restart a cancelled pipeline with 'jx start pipeline'"); !answer {
 			return err
 		}
 		args = []string{name}
@@ -175,15 +220,15 @@ func (o *Options) cancelPipelineRun() error {
 		if err != nil {
 			return errors.Wrapf(err, "getting PipelineRun %s", prName)
 		}
-		if tekton.PipelineRunIsComplete(pr) {
-			log.Logger().Infof("PipelineRun %s has already completed", util.ColorInfo(prName))
+		if tektonlog.PipelineRunIsComplete(pr) {
+			log.Logger().Infof("PipelineRun %s has already completed", termcolor.ColorInfo(prName))
 			continue
 		}
-		err = tekton.CancelPipelineRun(tektonClient, ns, pr)
+		err = tektonlog.CancelPipelineRun(tektonClient, ns, pr)
 		if err != nil {
 			return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
 		}
-		log.Logger().Infof("cancelled PipelineRun %s", util.ColorInfo(prName))
+		log.Logger().Infof("cancelled PipelineRun %s", termcolor.ColorInfo(prName))
 	}
 	return nil
 }

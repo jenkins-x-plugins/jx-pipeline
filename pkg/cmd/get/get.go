@@ -14,10 +14,11 @@ import (
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -88,18 +89,16 @@ func (o *Options) Validate() error {
 		return errors.Wrapf(err, "failed to create kube client")
 	}
 
-	if o.TektonClient != nil {
-		return nil
-	}
-
-	f := kubeclient.NewFactory()
-	cfg, err := f.CreateKubeConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to get kubernetes config")
-	}
-	o.TektonClient, err = tektonclient.NewForConfig(cfg)
-	if err != nil {
-		return errors.Wrap(err, "error building tekton client")
+	if o.TektonClient == nil {
+		f := kubeclient.NewFactory()
+		cfg, err := f.CreateKubeConfig()
+		if err != nil {
+			return errors.Wrap(err, "failed to get kubernetes config")
+		}
+		o.TektonClient, err = tektonclient.NewForConfig(cfg)
+		if err != nil {
+			return errors.Wrap(err, "error building tekton client")
+		}
 	}
 	return nil
 }
@@ -167,7 +166,7 @@ func (o *Options) renderPipelineRuns() error {
 	ns := o.Namespace
 	tektonClient := o.TektonClient
 
-	pipelines := tektonClient.TektonV1alpha1().PipelineRuns(ns)
+	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
 	prList, err := pipelines.List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
@@ -183,7 +182,7 @@ func (o *Options) renderPipelineRuns() error {
 	for k := range prList.Items {
 		pr := prList.Items[k]
 		status = "not completed"
-		if tekton.PipelineRunIsComplete(&pr) {
+		if tektonlog.PipelineRunIsComplete(&pr) {
 			status = "completed"
 		}
 		labels := pr.Labels
