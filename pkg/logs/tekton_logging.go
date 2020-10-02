@@ -27,7 +27,6 @@ import (
 	"github.com/jenkins-x/jx/v2/pkg/cloud/gke"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/step"
 	"github.com/jenkins-x/jx/v2/pkg/kube"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -105,7 +104,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 		pipelines.ToPipelineActivity(p, pa)
 
 		fullBuildName := createPipelineActivityName(pa)
-		prMap[fullBuildName] = append(prMap[paName], p)
+		prMap[fullBuildName] = append(prMap[fullBuildName], p)
 	}
 
 	paMap := make(map[string]*v1.PipelineActivity)
@@ -155,67 +154,12 @@ func createPipelineActivityName(pa *v1.PipelineActivity) string {
 	return baseName
 }
 
-func findLegacyPipelineRunBuildNumber(pipelineRun *tektonapis.PipelineRun) string {
-	var buildNumber string
-	for _, p := range pipelineRun.Spec.Params {
-		if p.Name == "build_id" && p.Value.Type == tektonapis.ParamTypeString {
-			buildNumber = p.Value.StringVal
-		}
-	}
-	return buildNumber
-}
-
-func getPipelineRunsForActivity(pa *v1.PipelineActivity, tektonClient tektonclient.Interface) (map[string]tektonapis.PipelineRun, error) {
-	filters := []string{
-		fmt.Sprintf("%s=%s", v1.LabelOwner, pa.Spec.GitOwner),
-		fmt.Sprintf("%s=%s", v1.LabelRepository, pa.Spec.GitRepository),
-		fmt.Sprintf("%s=%s", v1.LabelBranch, pa.Spec.GitBranch),
-	}
-
-	tektonPRs, err := tektonClient.TektonV1beta1().PipelineRuns(pa.Namespace).List(metav1.ListOptions{
-		LabelSelector: strings.Join(filters, ","),
-	})
-	if err != nil {
-		return nil, err
-	}
-	// For legacy purposes, look for the old "repo" label as well.
-	if len(tektonPRs.Items) == 0 {
-		tektonPRs, err = tektonClient.TektonV1beta1().PipelineRuns(pa.Namespace).List(metav1.ListOptions{
-			LabelSelector: strings.Replace(strings.Join(filters, ","), "repository=", "repo=", 1),
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	sort.Slice(tektonPRs.Items, func(i, j int) bool {
-		return tektonPRs.Items[i].CreationTimestamp.Before(&tektonPRs.Items[j].CreationTimestamp)
-	})
-
-	runs := make(map[string]tektonapis.PipelineRun)
-	for i := range tektonPRs.Items {
-		pipelineRun := &tektonPRs.Items[i]
-		buildNumber := pipelineRun.Labels[tekton.LabelBuild]
-		if buildNumber == "" {
-			buildNumber = findLegacyPipelineRunBuildNumber(pipelineRun)
-		}
-		pipelineType := pipelineRun.Labels[tekton.LabelType]
-		if pipelineType == "" {
-			pipelineType = tekton.BuildPipeline.String()
-		}
-		if buildNumber == pa.Spec.Build {
-			runs[pipelineType] = *pipelineRun
-		}
-	}
-	return runs, nil
-}
-
 // GetRunningBuildLogs obtains the logs of the provided PipelineActivity and streams the running build pods' logs using the provided LogWriter
 func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, noWaitForRuns bool) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)
-		err := t.getRunningBuildLogs(pa, pipelineRuns, buildName, noWaitForRuns, ch)
+		err := t.getRunningBuildLogs(pa, pipelineRuns, buildName, ch)
 		if err != nil {
 			t.err = err
 		}
@@ -228,7 +172,7 @@ type podTime struct {
 	startTime *metav1.Time
 }
 
-func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, noWaitForRuns bool, out chan<- LogLine) error {
+func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, out chan<- LogLine) error {
 	loggedAllRunsForActivity := false
 	foundLogs := false
 

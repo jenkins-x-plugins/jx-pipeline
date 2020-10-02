@@ -48,7 +48,8 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 			return ""
 		}
 		found := false
-		for _, pa := range paList {
+		for i := range paList {
+			pa := &paList[i]
 			if pa.Labels == nil {
 				continue
 			}

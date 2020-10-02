@@ -43,10 +43,7 @@ func PipelineRunIsNotPending(pr *pipelineapi.PipelineRun) bool {
 
 // PipelineRunIsComplete returns true if the PipelineRun has completed or has running steps.
 func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
-	if pr.Status.CompletionTime != nil {
-		return true
-	}
-	return false
+	return pr.Status.CompletionTime != nil
 }
 
 // CancelPipelineRun cancels a Pipeline

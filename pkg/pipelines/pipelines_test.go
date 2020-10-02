@@ -14,35 +14,15 @@ import (
 )
 
 func TestInitialPipelineActivity(t *testing.T) {
-	prFile := filepath.Join("test_data", "initial", "pipelinerun.yaml")
-	require.FileExists(t, prFile)
-
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "failed to create temp dir")
-
-	data, err := ioutil.ReadFile(prFile)
-	require.NoError(t, err, "failed to load %s", prFile)
-
-	pr := &v1beta1.PipelineRun{}
-	err = yaml.Unmarshal(data, pr)
-	require.NoError(t, err, "failed to unmarshal %s", prFile)
-
-	pa := &v1.PipelineActivity{}
-	ToPipelineActivity(pr, pa)
-
-	ClearTimestamps(pa)
-
-	paFile := filepath.Join(tmpDir, "pa.yaml")
-	err = yamls.SaveFile(pa, paFile)
-	require.NoError(t, err, "failed to save %s", paFile)
-
-	t.Logf("created PipelineActivity %s\n", paFile)
-
-	testhelpers.AssertTextFilesEqual(t, filepath.Join("test_data", "initial", "expected.yaml"), paFile, "generated git credentials file")
+	AssertPipelineActivityMapping(t, "initial")
 }
 
 func TestCreatePipelineActivity(t *testing.T) {
-	prFile := filepath.Join("test_data", "create", "pipelinerun.yaml")
+	AssertPipelineActivityMapping(t, "create")
+}
+
+func AssertPipelineActivityMapping(t *testing.T, folder string) {
+	prFile := filepath.Join("test_data", folder, "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
 	tmpDir, err := ioutil.TempDir("", "")
@@ -66,7 +46,7 @@ func TestCreatePipelineActivity(t *testing.T) {
 
 	t.Logf("created PipelineActivity %s\n", paFile)
 
-	testhelpers.AssertTextFilesEqual(t, filepath.Join("test_data", "create", "expected.yaml"), paFile, "generated git credentials file")
+	testhelpers.AssertTextFilesEqual(t, filepath.Join("test_data", folder, "expected.yaml"), paFile, "generated git credentials file")
 }
 
 func TestMergePipelineActivity(t *testing.T) {
