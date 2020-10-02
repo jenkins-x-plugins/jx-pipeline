@@ -37,9 +37,6 @@ func (o *BuildPodInfoFilter) Matches(pa *v1.PipelineActivity) bool {
 	if o.Repository != "" && o.Repository != ps.GitRepository {
 		return false
 	}
-	if o.Repository != "" && o.Repository != ps.GitRepository {
-		return false
-	}
 	if o.Branch != "" && o.Branch != ps.GitBranch {
 		return false
 	}

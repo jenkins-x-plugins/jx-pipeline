@@ -12,13 +12,12 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-helpers/pkg/table"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/pkg/errors"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
-	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/builds"
 	"github.com/spf13/cobra"
 )
 
@@ -26,12 +25,14 @@ import (
 type Options struct {
 	options.BaseOptions
 
+	Args         []string
+	Format       string
+	Namespace    string
+	BuildFilter  tektonlog.BuildPodInfoFilter
 	KubeClient   kubernetes.Interface
 	JXClient     versioned.Interface
 	TektonClient tektonclient.Interface
-	Format       string
-	Namespace    string
-	BuildFilter  builds.BuildPodInfoFilter
+	TektonLogger *tektonlog.TektonLogger
 }
 
 var (
@@ -69,21 +70,15 @@ func NewCmdGetBuildPods() (*cobra.Command, *Options) {
 		Example: cmdExample,
 		Aliases: []string{"pod"},
 		Run: func(cmd *cobra.Command, args []string) {
+			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
 		},
 	}
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "The namespace to look for the build pods. Defaults to the current namespace")
-	cmd.Flags().BoolVarP(&o.BuildFilter.Pending, "pending", "p", false, "Filter builds which are currently pending or running")
-	cmd.Flags().StringVarP(&o.BuildFilter.Filter, "filter", "f", "", "Filters the build name by the given text")
-	cmd.Flags().StringVarP(&o.BuildFilter.Owner, "owner", "o", "", "Filters the owner (person/organisation) of the repository")
-	cmd.Flags().StringVarP(&o.BuildFilter.Repository, "repo", "r", "", "Filters the build repository")
-	cmd.Flags().StringVarP(&o.BuildFilter.Branch, "branch", "", "", "Filters the branch")
-	cmd.Flags().StringVarP(&o.BuildFilter.Build, "build", "", "", "Filter a specific build number")
-	cmd.Flags().StringVarP(&o.BuildFilter.Context, "context", "", "", "Filters the context of the build")
-	cmd.Flags().StringVarP(&o.BuildFilter.GitURL, "giturl", "g", "", "The git URL to filter on. If you specify a link to a github repository or PR we can filter the query of build pods accordingly")
 
 	o.BaseOptions.AddBaseFlags(cmd)
+	o.BuildFilter.AddFlags(cmd)
 	return cmd, o
 }
 
@@ -116,6 +111,15 @@ func (o *Options) Validate() error {
 	if err != nil {
 		return errors.Wrap(err, "error building tekton client")
 	}
+
+	if o.TektonLogger == nil {
+		o.TektonLogger = &tektonlog.TektonLogger{
+			KubeClient:   o.KubeClient,
+			TektonClient: o.TektonClient,
+			JXClient:     o.JXClient,
+			Namespace:    o.Namespace,
+		}
+	}
 	return nil
 }
 
@@ -126,33 +130,40 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	kubeClient := o.KubeClient
-	ns := o.Namespace
-
-	pods, err := builds.GetBuildPods(kubeClient, ns)
+	names, paMap, _, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(&o.BuildFilter)
 	if err != nil {
-		log.Logger().Warnf("Failed to query pods %s", err)
 		return err
+	}
+
+	var filter string
+	if len(o.Args) > 0 {
+		filter = o.Args[0]
+	} else {
+		filter = o.BuildFilter.Filter
+	}
+
+	var filteredNames []string
+	for _, n := range names {
+		if strings.Contains(strings.ToLower(n), strings.ToLower(filter)) {
+			filteredNames = append(filteredNames, n)
+		}
 	}
 
 	out := os.Stdout
 	t := table.CreateTable(out)
 	t.AddRow("OWNER", "REPOSITORY", "BRANCH", "BUILD", "CONTEXT", "AGE", "STATUS", "POD", "GIT URL")
 
-	var buildInfos []*builds.BuildPodInfo
-	for _, pod := range pods {
-		buildInfo := builds.CreateBuildPodInfo(pod)
-		if o.BuildFilter.BuildMatches(buildInfo) {
-			buildInfos = append(buildInfos, buildInfo)
-		}
-	}
-	builds.SortBuildPodInfos(buildInfos)
-
 	now := time.Now()
-	for _, build := range buildInfos {
-		duration := strings.TrimSuffix(now.Sub(build.CreatedTime).Round(time.Minute).String(), "0s")
+	for _, name := range filteredNames {
+		pa := paMap[name]
+		if pa == nil {
+			continue
+		}
+		build := &pa.Spec
+		duration := strings.TrimSuffix(now.Sub(pa.CreationTimestamp.Time).Round(time.Minute).String(), "0s")
 
-		t.AddRow(build.Organisation, build.Repository, build.Branch, build.Build, build.Context, duration, build.Status(), build.PodName, build.GitURL)
+		podName := pa.Labels["podName"]
+		t.AddRow(build.GitOwner, build.GitRepository, build.GitBranch, build.Build, build.Context, duration, string(build.Status), podName, build.GitURL)
 	}
 	t.Render()
 	return nil

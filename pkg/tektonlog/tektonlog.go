@@ -114,13 +114,14 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 
 	paMap := make(map[string]*v1.PipelineActivity)
 	for _, p := range paNameMap {
-		if filter.Matches(p) {
-			paMap[createPipelineActivityName(p)] = p
-		}
+		paMap[createPipelineActivityName(p)] = p
 	}
 
 	var names []string
 	for _, pa := range sortedPA {
+		if !filter.Matches(pa) {
+			continue
+		}
 		paName := createPipelineActivityName(pa)
 		if _, exists := prMap[paName]; exists {
 			hasNonPendingPR := false
