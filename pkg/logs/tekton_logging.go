@@ -9,29 +9,35 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jenkins-x/jx-helpers/pkg/kube/pods"
+	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
 	"github.com/jenkins-x/jx/v2/pkg/auth"
 	"github.com/jenkins-x/jx/v2/pkg/cloud/buckets"
 	"github.com/jenkins-x/jx/v2/pkg/config"
 	"github.com/jenkins-x/jx/v2/pkg/errorutil"
 	"github.com/jenkins-x/jx/v2/pkg/kube/naming"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/fatih/color"
 	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/builds"
 	"github.com/jenkins-x/jx/v2/pkg/cloud/factory"
 	"github.com/jenkins-x/jx/v2/pkg/cloud/gke"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/step"
 	"github.com/jenkins-x/jx/v2/pkg/kube"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
-	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	knativeapis "knative.dev/pkg/apis"
+)
+
+var (
+	info = termcolor.ColorInfo
 )
 
 // TektonLogger contains the necessary clients and the namespace to get data from the cluster, an implementation of
@@ -64,66 +70,57 @@ type LogLine struct {
 }
 
 // GetTektonPipelinesWithActivePipelineActivity returns list of all PipelineActivities with corresponding Tekton PipelineRuns ordered by the PipelineRun creation timestamp and a map to obtain its reference once a name has been selected
-func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []string) ([]string, map[string]*v1.PipelineActivity, error) {
-	labelsFilter := strings.Join(filters, ",")
-	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(metav1.ListOptions{
-		LabelSelector: labelsFilter,
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "there was a problem getting the PipelineActivities")
+func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *BuildPodInfoFilter) ([]string, map[string]*v1.PipelineActivity, map[string][]*tektonapis.PipelineRun, error) {
+	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(metav1.ListOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, nil, nil, errors.Wrap(err, "there was a problem getting the PipelineActivities")
+	}
+
+	paNameMap := make(map[string]*v1.PipelineActivity)
+	for i := range paList.Items {
+		p := &paList.Items[i]
+		paNameMap[p.Name] = p
 	}
 
 	sort.Slice(paList.Items, func(i, j int) bool {
 		return paList.Items[i].CreationTimestamp.After(paList.Items[j].CreationTimestamp.Time)
 	})
 
-	paMap := make(map[string]*v1.PipelineActivity)
-	for i := range paList.Items {
-		p := &paList.Items[i]
-		paMap[createPipelineActivityName(p.Labels, p.Spec.Build)] = p
-	}
-
-	tektonPRs, _ := t.TektonClient.TektonV1alpha1().PipelineRuns(t.Namespace).List(metav1.ListOptions{
-		LabelSelector: labelsFilter,
-	})
-
-	// Handle the old "repo" tag as well for legacy purposes.
-	if len(tektonPRs.Items) == 0 {
-		labelsFilter = strings.Replace(labelsFilter, "repository=", "repo=", 1)
-		tektonPRs, _ = t.TektonClient.TektonV1alpha1().PipelineRuns(t.Namespace).List(metav1.ListOptions{
-			LabelSelector: labelsFilter,
-		})
-	}
+	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(metav1.ListOptions{})
+	log.Logger().Infof("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
 
 	prMap := make(map[string][]*tektonapis.PipelineRun)
 	for i := range tektonPRs.Items {
 		p := &tektonPRs.Items[i]
-		prStatus := p.Status.GetCondition(knativeapis.ConditionSucceeded)
-		// Don't include any pipeline runs that failed due to Tekton race conditions and were auto-restarted by Prow
-		if prStatus != nil && prStatus.IsFalse() &&
-			(strings.Contains(prStatus.Message, "can't be found:pipeline.tekton.dev") ||
-				strings.Contains(prStatus.Message, "it contains Tasks that don't exist")) {
+		paName := pipelines.ToPipelineActivityName(p, paList.Items)
+		if paName == "" {
 			continue
 		}
-		prBuildNumber := p.Labels[v1.LabelBuild]
-		if prBuildNumber == "" {
-			prBuildNumber = findLegacyPipelineRunBuildNumber(p)
+		pa := paNameMap[paName]
+		if pa == nil {
+			pa = &v1.PipelineActivity{}
+			pa.Name = paName
+			paNameMap[paName] = pa
 		}
-		paName := createPipelineActivityName(p.Labels, prBuildNumber)
-		if _, exists := prMap[paName]; !exists {
-			prMap[paName] = []*tektonapis.PipelineRun{}
+		pipelines.ToPipelineActivity(p, pa)
+
+		fullBuildName := createPipelineActivityName(pa)
+		prMap[fullBuildName] = append(prMap[paName], p)
+	}
+
+	paMap := make(map[string]*v1.PipelineActivity)
+	for _, p := range paNameMap {
+		if filter.Matches(p) {
+			paMap[createPipelineActivityName(p)] = p
 		}
-		prMap[paName] = append(prMap[paName], p)
 	}
 
 	var names []string
-	for i := range paList.Items {
-		pa := &paList.Items[i]
-		paName := createPipelineActivityName(pa.Labels, pa.Spec.Build)
+	for paName, pa := range paMap {
 		if _, exists := prMap[paName]; exists {
 			hasNonPendingPR := false
 			for _, pr := range prMap[paName] {
-				if tekton.PipelineRunIsNotPending(pr) {
+				if PipelineRunIsNotPending(pr) {
 					hasNonPendingPR = true
 				}
 			}
@@ -135,26 +132,26 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []st
 		}
 	}
 
-	return names, paMap, nil
+	return names, paMap, prMap, nil
 }
 
-func createPipelineActivityName(labels map[string]string, buildNumber string) string {
-	repository := labels[v1.LabelRepository]
-	// The label is called "repo" in the PipelineRun CRD and "repository" in the PipelineActivity CRD
-	if repository == "" {
-		repository = labels["repo"]
-	}
+func createPipelineActivityName(pa *v1.PipelineActivity) string {
+	ps := &pa.Spec
+	buildNumber := ps.Build
+	owner := ps.GitOwner
+	repository := ps.GitRepository
+	branch := ps.GitBranch
+	context := ps.Context
+
 	baseName := fmt.Sprintf("%s/%s/%s #%s",
-		naming.ToValidName(labels[v1.LabelOwner]),
+		naming.ToValidName(owner),
 		naming.ToValidName(repository),
-		naming.ToValidName(labels[v1.LabelBranch]),
+		naming.ToValidName(branch),
 		strings.ToLower(buildNumber))
 
-	context := labels[v1.LabelContext]
 	if context != "" {
 		return fmt.Sprintf("%s %s", baseName, naming.ToValidName(context))
 	}
-
 	return baseName
 }
 
@@ -175,7 +172,7 @@ func getPipelineRunsForActivity(pa *v1.PipelineActivity, tektonClient tektonclie
 		fmt.Sprintf("%s=%s", v1.LabelBranch, pa.Spec.GitBranch),
 	}
 
-	tektonPRs, err := tektonClient.TektonV1alpha1().PipelineRuns(pa.Namespace).List(metav1.ListOptions{
+	tektonPRs, err := tektonClient.TektonV1beta1().PipelineRuns(pa.Namespace).List(metav1.ListOptions{
 		LabelSelector: strings.Join(filters, ","),
 	})
 	if err != nil {
@@ -183,7 +180,7 @@ func getPipelineRunsForActivity(pa *v1.PipelineActivity, tektonClient tektonclie
 	}
 	// For legacy purposes, look for the old "repo" label as well.
 	if len(tektonPRs.Items) == 0 {
-		tektonPRs, err = tektonClient.TektonV1alpha1().PipelineRuns(pa.Namespace).List(metav1.ListOptions{
+		tektonPRs, err = tektonClient.TektonV1beta1().PipelineRuns(pa.Namespace).List(metav1.ListOptions{
 			LabelSelector: strings.Replace(strings.Join(filters, ","), "repository=", "repo=", 1),
 		})
 		if err != nil {
@@ -214,11 +211,11 @@ func getPipelineRunsForActivity(pa *v1.PipelineActivity, tektonClient tektonclie
 }
 
 // GetRunningBuildLogs obtains the logs of the provided PipelineActivity and streams the running build pods' logs using the provided LogWriter
-func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, buildName string, noWaitForRuns bool) <-chan LogLine {
+func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, noWaitForRuns bool) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)
-		err := t.getRunningBuildLogs(pa, buildName, noWaitForRuns, ch)
+		err := t.getRunningBuildLogs(pa, pipelineRuns, buildName, noWaitForRuns, ch)
 		if err != nil {
 			t.err = err
 		}
@@ -226,40 +223,71 @@ func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, buildName st
 	return ch
 }
 
-func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, buildName string, noWaitForRuns bool, out chan<- LogLine) error {
+type podTime struct {
+	name      string
+	startTime *metav1.Time
+}
+
+func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, noWaitForRuns bool, out chan<- LogLine) error {
 	loggedAllRunsForActivity := false
 	foundLogs := false
 
+	completedPods := map[string]bool{}
+
 	// Make sure we check again for the build pipeline if we just get the metapipeline initially, assuming the metapipeline succeeds
 	for !loggedAllRunsForActivity {
-		runsByType, err := getPipelineRunsForActivity(pa, t.TektonClient)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get PipelineRun names for activity %s in namespace %s", pa.Name, pa.Namespace)
-		}
-
-		var runToLog *tektonapis.PipelineRun
-		metaPr, hasMetaPr := runsByType[tekton.MetaPipeline.String()]
-		buildPr, hasBuildPr := runsByType[tekton.BuildPipeline.String()]
-		var metaStatus *knativeapis.Condition
-		if hasMetaPr {
-			metaStatus = metaPr.Status.GetCondition(knativeapis.ConditionSucceeded)
-		}
-		// If we don't have a build run yet, the build run doesn't yet have pods, or none of the build run pods are out
-		// of pending yet, get the logs for the metapipeline.
-		if hasMetaPr && (!hasBuildPr || !tekton.PipelineRunIsNotPending(&buildPr)) {
-			runToLog = &metaPr
-
-			// If we have a metapipeline and the metapipeline is failed, the pipeline as a whole is complete
-			if metaStatus != nil && metaStatus.Status == corev1.ConditionFalse {
-				loggedAllRunsForActivity = true
+		var podTimes []podTime
+		for _, pr := range pipelineRuns {
+			for _, taskStatus := range pr.Status.TaskRuns {
+				podTimes = append(podTimes, podTime{
+					name:      taskStatus.Status.PodName,
+					startTime: taskStatus.Status.StartTime,
+				})
 			}
-		} else if hasBuildPr {
-			// Log the build pipeline
-			runToLog = &buildPr
-			loggedAllRunsForActivity = true
+		}
+		sort.Slice(podTimes, func(i, j int) bool {
+			t1 := podTimes[i].startTime
+			t2 := podTimes[j].startTime
+			if t1 == nil && t2 == nil {
+				return false
+			}
+			if t1 == nil {
+				return true
+			}
+			if t2 == nil {
+				return false
+			}
+			return t1.Before(t2)
+		})
+
+		for _, pt := range podTimes {
+			podName := pt.name
+			if completedPods[podName] {
+				continue
+			}
+			log.Logger().Infof("logging pod: %s", info(podName))
+
+			pod, err := t.KubeClient.CoreV1().Pods(t.Namespace).Get(podName, metav1.GetOptions{})
+			if err != nil {
+				return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
+			}
+			if pods.IsPodCompleted(pod) {
+				completedPods[podName] = true
+			}
+
+			stageName := "pipeline"
+			err = t.getContainerLogsFromPod(pod, pa, buildName, stageName, out)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get logs for pod %s", podName)
+			}
 		}
 
-		// Assuming we have a run to log, go get its logs, looping until we've seen all stages for that run.
+		// if all pods completed lets terminate
+		if len(completedPods) == len(podTimes) {
+			break
+		}
+
+		/* TODO
 		if runToLog != nil {
 			structure, err := tekton.StructureForPipelineRun(t.JXClient, pa.Namespace, runToLog)
 			if err != nil {
@@ -306,14 +334,7 @@ func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, buildName st
 				}
 			}
 		}
-		if !foundLogs {
-			break
-		}
-
-		// Flag used for testing - don't loop forever waiting for the build run if it's pending
-		if noWaitForRuns && !tekton.PipelineRunIsNotPending(&buildPr) {
-			loggedAllRunsForActivity = true
-		}
+		*/
 	}
 	if !foundLogs {
 		return errors.New("the build pods for this build have been garbage collected and the log was not found in the long term storage bucket")
