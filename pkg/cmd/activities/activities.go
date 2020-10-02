@@ -12,6 +12,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxenv"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-helpers/pkg/table"
+	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/pkg/errors"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -22,7 +23,6 @@ import (
 	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/util"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -132,8 +132,8 @@ func (o *Options) Run() error {
 
 	out := os.Stdout
 	t := table.CreateTable(out)
-	t.SetColumnAlign(1, util.ALIGN_RIGHT)
-	t.SetColumnAlign(2, util.ALIGN_RIGHT)
+	t.SetColumnAlign(1, table.ALIGN_RIGHT)
+	t.SetColumnAlign(2, table.ALIGN_RIGHT)
 	t.AddRow("STEP", "STARTED AGO", "DURATION", "STATUS")
 
 	if o.Watch {
@@ -153,7 +153,6 @@ func (o *Options) Run() error {
 		o.addTableRow(&t, a)
 	}
 	t.Render()
-
 	return nil
 }
 
@@ -163,7 +162,7 @@ func (o *Options) addTableRow(t *table.Table, activity *v1.PipelineActivity) boo
 		text := ""
 		version := activity.Spec.Version
 		if version != "" {
-			text = "Version: " + util.ColorInfo(version)
+			text = "Version: " + termcolor.ColorInfo(version)
 		}
 		statusText := statusString(activity.Spec.Status)
 		if statusText == "" {
@@ -173,7 +172,7 @@ func (o *Options) addTableRow(t *table.Table, activity *v1.PipelineActivity) boo
 		}
 		t.AddRow(spec.Pipeline+" #"+spec.Build,
 			timeToString(spec.StartedTimestamp),
-			util.DurationString(spec.StartedTimestamp, spec.CompletedTimestamp),
+			DurationString(spec.StartedTimestamp, spec.CompletedTimestamp),
 			statusText)
 		indent := indentation
 		for _, step := range spec.Steps {
@@ -270,12 +269,12 @@ func addPreviewRow(t *table.Table, parent *v1.PreviewActivityStep, indent string
 	if pullRequestURL == "" {
 		pullRequestURL = parent.Environment
 	}
-	addStepRowItem(t, &parent.CoreActivityStep, indent, "Preview", util.ColorInfo(pullRequestURL))
+	addStepRowItem(t, &parent.CoreActivityStep, indent, "Preview", termcolor.ColorInfo(pullRequestURL))
 	indent += indentation
 
 	appURL := parent.ApplicationURL
 	if appURL != "" {
-		addStepRowItem(t, &parent.CoreActivityStep, indent, "Preview Application", util.ColorInfo(appURL))
+		addStepRowItem(t, &parent.CoreActivityStep, indent, "Preview Application", termcolor.ColorInfo(appURL))
 	}
 }
 
@@ -292,7 +291,7 @@ func addPromoteRow(t *table.Table, parent *v1.PromoteActivityStep, indent string
 		addStepRowItem(t, &update.CoreActivityStep, indent, "Update", describePromoteUpdate(update))
 
 		if parent.ApplicationURL != "" {
-			addStepRowItem(t, &update.CoreActivityStep, indent, "Promoted", " Application is at: "+util.ColorInfo(parent.ApplicationURL))
+			addStepRowItem(t, &update.CoreActivityStep, indent, "Promoted", " Application is at: "+termcolor.ColorInfo(parent.ApplicationURL))
 		}
 	}
 }
@@ -314,7 +313,7 @@ func addStepRowItem(t *table.Table, step *v1.CoreActivityStep, indent, name, des
 	}
 	t.AddRow(indent+textName,
 		timeToString(step.StartedTimestamp),
-		util.DurationString(step.StartedTimestamp, step.CompletedTimestamp),
+		DurationString(step.StartedTimestamp, step.CompletedTimestamp),
 		statusString(step.Status)+" "+text)
 }
 
@@ -322,11 +321,11 @@ func statusString(statusType v1.ActivityStatusType) string {
 	text := statusType.String()
 	switch statusType {
 	case v1.ActivityStatusTypeFailed, v1.ActivityStatusTypeError:
-		return util.ColorError(text)
+		return termcolor.ColorError(text)
 	case v1.ActivityStatusTypeSucceeded:
-		return util.ColorInfo(text)
+		return termcolor.ColorInfo(text)
 	case v1.ActivityStatusTypeRunning:
-		return util.ColorStatus(text)
+		return termcolor.ColorStatus(text)
 	}
 	return text
 }
@@ -334,10 +333,10 @@ func statusString(statusType v1.ActivityStatusType) string {
 func describePromotePullRequest(promote *v1.PromotePullRequestStep) string {
 	description := ""
 	if promote.PullRequestURL != "" {
-		description += " PullRequest: " + util.ColorInfo(promote.PullRequestURL)
+		description += " PullRequest: " + termcolor.ColorInfo(promote.PullRequestURL)
 	}
 	if promote.MergeCommitSHA != "" {
-		description += " Merge SHA: " + util.ColorInfo(promote.MergeCommitSHA)
+		description += " Merge SHA: " + termcolor.ColorInfo(promote.MergeCommitSHA)
 	}
 	return description
 }
@@ -349,7 +348,7 @@ func describePromoteUpdate(promote *v1.PromoteUpdateStep) string {
 		state := status.Status
 
 		if url != "" && state != "" {
-			description += " Status: " + pullRequestStatusString(state) + " at: " + util.ColorInfo(url)
+			description += " Status: " + pullRequestStatusString(state) + " at: " + termcolor.ColorInfo(url)
 		}
 	}
 	return description
@@ -359,11 +358,11 @@ func pullRequestStatusString(text string) string {
 	title := strings.Title(text)
 	switch text {
 	case "success":
-		return util.ColorInfo(title)
+		return termcolor.ColorInfo(title)
 	case "error", "failed":
-		return util.ColorError(title)
+		return termcolor.ColorError(title)
 	default:
-		return util.ColorStatus(title)
+		return termcolor.ColorStatus(title)
 	}
 }
 
@@ -374,7 +373,7 @@ func timeToString(t *metav1.Time) string {
 	now := &metav1.Time{
 		Time: time.Now(),
 	}
-	return util.DurationString(t, now)
+	return DurationString(t, now)
 }
 
 func (o *Options) matches(activity *v1.PipelineActivity) bool {
@@ -388,4 +387,12 @@ func (o *Options) matches(activity *v1.PipelineActivity) bool {
 		answer = activity.Spec.Build == build
 	}
 	return answer
+}
+
+// DurationString returns the duration between start and end time as string
+func DurationString(start, end *metav1.Time) string {
+	if start == nil || end == nil {
+		return ""
+	}
+	return end.Sub(start.Time).Round(time.Second).String()
 }

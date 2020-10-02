@@ -14,6 +14,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
+	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx/v2/pkg/gits"
@@ -253,7 +254,7 @@ func (o *Options) getTektonLogs() (bool, error) {
 		return false, o.TektonLogger.Err()
 	}
 
-	log.Logger().Infof("Build logs for %s", util.ColorInfo(name))
+	log.Logger().Infof("Build logs for %s", termcolor.ColorInfo(name))
 	name = strings.TrimSuffix(name, " ")
 
 	for line := range o.TektonLogger.GetRunningBuildLogs(pa, prList, name, false) {

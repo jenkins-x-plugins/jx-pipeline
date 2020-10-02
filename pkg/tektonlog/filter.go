@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
 	"github.com/jenkins-x/jx/v2/pkg/gits"
-	"github.com/jenkins-x/jx/v2/pkg/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +82,7 @@ func (o *BuildPodInfoFilter) Validate() error {
 					if paths[0] == "" {
 						paths[0] = "/"
 					}
-					u2.Path = util.UrlJoin(paths[0:3]...)
+					u2.Path = stringhelpers.UrlJoin(paths[0:3]...)
 					u = u2.String()
 				}
 			}

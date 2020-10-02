@@ -182,7 +182,6 @@ type podTime struct {
 func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, out chan<- LogLine) error {
 	loggedAllRunsForActivity := false
 	foundLogs := false
-
 	completedPods := map[string]bool{}
 
 	// Make sure we check again for the build pipeline if we just get the metapipeline initially, assuming the metapipeline succeeds
@@ -233,64 +232,18 @@ func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns
 			}
 		}
 
+		if len(completedPods) > 0 {
+			foundLogs = true
+		}
+
 		// if all pods completed lets terminate
 		if len(completedPods) == len(podTimes) {
 			break
 		}
-
-		/* TODO
-		if runToLog != nil {
-			structure, err := tekton.StructureForPipelineRun(t.JXClient, pa.Namespace, runToLog)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get pipeline structure for %s in namespace %s", runToLog.Name, pa.Namespace)
-			}
-
-			allStages := structure.GetAllStagesWithSteps()
-			var stagesToCheckCount int
-			// If the pipeline run is done, we only care about logs from the pods it actually ran.
-			if runToLog.IsDone() || pa.Spec.Status.IsTerminated() {
-				// Add all stages that actually ran while ignoring ones that were never executed, since the run is done.
-				stagesToCheckCount = len(runToLog.Status.TaskRuns)
-			} else {
-				stagesToCheckCount = len(allStages)
-			}
-			stagesSeen := make(map[string]bool)
-
-			// Repeat until we've seen pods for all stages
-			for stagesToCheckCount > len(stagesSeen) {
-				pods, err := builds.GetPipelineRunPods(t.KubeClient, pa.Namespace, runToLog.Name)
-				if err != nil {
-					return errors.Wrapf(err, "failed to get pods for pipeline run %s in namespace %s", runToLog.Name, pa.Namespace)
-				}
-
-				sort.Slice(pods, func(i, j int) bool {
-					return pods[i].CreationTimestamp.Before(&pods[j].CreationTimestamp)
-				})
-
-				for _, pod := range pods {
-					stageName := pod.Labels["jenkins.io/task-stage-name"]
-					params := builds.CreateBuildPodInfo(pod)
-					if _, seen := stagesSeen[stageName]; !seen && params.Organisation == pa.Spec.GitOwner && params.Repository == pa.Spec.GitRepository &&
-						strings.EqualFold(params.Branch, pa.Spec.GitBranch) && params.Build == pa.Spec.Build {
-						stagesSeen[stageName] = true
-						foundLogs = true
-						err := t.getContainerLogsFromPod(pod, pa, buildName, stageName, out)
-						if err != nil {
-							return errors.Wrapf(err, "failed to obtain the logs for build %s and stage %s", buildName, stageName)
-						}
-					}
-				}
-				if !foundLogs {
-					break
-				}
-			}
-		}
-		*/
 	}
 	if !foundLogs {
 		return errors.New("the build pods for this build have been garbage collected and the log was not found in the long term storage bucket")
 	}
-
 	return nil
 }
 
