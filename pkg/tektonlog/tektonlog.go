@@ -1,4 +1,4 @@
-package logs
+package tektonlog
 
 import (
 	"bufio"
@@ -86,7 +86,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 	})
 
 	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(metav1.ListOptions{})
-	log.Logger().Infof("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
+	log.Logger().Debugf("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
 
 	prMap := make(map[string][]*tektonapis.PipelineRun)
 	for i := range tektonPRs.Items {

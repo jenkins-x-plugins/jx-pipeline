@@ -1,11 +1,11 @@
 // +build unit
 
-package logs_test
+package tektonlog_test
 
 import (
 	"testing"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/logs"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/jenkins-x/jx/v2/pkg/tekton/syntax"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +52,7 @@ func TestPipelineRunIsNotPendingCompletedRun(t *testing.T) {
 		},
 	}
 
-	assert.True(t, logs.PipelineRunIsNotPending(pr))
+	assert.True(t, tektonlog.PipelineRunIsNotPending(pr))
 }
 
 func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {

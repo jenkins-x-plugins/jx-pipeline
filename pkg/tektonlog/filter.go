@@ -1,4 +1,4 @@
-package logs
+package tektonlog
 
 import (
 	"net/url"

@@ -1,4 +1,4 @@
-package logs
+package tektonlog
 
 import (
 	"github.com/pkg/errors"

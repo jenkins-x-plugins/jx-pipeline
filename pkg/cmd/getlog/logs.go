@@ -15,7 +15,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
-	"github.com/jenkins-x/jx-pipeline/pkg/logs"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx/v2/pkg/gits"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -39,11 +39,11 @@ type Options struct {
 	CurrentFolder           bool
 	FailIfPodFails          bool
 	WaitForPipelineDuration time.Duration
-	BuildFilter             logs.BuildPodInfoFilter
+	BuildFilter             tektonlog.BuildPodInfoFilter
 	KubeClient              kubernetes.Interface
 	JXClient                versioned.Interface
 	TektonClient            tektonclient.Interface
-	TektonLogger            *logs.TektonLogger
+	TektonLogger            *tektonlog.TektonLogger
 	Input                   input.Interface
 	Out                     io.Writer
 }
@@ -175,7 +175,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	var err error
 
 	if o.TektonLogger == nil {
-		o.TektonLogger = &logs.TektonLogger{
+		o.TektonLogger = &tektonlog.TektonLogger{
 			KubeClient:     kubeClient,
 			TektonClient:   tektonClient,
 			JXClient:       jxClient,
