@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jenkins-x/jx-helpers/pkg/kube/jxenv"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
@@ -16,7 +18,6 @@ import (
 	"github.com/jenkins-x/jx/v2/pkg/cloud/buckets"
 	"github.com/jenkins-x/jx/v2/pkg/config"
 	"github.com/jenkins-x/jx/v2/pkg/errorutil"
-	"github.com/jenkins-x/jx/v2/pkg/kube/naming"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/fatih/color"
@@ -26,7 +27,6 @@ import (
 	"github.com/jenkins-x/jx/v2/pkg/cloud/factory"
 	"github.com/jenkins-x/jx/v2/pkg/cloud/gke"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/step"
-	"github.com/jenkins-x/jx/v2/pkg/kube"
 	"github.com/pkg/errors"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -252,7 +252,7 @@ func (t *TektonLogger) getContainerLogsFromPod(pod *corev1.Pod, pa *v1.PipelineA
 	infoColor.EnableColor()
 	errorColor := color.New(color.FgRed)
 	errorColor.EnableColor()
-	containers, _, _ := kube.GetContainersWithStatusAndIsInit(pod)
+	containers, _, _ := pods.GetContainersWithStatusAndIsInit(pod)
 	for i := range containers {
 		ic := &containers[i]
 		var err error
@@ -314,7 +314,7 @@ func hasStepFailed(pod *corev1.Pod, stepNumber int, kubeClient kubernetes.Interf
 		log.Logger().Error("couldn't find the updated pod to check the step status")
 		return false
 	}
-	_, containerStatus, _ := kube.GetContainersWithStatusAndIsInit(pod)
+	_, containerStatus, _ := pods.GetContainersWithStatusAndIsInit(pod)
 	if containerStatus[stepNumber].State.Terminated != nil && containerStatus[stepNumber].State.Terminated.ExitCode != 0 {
 		return true
 	}
@@ -325,11 +325,11 @@ func (t *TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx i
 	if pod.Status.Phase == corev1.PodFailed {
 		return pod, nil
 	}
-	if kube.HasContainerStarted(pod, idx) {
+	if pods.HasContainerStarted(pod, idx) {
 		return pod, nil
 	}
 	containerName := ""
-	containers, _, _ := kube.GetContainersWithStatusAndIsInit(pod)
+	containers, _, _ := pods.GetContainersWithStatusAndIsInit(pod)
 	if idx < len(containers) {
 		containerName = containers[idx].Name
 	}
@@ -345,7 +345,7 @@ func (t *TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx i
 		if err != nil {
 			return p, errors.Wrapf(err, "failed to load pod %s", pod.Name)
 		}
-		if kube.HasContainerStarted(p, idx) {
+		if pods.HasContainerStarted(p, idx) {
 			return p, nil
 		}
 	}
@@ -451,7 +451,7 @@ func performProviderDownload(logsURL string, jxClient versioned.Interface, ns st
 }
 
 func NewBucketProviderFromTeamSettingsConfiguration(jxClient versioned.Interface, ns string) (buckets.Provider, error) {
-	teamSettings, err := kube.GetDevEnvTeamSettings(jxClient, ns)
+	teamSettings, err := jxenv.GetDevEnvTeamSettings(jxClient, ns)
 	if err != nil {
 		return nil, errors.Wrap(err, "error obtaining the dev environment teamSettings to select the correct bucket provider")
 	}

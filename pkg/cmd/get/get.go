@@ -16,7 +16,6 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -189,22 +188,22 @@ func (o *Options) renderPipelineRuns() error {
 		if labels == nil {
 			continue
 		}
-		owner = labels[tekton.LabelOwner]
-		repo = labels[tekton.LabelRepo]
-		branch = labels[tekton.LabelBranch]
-		context = labels[tekton.LabelContext]
-		buildNumber = labels[tekton.LabelBuild]
+		owner = labels[tektonlog.LabelOwner]
+		repo = labels[tektonlog.LabelRepo]
+		branch = labels[tektonlog.LabelBranch]
+		context = labels[tektonlog.LabelContext]
+		buildNumber = labels[tektonlog.LabelBuild]
 
 		if owner == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelOwner, pr.Name, labels)
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner, pr.Name, labels)
 			continue
 		}
 		if repo == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelRepo, pr.Name, labels)
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelRepo, pr.Name, labels)
 			continue
 		}
 		if branch == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelBranch, pr.Name, labels)
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelBranch, pr.Name, labels)
 			continue
 		}
 

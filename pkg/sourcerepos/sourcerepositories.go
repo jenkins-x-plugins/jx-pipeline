@@ -9,8 +9,8 @@ import (
 	jenkinsio "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io"
 	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
-	"github.com/jenkins-x/jx/v2/pkg/kube/naming"
-	"github.com/jenkins-x/jx/v2/pkg/util"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/naming"
+	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +24,7 @@ func GetRepositoryGitURL(s *v1.SourceRepository) (string, error) {
 	repo := spec.Repo
 	if spec.HTTPCloneURL == "" {
 		if spec.ProviderKind == "bitbucketserver" {
-			provider = util.UrlJoin(provider, "scm")
+			provider = stringhelpers.UrlJoin(provider, "scm")
 		}
 		if provider == "" {
 			return spec.HTTPCloneURL, fmt.Errorf("missing provider in SourceRepository %s", s.Name)
@@ -35,7 +35,7 @@ func GetRepositoryGitURL(s *v1.SourceRepository) (string, error) {
 		if repo == "" {
 			return spec.HTTPCloneURL, fmt.Errorf("missing repo in SourceRepository %s", s.Name)
 		}
-		spec.HTTPCloneURL = util.UrlJoin(provider, owner, repo) + ".git"
+		spec.HTTPCloneURL = stringhelpers.UrlJoin(provider, owner, repo) + ".git"
 	}
 	return spec.HTTPCloneURL, nil
 }

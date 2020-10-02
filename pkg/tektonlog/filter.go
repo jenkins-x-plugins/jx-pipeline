@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-helpers/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
-	"github.com/jenkins-x/jx/v2/pkg/gits"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -87,7 +87,7 @@ func (o *BuildPodInfoFilter) Validate() error {
 				}
 			}
 		}
-		gitInfo, err := gits.ParseGitURL(u)
+		gitInfo, err := giturl.ParseGitURL(u)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse GitURL: %s", u)
 		}

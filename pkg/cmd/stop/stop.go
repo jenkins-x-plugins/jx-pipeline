@@ -17,7 +17,6 @@ import (
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
@@ -29,22 +28,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
 )
 
 // StopPipelineOptions contains the command line options
 type Options struct {
 	options.BaseOptions
 
-	Args            []string
-	Build           int
-	Filter          string
-	Namespace       string
-	JenkinsSelector opts.JenkinsSelectorOptions
-	Input           input.Interface
-	KubeClient      kubernetes.Interface
-	JXClient        versioned.Interface
-	TektonClient    tektonclient.Interface
+	Args         []string
+	Build        int
+	Filter       string
+	Namespace    string
+	Input        input.Interface
+	KubeClient   kubernetes.Interface
+	JXClient     versioned.Interface
+	TektonClient tektonclient.Interface
 
 	Jobs map[string]gojenkins.Job
 }
@@ -83,7 +80,6 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 	cmd.Flags().IntVarP(&o.Build, "build", "", 0, "The build number to stop")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "",
 		"Filters all the available jobs by those that contain the given text")
-	o.JenkinsSelector.AddFlags(cmd)
 
 	return cmd, o
 }
@@ -153,24 +149,24 @@ func (o *Options) cancelPipelineRun() error {
 		if labels == nil {
 			continue
 		}
-		owner := labels[tekton.LabelOwner]
-		repo := labels[tekton.LabelRepo]
-		branch := labels[tekton.LabelBranch]
-		context := labels[tekton.LabelContext]
-		buildNumber := labels[tekton.LabelBuild]
+		owner := labels[tektonlog.LabelOwner]
+		repo := labels[tektonlog.LabelRepo]
+		branch := labels[tektonlog.LabelBranch]
+		context := labels[tektonlog.LabelContext]
+		buildNumber := labels[tektonlog.LabelBuild]
 
 		if owner == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelOwner,
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner,
 				pr.Name, labels)
 			continue
 		}
 		if repo == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelRepo,
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelRepo,
 				pr.Name, labels)
 			continue
 		}
 		if branch == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelBranch,
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelBranch,
 				pr.Name, labels)
 			continue
 		}

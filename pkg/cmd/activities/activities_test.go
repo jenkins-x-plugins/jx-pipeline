@@ -79,7 +79,7 @@ var _ = Describe("get activity", func() {
 			testhelpers.CreateTestPipelineActivityWithTime(c, ns, "jx-testing", "jx-testing", "job", "1", "workflow", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
 			testhelpers.CreateTestPipelineActivityWithTime(c, ns, "jx-testing", "jx-testing", "job", "2", "workflow", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
 
-			options := &get.GetActivityOptions{
+			_, options := &activities.GetActivityOptions{
 				CommonOptions: commonOpts,
 				Sort:          sort,
 			}

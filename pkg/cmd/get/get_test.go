@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
-	"github.com/jenkins-x/jx/v2/pkg/tekton/syntax"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
@@ -25,21 +24,27 @@ func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tekt
 			Name:      "PR1",
 			Namespace: ns,
 			Labels: map[string]string{
-				tekton.LabelRepo:    repo,
-				tekton.LabelBranch:  branch,
-				tekton.LabelOwner:   owner,
-				tekton.LabelContext: context,
+				tektonlog.LabelRepo:    repo,
+				tektonlog.LabelBranch:  branch,
+				tektonlog.LabelOwner:   owner,
+				tektonlog.LabelContext: context,
 			},
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			Params: []v1beta1.Param{
 				{
-					Name:  "version",
-					Value: syntax.StringParamValue("v1"),
+					Name: "version",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "v1",
+					},
 				},
 				{
-					Name:  "build_id",
-					Value: syntax.StringParamValue("1"),
+					Name: "build_id",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "1",
+					},
 				},
 			},
 		},

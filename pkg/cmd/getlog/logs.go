@@ -14,17 +14,18 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
+	"github.com/jenkins-x/jx-helpers/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
-	"github.com/jenkins-x/jx/v2/pkg/gits"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/cenkalti/backoff"
+
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/util"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 )
 
@@ -32,6 +33,7 @@ import (
 type Options struct {
 	options.BaseOptions
 
+	ScmDiscover             scmhelpers.Options
 	Args                    []string
 	Format                  string
 	Namespace               string
@@ -96,6 +98,7 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
+	cmd.Flags().StringVarP(&o.ScmDiscover.Dir, "dir", "", ".", "the directory to search for the .git to discover the git source URL")
 	cmd.Flags().BoolVarP(&o.Tail, "tail", "t", true, "Tails the build log to the current terminal")
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "w", false, "Waits for the build to start before failing")
 	cmd.Flags().BoolVarP(&o.FailIfPodFails, "fail-with-pod", "", false, "Return an error if the pod fails")
@@ -159,18 +162,12 @@ func (o *Options) Run() error {
 // getProwBuildLog prompts the user, if needed, to choose a pipeline, and then prints out that pipeline's logs.
 func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) error {
 	if o.CurrentFolder {
-		currentDirectory, err := os.Getwd()
+		err := o.ScmDiscover.Validate()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to discover current git repository in dir %s", o.ScmDiscover.Dir)
 		}
-
-		gitRepository, err := gits.NewGitCLI().Info(currentDirectory)
-		if err != nil {
-			return err
-		}
-
-		o.BuildFilter.Repository = gitRepository.Name
-		o.BuildFilter.Owner = gitRepository.Organisation
+		o.BuildFilter.Repository = o.ScmDiscover.Repository
+		o.BuildFilter.Owner = o.ScmDiscover.Owner
 	}
 
 	var err error
@@ -194,7 +191,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	if err != nil {
 		if o.Wait && waitableCondition {
 			log.Logger().Info("The selected pipeline didn't start, let's wait a bit")
-			err = util.Retry(o.WaitForPipelineDuration, f)
+			err = Retry(o.WaitForPipelineDuration, f)
 			if err != nil {
 				return err
 			}
@@ -202,6 +199,15 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 		return err
 	}
 	return nil
+}
+
+// Retry retries with exponential backoff the given function
+func Retry(maxElapsedTime time.Duration, f func() error) error {
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = maxElapsedTime
+	bo.Reset()
+	return backoff.Retry(f, bo)
+
 }
 
 func (o *Options) getTektonLogs() (bool, error) {
