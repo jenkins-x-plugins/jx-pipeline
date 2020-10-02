@@ -15,8 +15,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
-	"github.com/jenkins-x/jx-pipeline/pkg/logs"
-	"github.com/jenkins-x/jx/v2/pkg/builds"
+	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx/v2/pkg/gits"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -32,19 +31,20 @@ import (
 type Options struct {
 	options.BaseOptions
 
-	KubeClient              kubernetes.Interface
-	JXClient                versioned.Interface
-	TektonClient            tektonclient.Interface
+	Args                    []string
 	Format                  string
 	Namespace               string
 	Tail                    bool
 	Wait                    bool
 	CurrentFolder           bool
-	WaitForPipelineDuration time.Duration
-	BuildFilter             builds.BuildPodInfoFilter
-	TektonLogger            *logs.TektonLogger
-	Input                   input.Interface
 	FailIfPodFails          bool
+	WaitForPipelineDuration time.Duration
+	BuildFilter             tektonlog.BuildPodInfoFilter
+	KubeClient              kubernetes.Interface
+	JXClient                versioned.Interface
+	TektonClient            tektonclient.Interface
+	TektonLogger            *tektonlog.TektonLogger
+	Input                   input.Interface
 	Out                     io.Writer
 }
 
@@ -90,6 +90,7 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 		Example: cmdExample,
 		Aliases: []string{"logs"},
 		Run: func(cmd *cobra.Command, args []string) {
+			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -98,18 +99,10 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "w", false, "Waits for the build to start before failing")
 	cmd.Flags().BoolVarP(&o.FailIfPodFails, "fail-with-pod", "", false, "Return an error if the pod fails")
 	cmd.Flags().DurationVarP(&o.WaitForPipelineDuration, "wait-duration", "d", time.Minute*5, "Timeout period waiting for the given pipeline to be created")
-	cmd.Flags().BoolVarP(&o.BuildFilter.Pending, "pending", "p", false, "Only display logs which are currently pending to choose from if no build name is supplied")
-	cmd.Flags().StringVarP(&o.BuildFilter.Filter, "filter", "f", "", "Filters all the available jobs by those that contain the given text")
-	cmd.Flags().StringVarP(&o.BuildFilter.Owner, "owner", "o", "", "Filters the owner (person/organisation) of the repository")
-	cmd.Flags().StringVarP(&o.BuildFilter.Repository, "repo", "r", "", "Filters the build repository")
-	cmd.Flags().StringVarP(&o.BuildFilter.Branch, "branch", "", "", "Filters the branch")
-	cmd.Flags().StringVarP(&o.BuildFilter.Build, "build", "", "", "The build number to view")
-	cmd.Flags().StringVarP(&o.BuildFilter.Pod, "pod", "", "", "The pod name to view")
-	cmd.Flags().StringVarP(&o.BuildFilter.GitURL, "giturl", "g", "", "The git URL to filter on. If you specify a link to a github repository or PR we can filter the query of build pods accordingly")
-	cmd.Flags().StringVarP(&o.BuildFilter.Context, "context", "", "", "Filters the context of the build")
 	cmd.Flags().BoolVarP(&o.CurrentFolder, "current", "c", false, "Display logs using current folder as repo name, and parent folder as owner")
 
 	o.BaseOptions.AddBaseFlags(cmd)
+	o.BuildFilter.AddFlags(cmd)
 	return cmd, o
 }
 
@@ -159,11 +152,11 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	return o.getProwBuildLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace, true)
+	return o.getProwBuildLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace)
 }
 
 // getProwBuildLog prompts the user, if needed, to choose a pipeline, and then prints out that pipeline's logs.
-func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string, tektonEnabled bool) error {
+func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) error {
 	if o.CurrentFolder {
 		currentDirectory, err := os.Getwd()
 		if err != nil {
@@ -182,7 +175,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	var err error
 
 	if o.TektonLogger == nil {
-		o.TektonLogger = &logs.TektonLogger{
+		o.TektonLogger = &tektonlog.TektonLogger{
 			KubeClient:     kubeClient,
 			TektonClient:   tektonClient,
 			JXClient:       jxClient,
@@ -192,7 +185,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	}
 	var waitableCondition bool
 	f := func() error {
-		waitableCondition, err = o.getTektonLogs(kubeClient, tektonClient, jxClient, ns)
+		waitableCondition, err = o.getTektonLogs()
 		return err
 	}
 
@@ -200,7 +193,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	if err != nil {
 		if o.Wait && waitableCondition {
 			log.Logger().Info("The selected pipeline didn't start, let's wait a bit")
-			err := util.Retry(o.WaitForPipelineDuration, f)
+			err = util.Retry(o.WaitForPipelineDuration, f)
 			if err != nil {
 				return err
 			}
@@ -210,15 +203,20 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	return nil
 }
 
-func (o *Options) getTektonLogs(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) (bool, error) {
+func (o *Options) getTektonLogs() (bool, error) {
 	var defaultName string
 
-	names, paMap, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(o.BuildFilter.LabelSelectorsForActivity())
+	names, paMap, prMap, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(&o.BuildFilter)
 	if err != nil {
 		return true, err
 	}
 
-	filter := o.BuildFilter.Filter
+	var filter string
+	if len(o.Args) > 0 {
+		filter = o.Args[0]
+	} else {
+		filter = o.BuildFilter.Filter
+	}
 
 	var filteredNames []string
 	for _, n := range names {
@@ -242,14 +240,13 @@ func (o *Options) getTektonLogs(kubeClient kubernetes.Interface, tektonClient te
 	}
 
 	pa, exists := paMap[name]
+	prList := prMap[name]
+
 	if !exists {
 		return true, errors.New("there are no build logs for the supplied filters")
 	}
 
 	if pa.Spec.BuildLogsURL != "" {
-		if err != nil {
-			return false, err
-		}
 		for line := range o.TektonLogger.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL, nil) {
 			fmt.Fprintln(o.Out, line.Line)
 		}
@@ -258,7 +255,8 @@ func (o *Options) getTektonLogs(kubeClient kubernetes.Interface, tektonClient te
 
 	log.Logger().Infof("Build logs for %s", util.ColorInfo(name))
 	name = strings.TrimSuffix(name, " ")
-	for line := range o.TektonLogger.GetRunningBuildLogs(pa, name, false) {
+
+	for line := range o.TektonLogger.GetRunningBuildLogs(pa, prList, name, false) {
 		fmt.Fprintln(o.Out, line.Line)
 	}
 	return false, o.TektonLogger.Err()

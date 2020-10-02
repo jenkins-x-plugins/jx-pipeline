@@ -12,8 +12,8 @@ import (
 	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
 	"github.com/jenkins-x/jx/v2/pkg/cmd/testhelpers"
 	"github.com/jenkins-x/jx/v2/pkg/gits"
-	helm_test "github.com/jenkins-x/jx/v2/pkg/helm/mocks"
-	resources_test "github.com/jenkins-x/jx/v2/pkg/kube/resources/mocks"
+	helmtest "github.com/jenkins-x/jx/v2/pkg/helm/mocks"
+	resourcestest "github.com/jenkins-x/jx/v2/pkg/kube/resources/mocks"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -70,8 +70,8 @@ var _ = Describe("get activity", func() {
 				[]runtime.Object{},
 				&gits.GitFake{CurrentBranch: "job"},
 				&gits.FakeProvider{},
-				helm_test.NewMockHelmer(),
-				resources_test.NewMockInstaller(),
+				helmtest.NewMockHelmer(),
+				resourcestest.NewMockInstaller(),
 			)
 
 			c, ns, _ := commonOpts.JXClient()

@@ -152,7 +152,7 @@ func (o *Options) waitForRepositoryToBeSetup(kubeClient kubernetes.Interface, ns
 	}
 }
 
-func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns string, owner string, repository string) error {
+func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns, owner, repository string) error {
 	end := time.Now().Add(o.WaitDuration)
 	name := naming.ToValidName(o.Owner + "-" + o.Repository)
 	logWaiting := false
