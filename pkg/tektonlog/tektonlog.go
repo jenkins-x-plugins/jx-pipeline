@@ -81,10 +81,6 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 		paNameMap[p.Name] = p
 	}
 
-	sort.Slice(paList.Items, func(i, j int) bool {
-		return paList.Items[i].CreationTimestamp.After(paList.Items[j].CreationTimestamp.Time)
-	})
-
 	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(metav1.ListOptions{})
 	log.Logger().Debugf("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
 
@@ -107,6 +103,15 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 		prMap[fullBuildName] = append(prMap[fullBuildName], p)
 	}
 
+	// lets make a sorted list of activities and use that...
+	var sortedPA []*v1.PipelineActivity
+	for _, pa := range paNameMap {
+		sortedPA = append(sortedPA, pa)
+	}
+	sort.Slice(sortedPA, func(i, j int) bool {
+		return sortedPA[i].CreationTimestamp.After(sortedPA[j].CreationTimestamp.Time)
+	})
+
 	paMap := make(map[string]*v1.PipelineActivity)
 	for _, p := range paNameMap {
 		if filter.Matches(p) {
@@ -115,7 +120,8 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 	}
 
 	var names []string
-	for paName, pa := range paMap {
+	for _, pa := range sortedPA {
+		paName := createPipelineActivityName(pa)
 		if _, exists := prMap[paName]; exists {
 			hasNonPendingPR := false
 			for _, pr := range prMap[paName] {
