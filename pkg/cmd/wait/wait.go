@@ -1,16 +1,22 @@
 package wait
 
 import (
+	"strings"
 	"time"
 
 	"github.com/jenkins-x/go-scm/scm"
+	jxc "github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/lighthouse/pkg/config"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
@@ -29,6 +35,7 @@ type Options struct {
 	LighthouseConfigMap string
 	Namespace           string
 	KubeClient          kubernetes.Interface
+	JXClient            jxc.Interface
 }
 
 var (
@@ -78,6 +85,10 @@ func (o *Options) Validate() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create kube client")
 	}
+	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create jx client")
+	}
 
 	if o.Owner == "" {
 		return options.MissingOption("owner")
@@ -99,13 +110,18 @@ func (o *Options) Run() error {
 
 	exists, err := o.waitForRepositoryToBeSetup(o.KubeClient, o.Namespace, fullName)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get trigger names")
+		return errors.Wrapf(err, "failed to wait for repository to be setup in lighthouse")
 	}
 	if !exists {
-		return errors.Errorf("reppository %s is not yet setup in lighthouse", fullName)
+		return errors.Errorf("repository %s is not yet setup in lighthouse", fullName)
 	}
 
-	log.Logger().Infof("the repository %s is now setup in lighthouse", info(fullName))
+	err = o.waitForWebHookToBeSetup(o.JXClient, o.Namespace, o.Owner, o.Repository)
+	if err != nil {
+		return errors.Wrapf(err, "failed to wait for repository to have its webhook enabled")
+	}
+
+	log.Logger().Infof("the repository %s is now setup in lighthouse and has its webhook enabled", info(fullName))
 	return nil
 }
 
@@ -131,6 +147,64 @@ func (o *Options) waitForRepositoryToBeSetup(kubeClient kubernetes.Interface, ns
 		if !logWaiting {
 			logWaiting = true
 			log.Logger().Infof("waiting up to %s for a trigger to be added to the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s", info(o.WaitDuration.String()), info(name), info(ns), info(fullName))
+		}
+		time.Sleep(o.PollPeriod)
+	}
+}
+
+func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns string, owner string, repository string) error {
+	end := time.Now().Add(o.WaitDuration)
+	name := naming.ToValidName(o.Owner + "-" + o.Repository)
+	logWaiting := false
+
+	fullName := scm.Join(owner, repository)
+	lastValue := ""
+	found := false
+	lastFailMessage := ""
+
+	for {
+		sr, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return errors.Wrapf(err, "failed to find SourceRepository %s in namespace %s", name, ns)
+			}
+		} else {
+			if !found {
+				found = true
+				log.Logger().Infof("found SourceRepository %s for %s", info(sr.Name), info(sr.Spec.URL))
+			}
+
+			if sr.Annotations == nil {
+				sr.Annotations = map[string]string{}
+			}
+			value := sr.Annotations["webhook.jenkins-x.io"]
+			if value != "" {
+				if value != lastValue {
+					lastValue = value
+					log.Logger().Infof("webhook status annotation is: %s", info(value))
+
+					if value == "true" {
+						return nil
+					}
+
+					if strings.HasPrefix(strings.ToLower(value), "err") {
+						failure := sr.Annotations["webhook.jenkins-x.io/error"]
+						if failure != "" && failure != lastFailMessage {
+							lastFailMessage = failure
+							log.Logger().Warnf("when creating webhook: %s", lastFailMessage)
+						}
+					}
+				}
+			}
+		}
+
+		if time.Now().After(end) {
+			return errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
+		}
+
+		if !logWaiting {
+			logWaiting = true
+			log.Logger().Infof("waiting up to %s the webhook to be registered for the SourceRepository %s in namespace %s for repository: %s", info(o.WaitDuration.String()), info(name), info(ns), info(fullName))
 		}
 		time.Sleep(o.PollPeriod)
 	}
