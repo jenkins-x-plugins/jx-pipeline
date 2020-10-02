@@ -139,7 +139,7 @@ func (o *Options) Run() error {
 	t := table.CreateTable(out)
 	t.AddRow("OWNER", "REPOSITORY", "BRANCH", "BUILD", "CONTEXT", "AGE", "STATUS", "POD", "GIT URL")
 
-	buildInfos := []*builds.BuildPodInfo{}
+	var buildInfos []*builds.BuildPodInfo
 	for _, pod := range pods {
 		buildInfo := builds.CreateBuildPodInfo(pod)
 		if o.BuildFilter.BuildMatches(buildInfo) {

@@ -132,7 +132,8 @@ func (o *Options) renderPostsubmits() error {
 	t.AddRow("REPOSITORY", "NAME", "BRANCHES")
 
 	for repo, submits := range cfg.Postsubmits {
-		for _, submit := range submits {
+		for i := range submits {
+			submit := &submits[i]
 			t.AddRow(repo, submit.Name, strings.Join(submit.Branches, ", "))
 		}
 	}
@@ -152,7 +153,8 @@ func (o *Options) renderPresubmits() error {
 	t.AddRow("REPOSITORY", "CONTEXT", "RERUN COMMAND")
 
 	for repo, submits := range cfg.Presubmits {
-		for _, submit := range submits {
+		for i := range submits {
+			submit := &submits[i]
 			t.AddRow(repo, submit.Name, submit.RerunCommand)
 		}
 	}
@@ -176,7 +178,7 @@ func (o *Options) renderPipelineRuns() error {
 	}
 
 	var owner, repo, branch, context, buildNumber, status string
-	names := []string{}
+	var names []string
 	m := map[string]*pipelineapi.PipelineRun{}
 	for k := range prList.Items {
 		pr := prList.Items[k]

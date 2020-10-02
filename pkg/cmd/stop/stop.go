@@ -79,15 +79,6 @@ func NewCmdPipelineStop(commonOpts *opts.CommonOptions) (*cobra.Command, *Option
 
 // Run implements this command
 func (o *Options) Run() error {
-	devEnv, _, err := o.DevEnvAndTeamSettings()
-	if err != nil {
-		return err
-	}
-
-	isProw := devEnv.Spec.IsProwOrLighthouse()
-	if !isProw {
-		return errors.New("Only prow/lighthouse is supported as a webhook engine")
-	}
 	return o.cancelPipelineRun()
 }
 
@@ -105,7 +96,7 @@ func (o *Options) cancelPipelineRun() error {
 	if len(prList.Items) == 0 {
 		return errors.Wrapf(err, "no PipelineRuns were found in namespace %s", ns)
 	}
-	allNames := []string{}
+	var allNames []string
 	m := map[string]*pipelineapi.PipelineRun{}
 	for k := range prList.Items {
 		pr := prList.Items[k]
@@ -159,13 +150,15 @@ func (o *Options) cancelPipelineRun() error {
 
 	args := o.Args
 	if len(args) == 0 {
-		name, err := util.PickName(names, "Which pipeline do you want to stop: ",
+		var name string
+		name, err = util.PickName(names, "Which pipeline do you want to stop: ",
 			"select a pipeline to cancel", o.GetIOFileHandles())
 		if err != nil {
 			return err
 		}
 
-		if answer, err := util.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
+		var answer bool
+		if answer, err = util.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
 			"you can always restart a cancelled pipeline with 'jx start pipeline'",
 			o.GetIOFileHandles()); !answer {
 			return err
@@ -177,19 +170,20 @@ func (o *Options) cancelPipelineRun() error {
 		if pr == nil {
 			return fmt.Errorf("no PipelineRun found for name %s", a)
 		}
-		pr, err = pipelines.Get(pr.Name, metav1.GetOptions{})
+		prName := pr.Name
+		pr, err = pipelines.Get(prName, metav1.GetOptions{})
 		if err != nil {
-			return errors.Wrapf(err, "getting PipelineRun %s", pr.Name)
+			return errors.Wrapf(err, "getting PipelineRun %s", prName)
 		}
 		if tekton.PipelineRunIsComplete(pr) {
-			log.Logger().Infof("PipelineRun %s has already completed", util.ColorInfo(pr.Name))
+			log.Logger().Infof("PipelineRun %s has already completed", util.ColorInfo(prName))
 			continue
 		}
 		err = tekton.CancelPipelineRun(tektonClient, ns, pr)
 		if err != nil {
-			return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", pr.Name, ns)
+			return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
 		}
-		log.Logger().Infof("cancelled PipelineRun %s", util.ColorInfo(pr.Name))
+		log.Logger().Infof("cancelled PipelineRun %s", util.ColorInfo(prName))
 	}
 	return nil
 }

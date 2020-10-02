@@ -159,11 +159,11 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	return o.getProwBuildLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace, true)
+	return o.getProwBuildLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace)
 }
 
 // getProwBuildLog prompts the user, if needed, to choose a pipeline, and then prints out that pipeline's logs.
-func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string, tektonEnabled bool) error {
+func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) error {
 	if o.CurrentFolder {
 		currentDirectory, err := os.Getwd()
 		if err != nil {
@@ -192,7 +192,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	}
 	var waitableCondition bool
 	f := func() error {
-		waitableCondition, err = o.getTektonLogs(kubeClient, tektonClient, jxClient, ns)
+		waitableCondition, err = o.getTektonLogs()
 		return err
 	}
 
@@ -200,7 +200,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	if err != nil {
 		if o.Wait && waitableCondition {
 			log.Logger().Info("The selected pipeline didn't start, let's wait a bit")
-			err := util.Retry(o.WaitForPipelineDuration, f)
+			err = util.Retry(o.WaitForPipelineDuration, f)
 			if err != nil {
 				return err
 			}
@@ -210,7 +210,7 @@ func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient 
 	return nil
 }
 
-func (o *Options) getTektonLogs(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) (bool, error) {
+func (o *Options) getTektonLogs() (bool, error) {
 	var defaultName string
 
 	names, paMap, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(o.BuildFilter.LabelSelectorsForActivity())
@@ -247,9 +247,6 @@ func (o *Options) getTektonLogs(kubeClient kubernetes.Interface, tektonClient te
 	}
 
 	if pa.Spec.BuildLogsURL != "" {
-		if err != nil {
-			return false, err
-		}
 		for line := range o.TektonLogger.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL, nil) {
 			fmt.Fprintln(o.Out, line.Line)
 		}

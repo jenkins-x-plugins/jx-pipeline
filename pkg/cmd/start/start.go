@@ -133,7 +133,8 @@ func (o *Options) Run() error {
 				break
 			}
 		}
-		name, err := util.PickNameWithDefault(names, "Which pipeline do you want to start: ", defaultName, "", o.GetIOFileHandles())
+		name := ""
+		name, err = util.PickNameWithDefault(names, "Which pipeline do you want to start: ", defaultName, "", o.GetIOFileHandles())
 		if err != nil {
 			return err
 		}

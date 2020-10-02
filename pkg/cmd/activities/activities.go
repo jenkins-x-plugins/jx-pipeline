@@ -148,9 +148,9 @@ func (o *Options) Run() error {
 		activities.SortActivities(list.Items)
 	}
 
-	for _, activity := range list.Items {
-		a := activity
-		o.addTableRow(&t, &a)
+	for i := range list.Items {
+		a := &list.Items[i]
+		o.addTableRow(&t, a)
 	}
 	t.Render()
 
@@ -290,14 +290,14 @@ func addPromoteRow(t *table.Table, parent *v1.PromoteActivityStep, indent string
 	}
 	if update != nil {
 		addStepRowItem(t, &update.CoreActivityStep, indent, "Update", describePromoteUpdate(update))
-	}
-	appURL := parent.ApplicationURL
-	if appURL != "" {
-		addStepRowItem(t, &update.CoreActivityStep, indent, "Promoted", " Application is at: "+util.ColorInfo(appURL))
+
+		if parent.ApplicationURL != "" {
+			addStepRowItem(t, &update.CoreActivityStep, indent, "Promoted", " Application is at: "+util.ColorInfo(parent.ApplicationURL))
+		}
 	}
 }
 
-func addStepRowItem(t *table.Table, step *v1.CoreActivityStep, indent string, name string, description string) {
+func addStepRowItem(t *table.Table, step *v1.CoreActivityStep, indent, name, description string) {
 	text := step.Description
 	if description != "" {
 		if text == "" {
@@ -309,10 +309,8 @@ func addStepRowItem(t *table.Table, step *v1.CoreActivityStep, indent string, na
 	textName := step.Name
 	if textName == "" {
 		textName = name
-	} else {
-		if name != "" {
-			textName = name + ":" + textName
-		}
+	} else if name != "" {
+		textName = name + ":" + textName
 	}
 	t.AddRow(indent+textName,
 		timeToString(step.StartedTimestamp),

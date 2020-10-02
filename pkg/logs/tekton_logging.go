@@ -64,7 +64,7 @@ type LogLine struct {
 }
 
 // GetTektonPipelinesWithActivePipelineActivity returns list of all PipelineActivities with corresponding Tekton PipelineRuns ordered by the PipelineRun creation timestamp and a map to obtain its reference once a name has been selected
-func (t TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []string) ([]string, map[string]*v1.PipelineActivity, error) {
+func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []string) ([]string, map[string]*v1.PipelineActivity, error) {
 	labelsFilter := strings.Join(filters, ",")
 	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(metav1.ListOptions{
 		LabelSelector: labelsFilter,
@@ -78,9 +78,9 @@ func (t TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []str
 	})
 
 	paMap := make(map[string]*v1.PipelineActivity)
-	for _, pa := range paList.Items {
-		p := pa
-		paMap[createPipelineActivityName(p.Labels, p.Spec.Build)] = &p
+	for i := range paList.Items {
+		p := &paList.Items[i]
+		paMap[createPipelineActivityName(p.Labels, p.Spec.Build)] = p
 	}
 
 	tektonPRs, _ := t.TektonClient.TektonV1alpha1().PipelineRuns(t.Namespace).List(metav1.ListOptions{
@@ -96,8 +96,8 @@ func (t TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []str
 	}
 
 	prMap := make(map[string][]*tektonapis.PipelineRun)
-	for _, pr := range tektonPRs.Items {
-		p := pr
+	for i := range tektonPRs.Items {
+		p := &tektonPRs.Items[i]
 		prStatus := p.Status.GetCondition(knativeapis.ConditionSucceeded)
 		// Don't include any pipeline runs that failed due to Tekton race conditions and were auto-restarted by Prow
 		if prStatus != nil && prStatus.IsFalse() &&
@@ -107,17 +107,18 @@ func (t TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filters []str
 		}
 		prBuildNumber := p.Labels[v1.LabelBuild]
 		if prBuildNumber == "" {
-			prBuildNumber = findLegacyPipelineRunBuildNumber(&p)
+			prBuildNumber = findLegacyPipelineRunBuildNumber(p)
 		}
 		paName := createPipelineActivityName(p.Labels, prBuildNumber)
 		if _, exists := prMap[paName]; !exists {
 			prMap[paName] = []*tektonapis.PipelineRun{}
 		}
-		prMap[paName] = append(prMap[paName], &p)
+		prMap[paName] = append(prMap[paName], p)
 	}
 
 	var names []string
-	for _, pa := range paList.Items {
+	for i := range paList.Items {
+		pa := &paList.Items[i]
 		paName := createPipelineActivityName(pa.Labels, pa.Spec.Build)
 		if _, exists := prMap[paName]; exists {
 			hasNonPendingPR := false
@@ -195,21 +196,20 @@ func getPipelineRunsForActivity(pa *v1.PipelineActivity, tektonClient tektonclie
 	})
 
 	runs := make(map[string]tektonapis.PipelineRun)
-	for _, pr := range tektonPRs.Items {
-		pipelineRun := pr
+	for i := range tektonPRs.Items {
+		pipelineRun := &tektonPRs.Items[i]
 		buildNumber := pipelineRun.Labels[tekton.LabelBuild]
 		if buildNumber == "" {
-			buildNumber = findLegacyPipelineRunBuildNumber(&pipelineRun)
+			buildNumber = findLegacyPipelineRunBuildNumber(pipelineRun)
 		}
 		pipelineType := pipelineRun.Labels[tekton.LabelType]
 		if pipelineType == "" {
 			pipelineType = tekton.BuildPipeline.String()
 		}
 		if buildNumber == pa.Spec.Build {
-			runs[pipelineType] = pipelineRun
+			runs[pipelineType] = *pipelineRun
 		}
 	}
-
 	return runs, nil
 }
 
@@ -226,7 +226,7 @@ func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, buildName st
 	return ch
 }
 
-func (t TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, buildName string, noWaitForRuns bool, out chan<- LogLine) error {
+func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, buildName string, noWaitForRuns bool, out chan<- LogLine) error {
 	loggedAllRunsForActivity := false
 	foundLogs := false
 
@@ -292,7 +292,7 @@ func (t TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, buildName str
 					stageName := pod.Labels["jenkins.io/task-stage-name"]
 					params := builds.CreateBuildPodInfo(pod)
 					if _, seen := stagesSeen[stageName]; !seen && params.Organisation == pa.Spec.GitOwner && params.Repository == pa.Spec.GitRepository &&
-						strings.ToLower(params.Branch) == strings.ToLower(pa.Spec.GitBranch) && params.Build == pa.Spec.Build {
+						strings.EqualFold(params.Branch, pa.Spec.GitBranch) && params.Build == pa.Spec.Build {
 						stagesSeen[stageName] = true
 						foundLogs = true
 						err := t.getContainerLogsFromPod(pod, pa, buildName, stageName, out)
@@ -322,15 +322,16 @@ func (t TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, buildName str
 	return nil
 }
 
-func (t *TektonLogger) getContainerLogsFromPod(pod *corev1.Pod, pa *v1.PipelineActivity, buildName string, stageName string, out chan<- LogLine) error {
+func (t *TektonLogger) getContainerLogsFromPod(pod *corev1.Pod, pa *v1.PipelineActivity, buildName, stageName string, out chan<- LogLine) error {
 	infoColor := color.New(color.FgGreen)
 	infoColor.EnableColor()
 	errorColor := color.New(color.FgRed)
 	errorColor.EnableColor()
 	containers, _, _ := kube.GetContainersWithStatusAndIsInit(pod)
-	for i, initContainer := range containers {
-		ic := initContainer
-		pod, err := t.waitForContainerToStart(pa.Namespace, pod, i, stageName, out)
+	for i := range containers {
+		ic := &containers[i]
+		var err error
+		pod, err = t.waitForContainerToStart(pa.Namespace, pod, i, stageName, out)
 		out <- LogLine{
 			Line: fmt.Sprintf("\nShowing logs for build %v stage %s and container %s",
 				infoColor.Sprintf(buildName), infoColor.Sprintf(stageName), infoColor.Sprintf(ic.Name)),
@@ -338,16 +339,13 @@ func (t *TektonLogger) getContainerLogsFromPod(pod *corev1.Pod, pa *v1.PipelineA
 		if err != nil {
 			return errors.Wrapf(err, "there was a problem writing a single line into the logs writer")
 		}
-		err = t.fetchLogsToChannel(pa.Namespace, pod, &ic, out)
+		err = t.fetchLogsToChannel(pod, ic, out)
 		if err != nil {
 			return errors.Wrap(err, "couldn't fetch logs into the logs channel")
 		}
 		if hasStepFailed(pod, i, t.KubeClient, pa.Namespace) {
 			out <- LogLine{
 				Line: errorColor.Sprintf("\nPipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped.", stageName, ic.Name),
-			}
-			if err != nil {
-				return err
 			}
 			if t.FailIfPodFails {
 				return errors.Errorf("Pipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped.", stageName, ic.Name)
@@ -358,7 +356,7 @@ func (t *TektonLogger) getContainerLogsFromPod(pod *corev1.Pod, pa *v1.PipelineA
 	return nil
 }
 
-func (t *TektonLogger) fetchLogsToChannel(ns string, pod *corev1.Pod, container *corev1.Container, out chan<- LogLine) error {
+func (t *TektonLogger) fetchLogsToChannel(pod *corev1.Pod, container *corev1.Container, out chan<- LogLine) error {
 	logsRetrieverFunc := t.LogsRetrieverFunc
 	if logsRetrieverFunc == nil {
 		logsRetrieverFunc = retrieveLogsFromPod
@@ -398,7 +396,7 @@ func hasStepFailed(pod *corev1.Pod, stepNumber int, kubeClient kubernetes.Interf
 	return false
 }
 
-func (t TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx int, stageName string, out chan<- LogLine) (*corev1.Pod, error) {
+func (t *TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx int, stageName string, out chan<- LogLine) (*corev1.Pod, error) {
 	if pod.Status.Phase == corev1.PodFailed {
 		return pod, nil
 	}
@@ -451,7 +449,8 @@ func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, authSvc auth
 		reader, err := performProviderDownload(logsURL, t.JXClient, t.Namespace)
 		if err != nil {
 			// TODO: This is only here as long as we keep supporting non boot clusters, as GKE are the only ones with LTS supported outside of boot
-			reader, err2 := gke.StreamTransferFileFromBucket(logsURL)
+			var err2 error
+			reader, err2 = gke.StreamTransferFileFromBucket(logsURL)
 			if err2 != nil {
 				return errorutil.CombineErrors(err, err2)
 			}
