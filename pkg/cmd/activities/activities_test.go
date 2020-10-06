@@ -3,112 +3,63 @@
 package activities_test
 
 import (
-	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/jenkins-x/jx/v2/pkg/cmd/get"
-
-	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/testhelpers"
-	"github.com/jenkins-x/jx/v2/pkg/gits"
-	helmtest "github.com/jenkins-x/jx/v2/pkg/helm/mocks"
-	resourcestest "github.com/jenkins-x/jx/v2/pkg/kube/resources/mocks"
+	fakejx "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/fake"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/activities"
+	"github.com/jenkins-x/jx-pipeline/pkg/testpipelines"
+	"github.com/stretchr/testify/require"
+	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestGetActivity(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Get Activity Suite")
+	ns := "jx"
+	stdout := &strings.Builder{}
+
+	jxClient := fakejx.NewSimpleClientset()
+
+	testpipelines.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "1", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
+	testpipelines.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "2", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
+
+	kubeClient := fake.NewSimpleClientset(
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ns,
+			},
+		},
+	)
+
+	_, options := activities.NewCmdActivities()
+	options.JXClient = jxClient
+	options.KubeClient = kubeClient
+	options.TektonClient = faketekton.NewSimpleClientset()
+	options.Namespace = ns
+	options.Out = stdout
+
+	err := options.Run()
+	require.NoError(t, err, "failed to run command")
+
+	text := stdout.String()
+
+	t.Logf("got: %s\n", text)
+
+	orderedExpectedStrings := []string{
+		"STARTED AGO DURATION STATUS",
+		"jx-testing/jx-testing/job #1",
+		"jx-testing/jx-testing/job #2",
+	}
+
+	for _, expected := range orderedExpectedStrings {
+		require.Contains(t, text, expected)
+
+		// strip the text
+		idx := strings.Index(text, expected)
+		text = text[idx+len(expected):]
+	}
 }
-
-var _ = Describe("get activity", func() {
-	Describe("Run()", func() {
-		var (
-			originalRepoOwner  string
-			originalRepoName   string
-			originalJobName    string
-			originalBranchName string
-
-			sort   bool
-			err    error
-			stdout *testhelpers.FakeOut
-		)
-
-		BeforeEach(func() {
-			originalRepoOwner = os.Getenv("REPO_OWNER")
-			originalRepoName = os.Getenv("REPO_NAME")
-			originalJobName = os.Getenv("JOB_NAME")
-			originalBranchName = os.Getenv("BRANCH_NAME")
-
-			os.Setenv("REPO_OWNER", "jx-testing")
-			os.Setenv("REPO_NAME", "jx-testing")
-			os.Setenv("JOB_NAME", "job")
-			os.Setenv("BRANCH_NAME", "job")
-		})
-
-		AfterEach(func() {
-			os.Setenv("REPO_OWNER", originalRepoOwner)
-			os.Setenv("REPO_NAME", originalRepoName)
-			os.Setenv("JOB_NAME", originalJobName)
-			os.Setenv("BRANCH_NAME", originalBranchName)
-		})
-
-		JustBeforeEach(func() {
-			stdout = &testhelpers.FakeOut{}
-			commonOpts := &opts.CommonOptions{
-				Out: stdout,
-			}
-			commonOpts.SetDevNamespace("jx")
-
-			testhelpers.ConfigureTestOptionsWithResources(commonOpts,
-				[]runtime.Object{},
-				[]runtime.Object{},
-				&gits.GitFake{CurrentBranch: "job"},
-				&gits.FakeProvider{},
-				helmtest.NewMockHelmer(),
-				resourcestest.NewMockInstaller(),
-			)
-
-			c, ns, _ := commonOpts.JXClient()
-
-			testhelpers.CreateTestPipelineActivityWithTime(c, ns, "jx-testing", "jx-testing", "job", "1", "workflow", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
-			testhelpers.CreateTestPipelineActivityWithTime(c, ns, "jx-testing", "jx-testing", "job", "2", "workflow", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
-
-			options := &get.GetActivityOptions{
-				CommonOptions: commonOpts,
-				Sort:          sort,
-			}
-
-			err = options.Run()
-		})
-
-		Context("Without flags", func() {
-			BeforeEach(func() {
-				sort = false
-			})
-
-			It("Prints a list of activities", func() {
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stdout.GetOutput()).To(ContainSubstring(`STARTED AGO DURATION STATUS
-jx-testing/jx-testing/job #1`))
-			})
-		})
-
-		Context("With  the sort flag", func() {
-			BeforeEach(func() {
-				sort = true
-			})
-
-			It("Prints a sorted list of activities", func() {
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stdout.GetOutput()).To(ContainSubstring(`STARTED AGO DURATION STATUS
-jx-testing/jx-testing/job #2`))
-			})
-		})
-	})
-})

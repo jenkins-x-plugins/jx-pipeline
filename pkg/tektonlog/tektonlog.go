@@ -2,31 +2,24 @@ package tektonlog
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/jenkins-x/jx-helpers/pkg/kube/pods"
-	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/pods"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
+	"github.com/jenkins-x/jx-pipeline/pkg/cloud/buckets"
 	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
-	"github.com/jenkins-x/jx/v2/pkg/auth"
-	"github.com/jenkins-x/jx/v2/pkg/cloud/buckets"
-	"github.com/jenkins-x/jx/v2/pkg/config"
-	"github.com/jenkins-x/jx/v2/pkg/errorutil"
-	"github.com/jenkins-x/jx/v2/pkg/kube/naming"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/fatih/color"
-	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
-	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/cloud/factory"
-	"github.com/jenkins-x/jx/v2/pkg/cloud/gke"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/step"
-	"github.com/jenkins-x/jx/v2/pkg/kube"
+	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -46,6 +39,8 @@ type TektonLogger struct {
 	TektonClient      tektonclient.Interface
 	KubeClient        kubernetes.Interface
 	Namespace         string
+	GitUsername       string
+	GitToken          string
 	BytesLimit        int64
 	FailIfPodFails    bool
 	LogsRetrieverFunc retrieverFunc
@@ -70,7 +65,8 @@ type LogLine struct {
 
 // GetTektonPipelinesWithActivePipelineActivity returns list of all PipelineActivities with corresponding Tekton PipelineRuns ordered by the PipelineRun creation timestamp and a map to obtain its reference once a name has been selected
 func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *BuildPodInfoFilter) ([]string, map[string]*v1.PipelineActivity, map[string][]*tektonapis.PipelineRun, error) {
-	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(metav1.ListOptions{})
+	ctx := context.Background()
+	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, nil, nil, errors.Wrap(err, "there was a problem getting the PipelineActivities")
 	}
@@ -81,7 +77,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 		paNameMap[p.Name] = p
 	}
 
-	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(metav1.ListOptions{})
+	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(ctx, metav1.ListOptions{})
 	log.Logger().Debugf("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
 
 	prMap := make(map[string][]*tektonapis.PipelineRun)
@@ -147,7 +143,7 @@ func createPipelineActivityName(pa *v1.PipelineActivity) string {
 	owner := ps.GitOwner
 	repository := ps.GitRepository
 	branch := ps.GitBranch
-	context := ps.Context
+	triggerContext := ps.Context
 
 	baseName := fmt.Sprintf("%s/%s/%s #%s",
 		naming.ToValidName(owner),
@@ -155,14 +151,14 @@ func createPipelineActivityName(pa *v1.PipelineActivity) string {
 		naming.ToValidName(branch),
 		strings.ToLower(buildNumber))
 
-	if context != "" {
-		return fmt.Sprintf("%s %s", baseName, naming.ToValidName(context))
+	if triggerContext != "" {
+		return fmt.Sprintf("%s %s", baseName, naming.ToValidName(triggerContext))
 	}
 	return baseName
 }
 
 // GetRunningBuildLogs obtains the logs of the provided PipelineActivity and streams the running build pods' logs using the provided LogWriter
-func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, noWaitForRuns bool) <-chan LogLine {
+func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)
@@ -183,6 +179,7 @@ func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns
 	loggedAllRunsForActivity := false
 	foundLogs := false
 	completedPods := map[string]bool{}
+	ctx := context.Background()
 
 	// Make sure we check again for the build pipeline if we just get the metapipeline initially, assuming the metapipeline succeeds
 	for !loggedAllRunsForActivity {
@@ -217,7 +214,7 @@ func (t *TektonLogger) getRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns
 			}
 			log.Logger().Infof("logging pod: %s", info(podName))
 
-			pod, err := t.KubeClient.CoreV1().Pods(t.Namespace).Get(podName, metav1.GetOptions{})
+			pod, err := t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
 			}
@@ -252,7 +249,7 @@ func (t *TektonLogger) getContainerLogsFromPod(pod *corev1.Pod, pa *v1.PipelineA
 	infoColor.EnableColor()
 	errorColor := color.New(color.FgRed)
 	errorColor.EnableColor()
-	containers, _, _ := kube.GetContainersWithStatusAndIsInit(pod)
+	containers, _, _ := pods.GetContainersWithStatusAndIsInit(pod)
 	for i := range containers {
 		ic := &containers[i]
 		var err error
@@ -309,12 +306,13 @@ func writeStreamLines(reader io.Reader, out chan<- LogLine) error {
 }
 
 func hasStepFailed(pod *corev1.Pod, stepNumber int, kubeClient kubernetes.Interface, ns string) bool {
-	pod, err := kubeClient.CoreV1().Pods(ns).Get(pod.Name, metav1.GetOptions{})
+	ctx := context.Background()
+	pod, err := kubeClient.CoreV1().Pods(ns).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Logger().Error("couldn't find the updated pod to check the step status")
 		return false
 	}
-	_, containerStatus, _ := kube.GetContainersWithStatusAndIsInit(pod)
+	_, containerStatus, _ := pods.GetContainersWithStatusAndIsInit(pod)
 	if containerStatus[stepNumber].State.Terminated != nil && containerStatus[stepNumber].State.Terminated.ExitCode != 0 {
 		return true
 	}
@@ -322,14 +320,15 @@ func hasStepFailed(pod *corev1.Pod, stepNumber int, kubeClient kubernetes.Interf
 }
 
 func (t *TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx int, stageName string, out chan<- LogLine) (*corev1.Pod, error) {
+	ctx := context.Background()
 	if pod.Status.Phase == corev1.PodFailed {
 		return pod, nil
 	}
-	if kube.HasContainerStarted(pod, idx) {
+	if pods.HasContainerStarted(pod, idx) {
 		return pod, nil
 	}
 	containerName := ""
-	containers, _, _ := kube.GetContainersWithStatusAndIsInit(pod)
+	containers, _, _ := pods.GetContainersWithStatusAndIsInit(pod)
 	if idx < len(containers) {
 		containerName = containers[idx].Name
 	}
@@ -341,22 +340,22 @@ func (t *TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx i
 	}
 	for {
 		time.Sleep(time.Second)
-		p, err := t.KubeClient.CoreV1().Pods(ns).Get(pod.Name, metav1.GetOptions{})
+		p, err := t.KubeClient.CoreV1().Pods(ns).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
 			return p, errors.Wrapf(err, "failed to load pod %s", pod.Name)
 		}
-		if kube.HasContainerStarted(p, idx) {
+		if pods.HasContainerStarted(p, idx) {
 			return p, nil
 		}
 	}
 }
 
 // StreamPipelinePersistentLogs reads logs from the provided bucket URL and writes them using the provided LogWriter
-func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string, authSvc auth.ConfigService) <-chan LogLine {
+func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)
-		err := t.streamPipelinePersistentLogs(logsURL, authSvc, ch)
+		err := t.streamPipelinePersistentLogs(logsURL, ch)
 		if err != nil {
 			t.err = err
 		}
@@ -364,42 +363,12 @@ func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string, authSvc auth
 	return ch
 }
 
-func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, authSvc auth.ConfigService, out chan<- LogLine) error {
-	u, err := url.Parse(logsURL)
+func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, out chan<- LogLine) error {
+	reader, err := buckets.ReadURL(logsURL, 30*time.Second, t.CreateBucketHTTPFn())
 	if err != nil {
-		return errors.Wrapf(err, "unable to parse logs URL %s to retrieve scheme", logsURL)
+		return errors.Wrapf(err, "there was a problem obtaining the log file from the github pages URL %s", logsURL)
 	}
-	switch u.Scheme {
-	case "gs":
-		reader, err := performProviderDownload(logsURL, t.JXClient, t.Namespace)
-		if err != nil {
-			// TODO: This is only here as long as we keep supporting non boot clusters, as GKE are the only ones with LTS supported outside of boot
-			var err2 error
-			reader, err2 = gke.StreamTransferFileFromBucket(logsURL)
-			if err2 != nil {
-				return errorutil.CombineErrors(err, err2)
-			}
-			return t.streamPipedLogs(reader, out)
-		}
-		return t.streamPipedLogs(reader, out)
-	case "s3":
-		reader, err := performProviderDownload(logsURL, t.JXClient, t.Namespace)
-		if err != nil {
-			return errors.Wrap(err, "there was a problem downloading logs from s3 bucket")
-		}
-		return t.streamPipedLogs(reader, out)
-	case "http", "https":
-		reader, err := downloadLogFile(logsURL, authSvc)
-		if err != nil {
-			return errors.Wrapf(err, "there was a problem obtaining the log file from the github pages URL %s", logsURL)
-		}
-		return t.streamPipedLogs(reader, out)
-	default:
-		out <- LogLine{
-			Line: fmt.Sprintf("The provided logsURL scheme is not supported: %s", u.Scheme),
-		}
-	}
-	return nil
+	return t.streamPipedLogs(reader, out)
 }
 
 func (t *TektonLogger) streamPipedLogs(src io.ReadCloser, out chan<- LogLine) (err error) {
@@ -422,6 +391,7 @@ func (t *TektonLogger) streamPipedLogs(src io.ReadCloser, out chan<- LogLine) (e
 
 // Uses the same signature as retrieverFunc so it can be used in TektonLogger
 func retrieveLogsFromPod(pod *corev1.Pod, container *corev1.Container, limitBytes int64, client kubernetes.Interface) (io.ReadCloser, error) {
+	ctx := context.Background()
 	options := &corev1.PodLogOptions{
 		Container: container.Name,
 		Follow:    true,
@@ -430,34 +400,9 @@ func retrieveLogsFromPod(pod *corev1.Pod, container *corev1.Container, limitByte
 		options.LimitBytes = &limitBytes
 	}
 	req := client.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, options)
-	stream, err := req.Stream()
+	stream, err := req.Stream(ctx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "there was an error creating the logs stream for pod %s", pod.Name)
 	}
 	return stream, nil
-}
-
-func downloadLogFile(logsURL string, authSvc auth.ConfigService) (io.ReadCloser, error) {
-	reader, err := buckets.ReadURL(logsURL, 30*time.Second, step.CreateBucketHTTPFn(authSvc))
-	return reader, err
-}
-
-func performProviderDownload(logsURL string, jxClient versioned.Interface, ns string) (io.ReadCloser, error) {
-	provider, err := NewBucketProviderFromTeamSettingsConfiguration(jxClient, ns)
-	if err != nil {
-		return nil, errors.Wrap(err, "There was a problem obtaining a Bucket provider for bucket scheme gs://")
-	}
-	return provider.DownloadFileFromBucket(logsURL)
-}
-
-func NewBucketProviderFromTeamSettingsConfiguration(jxClient versioned.Interface, ns string) (buckets.Provider, error) {
-	teamSettings, err := kube.GetDevEnvTeamSettings(jxClient, ns)
-	if err != nil {
-		return nil, errors.Wrap(err, "error obtaining the dev environment teamSettings to select the correct bucket provider")
-	}
-	requirements, err := config.GetRequirementsConfigFromTeamSettings(teamSettings)
-	if err != nil || requirements == nil {
-		return nil, errorutil.CombineErrors(err, errors.New("error obtaining the requirements file to decide bucket provider"))
-	}
-	return factory.NewBucketProvider(requirements), nil
 }

@@ -1,16 +1,17 @@
 package sourcerepos
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"reflect"
 	"strings"
 
-	jenkinsio "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io"
-	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
-	"github.com/jenkins-x/jx/v2/pkg/kube/naming"
-	"github.com/jenkins-x/jx/v2/pkg/util"
+	jenkinsio "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io"
+	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +25,7 @@ func GetRepositoryGitURL(s *v1.SourceRepository) (string, error) {
 	repo := spec.Repo
 	if spec.HTTPCloneURL == "" {
 		if spec.ProviderKind == "bitbucketserver" {
-			provider = util.UrlJoin(provider, "scm")
+			provider = stringhelpers.UrlJoin(provider, "scm")
 		}
 		if provider == "" {
 			return spec.HTTPCloneURL, fmt.Errorf("missing provider in SourceRepository %s", s.Name)
@@ -35,7 +36,7 @@ func GetRepositoryGitURL(s *v1.SourceRepository) (string, error) {
 		if repo == "" {
 			return spec.HTTPCloneURL, fmt.Errorf("missing repo in SourceRepository %s", s.Name)
 		}
-		spec.HTTPCloneURL = util.UrlJoin(provider, owner, repo) + ".git"
+		spec.HTTPCloneURL = stringhelpers.UrlJoin(provider, owner, repo) + ".git"
 	}
 	return spec.HTTPCloneURL, nil
 }
@@ -48,7 +49,8 @@ func FindSourceRepositoryWithoutProvider(jxClient versioned.Interface, ns, owner
 
 // findSourceRepositoryByLabels returns a SourceRepository matching the given label selector, if it exists.
 func findSourceRepositoryByLabels(jxClient versioned.Interface, ns, labelSelector string) (*v1.SourceRepository, error) {
-	repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(metav1.ListOptions{
+	ctx := context.Background()
+	repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -63,9 +65,10 @@ func findSourceRepositoryByLabels(jxClient versioned.Interface, ns, labelSelecto
 // FindSourceRepository returns a SourceRepository for the given namespace, owner, repo name, and (optional) provider name.
 // If no SourceRepository is found, return nil.
 func FindSourceRepository(jxClient versioned.Interface, ns, owner, name, providerName string) (*v1.SourceRepository, error) {
+	ctx := context.Background()
 	// Look up by resource name is retained for compatibility with SourceRepositorys created before they were always created with labels
 	resourceName := naming.ToValidName(owner + "-" + name)
-	repo, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(resourceName, metav1.GetOptions{})
+	repo, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, resourceName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			labelSelector := fmt.Sprintf("%s=%s,%s=%s", v1.LabelOwner, owner, v1.LabelRepository, name)
@@ -128,11 +131,12 @@ func GetOrCreateSourceRepositoryCallback(jxClient versioned.Interface, ns, name,
 	}
 
 	// Otherwise, update the SourceRepository and return it.
-	answer, err := repositories.Update(srCopy)
+	ctx := context.Background()
+	answer, err := repositories.Update(ctx, srCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return answer, errors.Wrapf(err, "failed to update SourceRepository %s", resourceName)
 	}
-	answer, err = repositories.Get(foundSr.Name, metav1.GetOptions{})
+	answer, err = repositories.Get(ctx, foundSr.Name, metav1.GetOptions{})
 	if err != nil {
 		return answer, errors.Wrapf(err, "failed to get SourceRepository %s", resourceName)
 	}
@@ -198,7 +202,8 @@ func createSourceRepositoryCallback(client versioned.Interface, namespace, name,
 		callback(sr)
 	}
 	sr.Sanitize()
-	answer, err := client.JenkinsV1().SourceRepositories(namespace).Create(sr)
+	ctx := context.Background()
+	answer, err := client.JenkinsV1().SourceRepositories(namespace).Create(ctx, sr, metav1.CreateOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create new SourceRepository for organisation %s and repository %s", organisation, name)
 	}

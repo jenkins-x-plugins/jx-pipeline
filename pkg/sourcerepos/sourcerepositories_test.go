@@ -5,11 +5,11 @@ package sourcerepos_test
 import (
 	"testing"
 
-	jenkinsio "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io"
-	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned/fake"
-	"github.com/jenkins-x/jx/v2/pkg/kube"
-	"github.com/jenkins-x/jx/v2/pkg/kube/naming"
+	jenkinsio "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io"
+	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/fake"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
+	"github.com/jenkins-x/jx-pipeline/pkg/sourcerepos"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,19 +32,19 @@ func TestFindSourceRepository(t *testing.T) {
 	jxClient := fake.NewSimpleClientset(existingRepos)
 
 	// Test the standard auto-created
-	firstSr, err := kube.FindSourceRepository(jxClient, ns, "first-org", "first-repo", "github")
+	firstSr, err := sourcerepos.FindSourceRepository(jxClient, ns, "first-org", "first-repo", "github")
 	assert.NoError(t, err)
 	assert.NotNil(t, firstSr)
 	assert.Equal(t, "first-org-first-repo", firstSr.Name)
 
 	// Test the arbitrary name
-	secondSr, err := kube.FindSourceRepository(jxClient, ns, "second-org", "second-repo", "github")
+	secondSr, err := sourcerepos.FindSourceRepository(jxClient, ns, "second-org", "second-repo", "github")
 	assert.NoError(t, err)
 	assert.NotNil(t, secondSr)
 	assert.Equal(t, "random-name", secondSr.Name)
 
 	// Test the unlabeled case
-	thirdSr, err := kube.FindSourceRepository(jxClient, ns, "third-org", "third-repo", "github")
+	thirdSr, err := sourcerepos.FindSourceRepository(jxClient, ns, "third-org", "third-repo", "github")
 	assert.NoError(t, err)
 	assert.NotNil(t, thirdSr)
 	assert.Equal(t, "third-org-third-repo", thirdSr.Name)
@@ -94,7 +94,7 @@ func TestGetOrCreateSourceRepositories(t *testing.T) {
 				jxClient = fake.NewSimpleClientset()
 			}
 
-			createdOrExisting, err := kube.GetOrCreateSourceRepository(jxClient, ns, tt.repo, tt.org, tt.providerURL)
+			createdOrExisting, err := sourcerepos.GetOrCreateSourceRepository(jxClient, ns, tt.repo, tt.org, tt.providerURL)
 			assert.NoError(t, err)
 			assert.NotNil(t, createdOrExisting)
 
@@ -107,7 +107,7 @@ func TestGetOrCreateSourceRepositories(t *testing.T) {
 
 			assert.Equal(t, tt.org, createdOrExisting.Spec.Org)
 			assert.Equal(t, tt.repo, createdOrExisting.Spec.Repo)
-			assert.Equal(t, kube.ToProviderName(tt.providerURL), createdOrExisting.Spec.ProviderName)
+			assert.Equal(t, sourcerepos.ToProviderName(tt.providerURL), createdOrExisting.Spec.ProviderName)
 		})
 	}
 }
@@ -117,7 +117,7 @@ func createSourceRepository(name, org, repo, providerURL string, skipLabels bool
 	if !skipLabels {
 		labels[v1.LabelOwner] = org
 		labels[v1.LabelRepository] = repo
-		labels[v1.LabelProvider] = kube.ToProviderName(providerURL)
+		labels[v1.LabelProvider] = sourcerepos.ToProviderName(providerURL)
 	}
 
 	return v1.SourceRepository{
@@ -133,7 +133,7 @@ func createSourceRepository(name, org, repo, providerURL string, skipLabels bool
 		Spec: v1.SourceRepositorySpec{
 			Org:          org,
 			Provider:     providerURL,
-			ProviderName: kube.ToProviderName(providerURL),
+			ProviderName: sourcerepos.ToProviderName(providerURL),
 			Repo:         repo,
 		},
 	}

@@ -1,23 +1,23 @@
 package stop
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
-	"github.com/jenkins-x/jx-helpers/pkg/input"
-	"github.com/jenkins-x/jx-helpers/pkg/input/inputfactory"
-	"github.com/jenkins-x/jx-helpers/pkg/kube"
-	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
-	"github.com/jenkins-x/jx-helpers/pkg/options"
-	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
-	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
-	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
+	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
@@ -28,34 +28,32 @@ import (
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/opts"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
 // StopPipelineOptions contains the command line options
 type Options struct {
 	options.BaseOptions
 
-	Args            []string
-	Build           int
-	Filter          string
-	Namespace       string
-	JenkinsSelector opts.JenkinsSelectorOptions
-	Input           input.Interface
-	KubeClient      kubernetes.Interface
-	JXClient        versioned.Interface
-	TektonClient    tektonclient.Interface
+	Args         []string
+	Build        int
+	Filter       string
+	Namespace    string
+	Input        input.Interface
+	KubeClient   kubernetes.Interface
+	JXClient     versioned.Interface
+	TektonClient tektonclient.Interface
 
 	Jobs map[string]gojenkins.Job
 }
 
 var (
-	stopPipelineLong = templates.LongDesc(`
+	cmdLong = templates.LongDesc(`
 		Stops the pipeline build.
 
 `)
 
-	stopPipelineExample = templates.Examples(`
+	cmdExample = templates.Examples(`
 		# Stop a pipeline
 		jx pipeline stop foo/bar/master -b 2
 
@@ -71,8 +69,8 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 	cmd := &cobra.Command{
 		Use:     "stop",
 		Short:   "Stops one or more pipelines",
-		Long:    stopPipelineLong,
-		Example: stopPipelineExample,
+		Long:    cmdLong,
+		Example: cmdExample,
 		Aliases: []string{"kill"},
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Args = args
@@ -83,7 +81,6 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 	cmd.Flags().IntVarP(&o.Build, "build", "", 0, "The build number to stop")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "",
 		"Filters all the available jobs by those that contain the given text")
-	o.JenkinsSelector.AddFlags(cmd)
 
 	return cmd, o
 }
@@ -131,10 +128,11 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) cancelPipelineRun() error {
+	ctx := context.Background()
 	tektonClient := o.TektonClient
 	ns := o.Namespace
 	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
-	prList, err := pipelines.List(metav1.ListOptions{})
+	prList, err := pipelines.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
 	}
@@ -153,32 +151,32 @@ func (o *Options) cancelPipelineRun() error {
 		if labels == nil {
 			continue
 		}
-		owner := labels[tekton.LabelOwner]
-		repo := labels[tekton.LabelRepo]
-		branch := labels[tekton.LabelBranch]
-		context := labels[tekton.LabelContext]
-		buildNumber := labels[tekton.LabelBuild]
+		owner := labels[tektonlog.LabelOwner]
+		repo := labels[tektonlog.LabelRepo]
+		branch := labels[tektonlog.LabelBranch]
+		triggerContext := labels[tektonlog.LabelContext]
+		buildNumber := labels[tektonlog.LabelBuild]
 
 		if owner == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelOwner,
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner,
 				pr.Name, labels)
 			continue
 		}
 		if repo == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelRepo,
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelRepo,
 				pr.Name, labels)
 			continue
 		}
 		if branch == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelBranch,
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelBranch,
 				pr.Name, labels)
 			continue
 		}
 
 		name := fmt.Sprintf("%s/%s/%s #%s", owner, repo, branch, buildNumber)
 
-		if context != "" {
-			name = fmt.Sprintf("%s-%s", name, context)
+		if triggerContext != "" {
+			name = fmt.Sprintf("%s-%s", name, triggerContext)
 		}
 		allNames = append(allNames, name)
 		m[name] = &pr
@@ -216,7 +214,7 @@ func (o *Options) cancelPipelineRun() error {
 			return fmt.Errorf("no PipelineRun found for name %s", a)
 		}
 		prName := pr.Name
-		pr, err = pipelines.Get(prName, metav1.GetOptions{})
+		pr, err = pipelines.Get(ctx, prName, metav1.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "getting PipelineRun %s", prName)
 		}

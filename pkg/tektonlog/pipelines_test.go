@@ -6,10 +6,7 @@ import (
 	"testing"
 
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
-	"github.com/jenkins-x/jx/v2/pkg/tekton/syntax"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,21 +23,27 @@ func TestPipelineRunIsNotPendingCompletedRun(t *testing.T) {
 			Name:      "PR1",
 			Namespace: ns,
 			Labels: map[string]string{
-				tekton.LabelRepo:    "fakerepo",
-				tekton.LabelBranch:  "fakebranch",
-				tekton.LabelOwner:   "fakeowner",
-				tekton.LabelContext: "fakecontext",
+				tektonlog.LabelRepo:    "fakerepo",
+				tektonlog.LabelBranch:  "fakebranch",
+				tektonlog.LabelOwner:   "fakeowner",
+				tektonlog.LabelContext: "fakecontext",
 			},
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			Params: []v1beta1.Param{
 				{
-					Name:  "version",
-					Value: syntax.StringParamValue("v1"),
+					Name: "version",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "v1",
+					},
 				},
 				{
-					Name:  "build_id",
-					Value: syntax.StringParamValue("1"),
+					Name: "build_id",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "1",
+					},
 				},
 			},
 		},
@@ -55,11 +58,11 @@ func TestPipelineRunIsNotPendingCompletedRun(t *testing.T) {
 }
 
 func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {
-	taskRunStatusMap := make(map[string]*v1alpha1.PipelineRunTaskRunStatus)
-	taskRunStatusMap["faketaskrun"] = &v1alpha1.PipelineRunTaskRunStatus{
-		Status: &v1alpha1.TaskRunStatus{
+	taskRunStatusMap := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
+	taskRunStatusMap["faketaskrun"] = &v1beta1.PipelineRunTaskRunStatus{
+		Status: &v1beta1.TaskRunStatus{
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				Steps: []v1alpha1.StepState{{
+				Steps: []v1beta1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Running: &corev1.ContainerStateRunning{},
 					},
@@ -68,39 +71,50 @@ func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {
 		},
 	}
 
-	pr := &v1alpha1.PipelineRun{
+	pr := &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
 			Labels: map[string]string{
-				tekton.LabelRepo:    "fakerepo",
-				tekton.LabelBranch:  "fakebranch",
-				tekton.LabelOwner:   "fakeowner",
-				tekton.LabelContext: "fakecontext",
+				tektonlog.LabelRepo:    "fakerepo",
+				tektonlog.LabelBranch:  "fakebranch",
+				tektonlog.LabelOwner:   "fakeowner",
+				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1alpha1.PipelineRunSpec{
-			Params: []v1alpha1.Param{
-				{Name: "version", Value: syntax.StringParamValue("v1")},
-				{Name: "build_id", Value: syntax.StringParamValue("1")},
+		Spec: v1beta1.PipelineRunSpec{
+			Params: []v1beta1.Param{
+				{
+					Name: "version",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "v1",
+					}},
+				{
+					Name: "build_id",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "1",
+					},
+				},
 			},
 		},
-		Status: v1alpha1.PipelineRunStatus{
+		Status: v1beta1.PipelineRunStatus{
 			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
 				TaskRuns: taskRunStatusMap,
 			},
 		},
 	}
 
-	assert.True(t, tekton.PipelineRunIsNotPending(pr))
+	assert.True(t, tektonlog.PipelineRunIsNotPending(pr))
 }
 
 func TestPipelineRunIsNotPendingWaitingSteps(t *testing.T) {
-	taskRunStatusMap := make(map[string]*v1alpha1.PipelineRunTaskRunStatus)
-	taskRunStatusMap["faketaskrun"] = &v1alpha1.PipelineRunTaskRunStatus{
-		Status: &v1alpha1.TaskRunStatus{
+	taskRunStatusMap := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
+	taskRunStatusMap["faketaskrun"] = &v1beta1.PipelineRunTaskRunStatus{
+		Status: &v1beta1.TaskRunStatus{
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				Steps: []v1alpha1.StepState{{
+				Steps: []v1beta1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Waiting: &corev1.ContainerStateWaiting{
 							Message: "Pending",
@@ -111,39 +125,50 @@ func TestPipelineRunIsNotPendingWaitingSteps(t *testing.T) {
 		},
 	}
 
-	pr := &v1alpha1.PipelineRun{
+	pr := &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
 			Labels: map[string]string{
-				tekton.LabelRepo:    "fakerepo",
-				tekton.LabelBranch:  "fakebranch",
-				tekton.LabelOwner:   "fakeowner",
-				tekton.LabelContext: "fakecontext",
+				tektonlog.LabelRepo:    "fakerepo",
+				tektonlog.LabelBranch:  "fakebranch",
+				tektonlog.LabelOwner:   "fakeowner",
+				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1alpha1.PipelineRunSpec{
-			Params: []v1alpha1.Param{
-				{Name: "version", Value: syntax.StringParamValue("v1")},
-				{Name: "build_id", Value: syntax.StringParamValue("1")},
+		Spec: v1beta1.PipelineRunSpec{
+			Params: []v1beta1.Param{
+				{
+					Name: "version",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "v1",
+					}},
+				{
+					Name: "build_id",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "1",
+					},
+				},
 			},
 		},
-		Status: v1alpha1.PipelineRunStatus{
+		Status: v1beta1.PipelineRunStatus{
 			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
 				TaskRuns: taskRunStatusMap,
 			},
 		},
 	}
 
-	assert.False(t, tekton.PipelineRunIsNotPending(pr))
+	assert.False(t, tektonlog.PipelineRunIsNotPending(pr))
 }
 
 func TestPipelineRunIsNotPendingWaitingStepsInPodInitializing(t *testing.T) {
-	taskRunStatusMap := make(map[string]*v1alpha1.PipelineRunTaskRunStatus)
-	taskRunStatusMap["faketaskrun"] = &v1alpha1.PipelineRunTaskRunStatus{
-		Status: &v1alpha1.TaskRunStatus{
+	taskRunStatusMap := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
+	taskRunStatusMap["faketaskrun"] = &v1beta1.PipelineRunTaskRunStatus{
+		Status: &v1beta1.TaskRunStatus{
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				Steps: []v1alpha1.StepState{{
+				Steps: []v1beta1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Waiting: &corev1.ContainerStateWaiting{
 							Reason: "PodInitializing",
@@ -154,29 +179,40 @@ func TestPipelineRunIsNotPendingWaitingStepsInPodInitializing(t *testing.T) {
 		},
 	}
 
-	pr := &v1alpha1.PipelineRun{
+	pr := &v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
 			Labels: map[string]string{
-				tekton.LabelRepo:    "fakerepo",
-				tekton.LabelBranch:  "fakebranch",
-				tekton.LabelOwner:   "fakeowner",
-				tekton.LabelContext: "fakecontext",
+				tektonlog.LabelRepo:    "fakerepo",
+				tektonlog.LabelBranch:  "fakebranch",
+				tektonlog.LabelOwner:   "fakeowner",
+				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1alpha1.PipelineRunSpec{
-			Params: []v1alpha1.Param{
-				{Name: "version", Value: syntax.StringParamValue("v1")},
-				{Name: "build_id", Value: syntax.StringParamValue("1")},
+		Spec: v1beta1.PipelineRunSpec{
+			Params: []v1beta1.Param{
+				{
+					Name: "version",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "v1",
+					}},
+				{
+					Name: "build_id",
+					Value: v1beta1.ArrayOrString{
+						Type:      v1beta1.ParamTypeString,
+						StringVal: "1",
+					},
+				},
 			},
 		},
-		Status: v1alpha1.PipelineRunStatus{
+		Status: v1beta1.PipelineRunStatus{
 			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
 				TaskRuns: taskRunStatusMap,
 			},
 		},
 	}
 
-	assert.True(t, tekton.PipelineRunIsNotPending(pr))
+	assert.True(t, tektonlog.PipelineRunIsNotPending(pr))
 }

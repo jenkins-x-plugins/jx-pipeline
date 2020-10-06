@@ -1,22 +1,22 @@
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
-	"github.com/jenkins-x/jx-helpers/pkg/kube"
-	"github.com/jenkins-x/jx-helpers/pkg/options"
-	"github.com/jenkins-x/jx-helpers/pkg/outputformat"
-	"github.com/jenkins-x/jx-helpers/pkg/table"
-	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/outputformat"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
+	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
-	"github.com/jenkins-x/jx/v2/pkg/tekton"
 	"github.com/pkg/errors"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
 // PipelineOptions is the start of the data required to perform the operation.
@@ -163,11 +163,12 @@ func (o *Options) renderPresubmits() error {
 
 // renderPipelines view the current tekton PipelineRuns
 func (o *Options) renderPipelineRuns() error {
+	ctx := context.Background()
 	ns := o.Namespace
 	tektonClient := o.TektonClient
 
 	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
-	prList, err := pipelines.List(metav1.ListOptions{})
+	prList, err := pipelines.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
 	}
@@ -176,7 +177,7 @@ func (o *Options) renderPipelineRuns() error {
 		return errors.New(fmt.Sprintf("no PipelineRuns were found in namespace %s", ns))
 	}
 
-	var owner, repo, branch, context, buildNumber, status string
+	var owner, repo, branch, triggerContext, buildNumber, status string
 	var names []string
 	m := map[string]*pipelineapi.PipelineRun{}
 	for k := range prList.Items {
@@ -189,29 +190,29 @@ func (o *Options) renderPipelineRuns() error {
 		if labels == nil {
 			continue
 		}
-		owner = labels[tekton.LabelOwner]
-		repo = labels[tekton.LabelRepo]
-		branch = labels[tekton.LabelBranch]
-		context = labels[tekton.LabelContext]
-		buildNumber = labels[tekton.LabelBuild]
+		owner = labels[tektonlog.LabelOwner]
+		repo = labels[tektonlog.LabelRepo]
+		branch = labels[tektonlog.LabelBranch]
+		triggerContext = labels[tektonlog.LabelContext]
+		buildNumber = labels[tektonlog.LabelBuild]
 
 		if owner == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelOwner, pr.Name, labels)
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner, pr.Name, labels)
 			continue
 		}
 		if repo == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelRepo, pr.Name, labels)
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelRepo, pr.Name, labels)
 			continue
 		}
 		if branch == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tekton.LabelBranch, pr.Name, labels)
+			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelBranch, pr.Name, labels)
 			continue
 		}
 
 		name := fmt.Sprintf("%s/%s/%s #%s %s", owner, repo, branch, buildNumber, status)
 
-		if context != "" {
-			name = fmt.Sprintf("%s-%s", name, context)
+		if triggerContext != "" {
+			name = fmt.Sprintf("%s-%s", name, triggerContext)
 		}
 		names = append(names, name)
 		m[name] = &pr

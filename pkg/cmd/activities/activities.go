@@ -1,28 +1,30 @@
 package activities
 
 import (
+	"context"
+	"io"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
-	"github.com/jenkins-x/jx-helpers/pkg/kube"
-	"github.com/jenkins-x/jx-helpers/pkg/kube/activities"
-	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
-	"github.com/jenkins-x/jx-helpers/pkg/kube/jxenv"
-	"github.com/jenkins-x/jx-helpers/pkg/options"
-	"github.com/jenkins-x/jx-helpers/pkg/table"
-	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
-	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxenv"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
+	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/pkg/errors"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/ghodss/yaml"
-	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -37,15 +39,17 @@ const (
 type Options struct {
 	options.BaseOptions
 
-	KubeClient   kubernetes.Interface
-	JXClient     versioned.Interface
-	TektonClient tektonclient.Interface
 	Format       string
 	Namespace    string
 	Filter       string
 	BuildNumber  string
 	Watch        bool
 	Sort         bool
+	KubeClient   kubernetes.Interface
+	JXClient     versioned.Interface
+	TektonClient tektonclient.Interface
+	Out          io.Writer
+	Results      []v1.PipelineActivity
 }
 
 var (
@@ -114,6 +118,9 @@ func (o *Options) Validate() error {
 	if err != nil {
 		return errors.Wrap(err, "error building tekton client")
 	}
+	if o.Out == nil {
+		o.Out = os.Stdout
+	}
 	return nil
 }
 
@@ -130,8 +137,7 @@ func (o *Options) Run() error {
 	}
 	jxClient := o.JXClient
 
-	out := os.Stdout
-	t := table.CreateTable(out)
+	t := table.CreateTable(o.Out)
 	t.SetColumnAlign(1, table.ALIGN_RIGHT)
 	t.SetColumnAlign(2, table.ALIGN_RIGHT)
 	t.AddRow("STEP", "STARTED AGO", "DURATION", "STATUS")
@@ -140,19 +146,23 @@ func (o *Options) Run() error {
 		return o.WatchActivities(&t, jxClient, ns)
 	}
 
-	list, err := jxClient.JenkinsV1().PipelineActivities(ns).List(metav1.ListOptions{})
+	ctx := context.Background()
+	list, err := jxClient.JenkinsV1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
+	items := list.Items
 	if o.Sort {
-		activities.SortActivities(list.Items)
+		activities.SortActivities(items)
 	}
 
-	for i := range list.Items {
-		a := &list.Items[i]
+	for i := range items {
+		a := &items[i]
 		o.addTableRow(&t, a)
 	}
 	t.Render()
+
+	o.Results = items
 	return nil
 }
 

@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/jenkins-x/jx-helpers/pkg/cobras"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/activities"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/getlog"
