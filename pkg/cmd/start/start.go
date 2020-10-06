@@ -284,7 +284,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	if cfg.InRepoConfigEnabled(fullName) {
 		pluginCfg := &plugins.Configuration{
 			Plugins: map[string][]string{
-				fullName: []string{"trigger"},
+				fullName: {"trigger"},
 			},
 		}
 
