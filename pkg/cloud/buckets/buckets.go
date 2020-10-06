@@ -14,6 +14,12 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/cloud"
 	"github.com/pkg/errors"
 	"gocloud.dev/blob"
+
+	_ "gocloud.dev/blob/azureblob"
+	_ "gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/memblob"
+	_ "gocloud.dev/blob/s3blob"
 )
 
 // CreateBucketURL creates a go-cloud URL to a bucket
