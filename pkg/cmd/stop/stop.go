@@ -47,12 +47,12 @@ type Options struct {
 }
 
 var (
-	stopPipelineLong = templates.LongDesc(`
+	cmdLong = templates.LongDesc(`
 		Stops the pipeline build.
 
 `)
 
-	stopPipelineExample = templates.Examples(`
+	cmdExample = templates.Examples(`
 		# Stop a pipeline
 		jx pipeline stop foo/bar/master -b 2
 
@@ -68,8 +68,8 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 	cmd := &cobra.Command{
 		Use:     "stop",
 		Short:   "Stops one or more pipelines",
-		Long:    stopPipelineLong,
-		Example: stopPipelineExample,
+		Long:    cmdLong,
+		Example: cmdExample,
 		Aliases: []string{"kill"},
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Args = args
