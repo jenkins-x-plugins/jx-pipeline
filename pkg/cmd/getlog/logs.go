@@ -156,11 +156,11 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	return o.getProwBuildLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace)
+	return o.getPipelineLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace)
 }
 
-// getProwBuildLog prompts the user, if needed, to choose a pipeline, and then prints out that pipeline's logs.
-func (o *Options) getProwBuildLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) error {
+// getPipelineLog prompts the user, if needed, to choose a pipeline, and then prints out that pipeline's logs.
+func (o *Options) getPipelineLog(kubeClient kubernetes.Interface, tektonClient tektonclient.Interface, jxClient versioned.Interface, ns string) error {
 	if o.CurrentFolder {
 		err := o.ScmDiscover.Validate()
 		if err != nil {
