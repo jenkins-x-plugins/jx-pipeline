@@ -34,7 +34,7 @@ func label(m map[string]string, labels []string) string {
 func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivity) string {
 	labels := pr.Labels
 	if labels == nil {
-		return pr.Name
+		return ""
 	}
 
 	build := labels["build"]
