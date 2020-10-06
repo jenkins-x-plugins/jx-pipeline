@@ -44,10 +44,6 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 )
 
-const (
-	releaseBranchName = "master"
-)
-
 // Options contains the command line options
 type Options struct {
 	options.BaseOptions
@@ -255,7 +251,8 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 
 	gitServerURL := sr.Spec.Provider
 	if gitServerURL == "" {
-		gitInfo, err := giturl.ParseGitURL(sr.Spec.HTTPCloneURL)
+		var gitInfo *giturl.GitRepository
+		gitInfo, err = giturl.ParseGitURL(sr.Spec.HTTPCloneURL)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse git clone URL %s", sr.Spec.HTTPCloneURL)
 		}

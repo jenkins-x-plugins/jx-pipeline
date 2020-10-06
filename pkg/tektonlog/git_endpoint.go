@@ -15,7 +15,6 @@ import (
 func (t *TektonLogger) CreateBucketHTTPFn() func(string) (string, func(*http.Request), error) {
 	return func(urlText string) (string, func(*http.Request), error) {
 		headerFunc := func(*http.Request) {
-			return
 		}
 
 		gitInfo, err := giturl.ParseGitURL(urlText)
@@ -48,9 +47,6 @@ func (t *TektonLogger) CreateBucketHTTPFn() func(string) (string, func(*http.Req
 				headerFunc = func(r *http.Request) {
 					r.Header.Set("PRIVATE-TOKEN", gitToken)
 				}
-			} else if gitKind == giturl.KindGitHub && !gitInfo.IsGitHub() {
-				// If we're on GitHub Enterprise, we need to put the token as a parameter to the URL.
-				tokenPrefix = gitToken
 			} else {
 				tokenPrefix = gitToken
 			}

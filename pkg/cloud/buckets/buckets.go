@@ -15,10 +15,15 @@ import (
 	"github.com/pkg/errors"
 	"gocloud.dev/blob"
 
+	// support azure blobs
 	_ "gocloud.dev/blob/azureblob"
+	// support file blobs
 	_ "gocloud.dev/blob/fileblob"
+	// support GCS blobs
 	_ "gocloud.dev/blob/gcsblob"
+	// support memory blobs
 	_ "gocloud.dev/blob/memblob"
+	// support s3 blobs
 	_ "gocloud.dev/blob/s3blob"
 )
 
@@ -100,7 +105,8 @@ func ReadHTTPURL(u string, headerFunc func(*http.Request), timeout time.Duration
 func ReadBucketURL(u *url.URL, timeout time.Duration) (io.ReadCloser, error) {
 	bucketURL, key := SplitBucketURL(u)
 
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open bucket %s", bucketURL)
@@ -121,8 +127,9 @@ func WriteBucketURL(u *url.URL, data io.Reader, timeout time.Duration) error {
 
 // WriteBucket writes the data to a bucket URL and key of the for 's3://bucketName' and key 'foo/bar/whatnot.txt'
 // with the given timeout
-func WriteBucket(bucketURL string, key string, reader io.Reader, timeout time.Duration) (err error) {
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+func WriteBucket(bucketURL, key string, reader io.Reader, timeout time.Duration) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open bucket %s", bucketURL)
