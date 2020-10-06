@@ -1,18 +1,19 @@
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/helper"
-	"github.com/jenkins-x/jx-helpers/pkg/kube"
-	"github.com/jenkins-x/jx-helpers/pkg/options"
-	"github.com/jenkins-x/jx-helpers/pkg/outputformat"
-	"github.com/jenkins-x/jx-helpers/pkg/table"
-	"github.com/jenkins-x/jx-kube-client/pkg/kubeclient"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/outputformat"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
+	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
@@ -24,7 +25,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jenkins-x/jx-helpers/pkg/cobras/templates"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
 // PipelineOptions is the start of the data required to perform the operation.
@@ -162,11 +163,12 @@ func (o *Options) renderPresubmits() error {
 
 // renderPipelines view the current tekton PipelineRuns
 func (o *Options) renderPipelineRuns() error {
+	ctx := context.Background()
 	ns := o.Namespace
 	tektonClient := o.TektonClient
 
 	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
-	prList, err := pipelines.List(metav1.ListOptions{})
+	prList, err := pipelines.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
 	}

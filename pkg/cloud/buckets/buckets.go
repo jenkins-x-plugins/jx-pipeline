@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jenkins-x/jx-helpers/pkg/httphelpers"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/httphelpers"
 	"github.com/jenkins-x/jx-pipeline/pkg/cloud"
 	"github.com/pkg/errors"
 	"gocloud.dev/blob"
@@ -95,7 +95,7 @@ func ReadBucketURL(u *url.URL, timeout time.Duration) (io.ReadCloser, error) {
 	bucketURL, key := SplitBucketURL(u)
 
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
-	bucket, err := blob.Open(ctx, bucketURL)
+	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open bucket %s", bucketURL)
 	}
@@ -117,7 +117,7 @@ func WriteBucketURL(u *url.URL, data io.Reader, timeout time.Duration) error {
 // with the given timeout
 func WriteBucket(bucketURL string, key string, reader io.Reader, timeout time.Duration) (err error) {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
-	bucket, err := blob.Open(ctx, bucketURL)
+	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open bucket %s", bucketURL)
 	}

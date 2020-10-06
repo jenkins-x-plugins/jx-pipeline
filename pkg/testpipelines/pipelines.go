@@ -1,14 +1,15 @@
 package testpipelines
 
 import (
+	"context"
 	"testing"
 
-	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
-	typev1 "github.com/jenkins-x/jx-api/pkg/client/clientset/versioned/typed/jenkins.io/v1"
-	"github.com/jenkins-x/jx-helpers/pkg/gitclient/giturl"
-	"github.com/jenkins-x/jx-helpers/pkg/kube/activities"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	typev1 "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/typed/jenkins.io/v1"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -16,6 +17,7 @@ import (
 
 // CreateTestPipelineActivity creates a PipelineActivity with the given arguments
 func CreateTestPipelineActivity(jxClient versioned.Interface, ns string, folder string, repo string, branch string, build string, workflow string) (*v1.PipelineActivity, error) {
+	ctx := context.Background()
 	activities := jxClient.JenkinsV1().PipelineActivities(ns)
 	key := newPromoteStepActivityKey(folder, repo, branch, build, workflow)
 	a, _, err := key.GetOrCreate(jxClient, ns)
@@ -25,22 +27,24 @@ func CreateTestPipelineActivity(jxClient versioned.Interface, ns string, folder 
 	a.Spec.GitURL = "https://fake.git/" + folder + "/" + repo + ".git"
 	a.Spec.Version = version
 	a.Spec.Workflow = workflow
-	_, err = activities.Update(a)
+	_, err = activities.Update(ctx, a, metav1.UpdateOptions{})
 	return a, err
 }
 
 // CreateTestPipelineActivityWithTime creates a PipelineActivity with the given timestamp and adds it to the list of activities
 func CreateTestPipelineActivityWithTime(jxClient versioned.Interface, ns string, folder string, repo string, branch string, build string, workflow string, t metav1.Time) (*v1.PipelineActivity, error) {
+	ctx := context.Background()
 	activities := jxClient.JenkinsV1().PipelineActivities(ns)
 	key := newPromoteStepActivityKey(folder, repo, branch, build, workflow)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	a.Spec.StartedTimestamp = &t
-	_, err = activities.Update(a)
+	_, err = activities.Update(ctx, a, metav1.UpdateOptions{})
 	return a, err
 }
 
 func AssertHasPullRequestForEnv(t *testing.T, activities typev1.PipelineActivityInterface, name string, envName string) {
-	activity, err := activities.Get(name, metav1.GetOptions{})
+	ctx := context.Background()
+	activity, err := activities.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		assert.NoError(t, err, "Could not find PipelineActivity %s", name)
 		return

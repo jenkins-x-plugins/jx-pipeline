@@ -1,6 +1,8 @@
 package triggers
 
 import (
+	"context"
+
 	"github.com/jenkins-x/lighthouse/pkg/config"
 	"github.com/jenkins-x/lighthouse/pkg/config/job"
 	"github.com/pkg/errors"
@@ -12,7 +14,8 @@ import (
 
 // LoadLighthouseConfig loads the lighthouse configuration from the given ConfigMap namespace and name
 func LoadLighthouseConfig(kubeClient kubernetes.Interface, ns, name string, allowEmpty bool) (*config.Config, error) {
-	cm, err := kubeClient.CoreV1().ConfigMaps(ns).Get(name, metav1.GetOptions{})
+	ctx := context.Background()
+	cm, err := kubeClient.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if allowEmpty {

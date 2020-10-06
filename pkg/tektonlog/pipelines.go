@@ -1,9 +1,12 @@
 package tektonlog
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PipelineType is used to differentiate between actual build pipelines and pipelines to create the build pipelines,
@@ -48,8 +51,9 @@ func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
 
 // CancelPipelineRun cancels a Pipeline
 func CancelPipelineRun(tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
+	ctx := context.Background()
 	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
-	_, err := tektonClient.TektonV1beta1().PipelineRuns(ns).Update(pr)
+	_, err := tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update PipelineRun %s in namespace %s to mark it as cancelled", pr.Name, ns)
 	}

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/jenkins-x/jx-helpers/pkg/gitclient/giturl"
-	"github.com/jenkins-x/jx-helpers/pkg/scmhelpers"
-	"github.com/jenkins-x/jx-logging/pkg/log"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 )
 
@@ -27,7 +27,6 @@ func (t *TektonLogger) CreateBucketHTTPFn() func(string) (string, func(*http.Req
 
 		f := scmhelpers.Factory{
 			GitServerURL: gitInfo.HostURL(),
-			Owner:        gitInfo.Organisation,
 			GitUsername:  t.GitUsername,
 			GitToken:     t.GitToken,
 		}
