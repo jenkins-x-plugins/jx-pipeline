@@ -27,11 +27,8 @@ require (
 
 )
 
-replace github.com/heptio/sonobuoy => github.com/jenkins-x/sonobuoy v0.11.7-0.20190318120422-253758214767
 
 replace k8s.io/api => k8s.io/api v0.16.5
-
-replace k8s.io/metrics => k8s.io/metrics v0.0.0-20190819143841-305e1cef1ab1
 
 replace k8s.io/apimachinery => k8s.io/apimachinery v0.16.5
 
@@ -41,13 +38,7 @@ replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-
 
 replace github.com/sirupsen/logrus => github.com/jtnord/logrus v1.4.2-0.20190423161236-606ffcaf8f5d
 
-replace github.com/Azure/azure-sdk-for-go => github.com/Azure/azure-sdk-for-go v23.2.0+incompatible
-
 replace github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.1+incompatible
-
-replace github.com/banzaicloud/bank-vaults => github.com/banzaicloud/bank-vaults v0.0.0-20191212164220-b327d7f2b681
-
-replace github.com/banzaicloud/bank-vaults/pkg/sdk => github.com/banzaicloud/bank-vaults/pkg/sdk v0.0.0-20191212164220-b327d7f2b681
 
 replace k8s.io/test-infra => github.com/jenkins-x/test-infra v0.0.0-20200611142252-211a92405c22
 
