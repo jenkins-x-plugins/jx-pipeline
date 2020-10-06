@@ -6,19 +6,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/pkg/input"
 	"github.com/jenkins-x/jx-helpers/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
 	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
+	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
+	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-pipeline/pkg/sourcerepos"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
-	"github.com/jenkins-x/jx/v2/pkg/tekton/metapipeline"
+	"github.com/jenkins-x/lighthouse/pkg/apis/lighthouse/v1alpha1"
+	lhclient "github.com/jenkins-x/lighthouse/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/lighthouse/pkg/config"
+	"github.com/jenkins-x/lighthouse/pkg/config/job"
+	"github.com/jenkins-x/lighthouse/pkg/launcher"
+
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 
@@ -52,6 +60,7 @@ type Options struct {
 	PollPeriod          time.Duration
 	KubeClient          kubernetes.Interface
 	JXClient            versioned.Interface
+	LHClient            lhclient.Interface
 	Input               input.Interface
 
 	// meta pipeline options
@@ -61,12 +70,14 @@ type Options struct {
 }
 
 var (
-	startPipelineLong = templates.LongDesc(`
+	info = termcolor.ColorInfo
+
+	cmdLong = templates.LongDesc(`
 		Starts the pipeline build.
 
 `)
 
-	startPipelineExample = templates.Examples(`
+	cmdExample = templates.Examples(`
 		# Start a pipeline
 		jx pipeline start foo
 
@@ -85,8 +96,8 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	cmd := &cobra.Command{
 		Use:     "start",
 		Short:   "Starts one or more pipelines",
-		Long:    startPipelineLong,
-		Example: startPipelineExample,
+		Long:    cmdLong,
+		Example: cmdExample,
 		Aliases: []string{"build", "run"},
 		Run: func(cmd *cobra.Command, args []string) {
 			o.Args = args
@@ -121,6 +132,10 @@ func (o *Options) Validate() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the jx client")
 	}
+	o.LHClient, err = lighthouses.LazyCreateLHClient(o.LHClient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the lighthouse client")
+	}
 
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
@@ -137,7 +152,7 @@ func (o *Options) Run() error {
 
 	args := o.Args
 
-	names, err := o.getFilteredTriggerNames(o.KubeClient, o.Namespace)
+	names, cfg, err := o.getFilteredTriggerNames(o.KubeClient, o.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get trigger names")
 	}
@@ -163,7 +178,7 @@ func (o *Options) Run() error {
 		args = []string{name}
 	}
 	for _, a := range args {
-		err = o.createMetaPipeline(a)
+		err = o.createLighthouseJob(a, cfg)
 		if err != nil {
 			return err
 		}
@@ -171,7 +186,7 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns string) ([]string, error) {
+func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns string) ([]string, *config.Config, error) {
 	end := time.Now().Add(o.WaitDuration)
 	name := o.LighthouseConfigMap
 	logWaiting := false
@@ -179,17 +194,17 @@ func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns st
 	for {
 		cfg, err := triggers.LoadLighthouseConfig(kubeClient, ns, name, o.Wait)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to load lighthouse config")
+			return nil, cfg, errors.Wrapf(err, "failed to load lighthouse config")
 		}
 		names := o.pipelineNames(cfg)
 		names = stringhelpers.StringsContaining(names, o.Filter)
 
 		if len(names) > 0 || !o.Wait {
-			return names, nil
+			return names, cfg, nil
 		}
 
 		if time.Now().After(end) {
-			return nil, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s matching filter: '%s' within %s", name, ns, o.Filter, o.WaitDuration.String())
+			return nil, cfg, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s matching filter: '%s' within %s", name, ns, o.Filter, o.WaitDuration.String())
 		}
 
 		if !logWaiting {
@@ -200,7 +215,7 @@ func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns st
 	}
 }
 
-func (o *Options) createMetaPipeline(jobName string) error {
+func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error {
 	parts := strings.Split(jobName, "/")
 	if len(parts) < 2 {
 		return fmt.Errorf("job name [%s] does not match org/repo/branch format", jobName)
@@ -217,86 +232,65 @@ func (o *Options) createMetaPipeline(jobName string) error {
 	if branch == "" {
 		branch = "master"
 	}
-
-	var err error
-	jxClient := o.JXClient
 	ns := o.Namespace
 
-	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(jxClient, ns, owner, repo)
+	jobType := job.PostsubmitJob
+
+	fullName := scm.Join(owner, repo)
+
+	if cfg.InRepoConfigEnabled(fullName) {
+		// TODO load the config from the in repo...
+		return errors.Errorf("TODO in repo config")
+	}
+
+	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(o.JXClient, ns, owner, repo)
 	if err != nil {
-		return errors.Wrap(err, "cannot determine git source URL")
-	}
-	if sr == nil {
-		return fmt.Errorf("could not find existing SourceRepository for owner %s and repo %s", owner, repo)
+		return errors.Wrapf(err, "failed to find the SourceRepository %s", fullName)
 	}
 
-	sourceURL, err := sourcerepos.GetRepositoryGitURL(sr)
+	postsubmits := cfg.Postsubmits[fullName]
+	if len(postsubmits) == 0 {
+		return errors.Errorf("could not find Postsubmit for repository %s", fullName)
+	}
+
+	// TODO pick the first one for now?
+	postsubmit := postsubmits[0]
+
+	lhjob := &v1alpha1.LighthouseJob{
+		Spec: v1alpha1.LighthouseJobSpec{
+			Type:  jobType,
+			Agent: job.TektonPipelineAgent,
+			//Namespace: ns,
+			Job: postsubmit.Name,
+			Refs: &v1alpha1.Refs{
+				Org:      owner,
+				Repo:     repo,
+				RepoLink: sr.Spec.URL,
+				BaseRef:  "master",
+				BaseSHA:  "",
+				BaseLink: "",
+				CloneURI: sr.Spec.HTTPCloneURL,
+			},
+			ExtraRefs: nil,
+			Context:   postsubmit.Context,
+			//RerunCommand:      postsubmit.Context,
+			MaxConcurrency:    postsubmit.MaxConcurrency,
+			PipelineRunSpec:   postsubmit.PipelineRunSpec,
+			PipelineRunParams: postsubmit.PipelineRunParams,
+		},
+	}
+
+	lhjob.GenerateName = naming.ToValidName(owner+"-"+repo) + "-"
+
+	laucherClient := launcher.NewLauncher(o.LHClient, o.Namespace)
+
+	lhjob, err = laucherClient.Launch(lhjob)
 	if err != nil {
-		return errors.Wrapf(err, "cannot generate the git URL from SourceRepository %s", sr.Name)
-	}
-	if sourceURL == "" {
-		return fmt.Errorf("no git URL returned from SourceRepository %s", sr.Name)
+		return errors.Wrapf(err, "failed to create lighthousejob %s in namespace %s", lhjob.Name, ns)
 	}
 
-	log.Logger().Debug("creating meta pipeline client")
-	client, err := metapipeline.NewMetaPipelineClient()
-	if err != nil {
-		return errors.Wrap(err, "unable to create meta pipeline client")
-	}
-
-	pullRef := metapipeline.NewPullRef(sourceURL, branch, "")
-	pipelineKind := o.determinePipelineKind(branch)
-	envVarMap, err := stringhelpers.ExtractKeyValuePairs(o.CustomEnvs, "=")
-	if err != nil {
-		return errors.Wrap(err, "unable to parse env variables")
-	}
-
-	labelMap, err := stringhelpers.ExtractKeyValuePairs(o.CustomLabels, "=")
-	if err != nil {
-		return errors.Wrap(err, "unable to parse label variables")
-	}
-
-	pipelineCreateParam := metapipeline.PipelineCreateParam{
-		PullRef:        pullRef,
-		PipelineKind:   pipelineKind,
-		Context:        o.Context,
-		EnvVariables:   envVarMap,
-		Labels:         labelMap,
-		ServiceAccount: o.ServiceAccount,
-	}
-
-	pipelineActivity, tektonCRDs, err := client.Create(pipelineCreateParam)
-	if err != nil {
-		return errors.Wrap(err, "unable to create Tekton CRDs")
-	}
-
-	err = client.Apply(pipelineActivity, tektonCRDs)
-	if err != nil {
-		return errors.Wrap(err, "unable to apply Tekton CRDs")
-	}
-
-	err = client.Close()
-	if err != nil {
-		log.Logger().Errorf("unable to close meta pipeline client: %s", err.Error())
-	}
-
+	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
 	return nil
-}
-
-func (o *Options) determinePipelineKind(branch string) metapipeline.PipelineKind {
-	if o.PipelineKind != "" {
-		return metapipeline.StringToPipelineKind(o.PipelineKind)
-	}
-	var kind metapipeline.PipelineKind
-
-	// `jx pipeline start` will only always trigger a release or feature pipeline. Not sure whether there is a way
-	// to configure your release branch atm. Using a constant here (HF)
-	if branch == releaseBranchName {
-		kind = metapipeline.ReleasePipeline
-	} else {
-		kind = metapipeline.FeaturePipeline
-	}
-	return kind
 }
 
 // pipelineNames returns the pipeline names to trigger
