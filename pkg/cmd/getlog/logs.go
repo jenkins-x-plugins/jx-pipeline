@@ -129,22 +129,20 @@ func (o *Options) Validate() error {
 		return errors.Wrapf(err, "failed to create the jx client")
 	}
 
-	if o.TektonClient != nil {
-		return nil
-	}
-
-	f := kubeclient.NewFactory()
-	cfg, err := f.CreateKubeConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to get kubernetes config")
-	}
-	o.TektonClient, err = tektonclient.NewForConfig(cfg)
-	if err != nil {
-		return errors.Wrap(err, "error building tekton client")
-	}
-
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
+	}
+
+	if o.TektonClient == nil {
+		f := kubeclient.NewFactory()
+		cfg, err := f.CreateKubeConfig()
+		if err != nil {
+			return errors.Wrap(err, "failed to get kubernetes config")
+		}
+		o.TektonClient, err = tektonclient.NewForConfig(cfg)
+		if err != nil {
+			return errors.Wrap(err, "error building tekton client")
+		}
 	}
 	return nil
 }
