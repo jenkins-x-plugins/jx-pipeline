@@ -9,7 +9,7 @@ import (
 
 	fakejx "github.com/jenkins-x/jx-api/pkg/client/clientset/versioned/fake"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/activities"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/testhelpers"
+	"github.com/jenkins-x/jx-pipeline/pkg/testpipelines"
 	"github.com/stretchr/testify/require"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -24,8 +24,8 @@ func TestGetActivity(t *testing.T) {
 
 	jxClient := fakejx.NewSimpleClientset()
 
-	testhelpers.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "1", "workflow", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
-	testhelpers.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "2", "workflow", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
+	testpipelines.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "1", "workflow", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
+	testpipelines.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "2", "workflow", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
 
 	kubeClient := fake.NewSimpleClientset(
 		&corev1.Namespace{
