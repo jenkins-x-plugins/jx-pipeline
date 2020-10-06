@@ -4,29 +4,21 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/jenkins-x/jx-helpers/pkg/kube/jxenv"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
+	"github.com/jenkins-x/jx-pipeline/pkg/cloud/buckets"
 	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
-	"github.com/jenkins-x/jx/v2/pkg/auth"
-	"github.com/jenkins-x/jx/v2/pkg/cloud/buckets"
-	"github.com/jenkins-x/jx/v2/pkg/config"
-	"github.com/jenkins-x/jx/v2/pkg/errorutil"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/fatih/color"
 	v1 "github.com/jenkins-x/jx-api/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-logging/pkg/log"
-	"github.com/jenkins-x/jx/v2/pkg/cloud/factory"
-	"github.com/jenkins-x/jx/v2/pkg/cloud/gke"
-	"github.com/jenkins-x/jx/v2/pkg/cmd/step"
 	"github.com/pkg/errors"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -46,6 +38,8 @@ type TektonLogger struct {
 	TektonClient      tektonclient.Interface
 	KubeClient        kubernetes.Interface
 	Namespace         string
+	GitUsername       string
+	GitToken          string
 	BytesLimit        int64
 	FailIfPodFails    bool
 	LogsRetrieverFunc retrieverFunc
@@ -352,11 +346,11 @@ func (t *TektonLogger) waitForContainerToStart(ns string, pod *corev1.Pod, idx i
 }
 
 // StreamPipelinePersistentLogs reads logs from the provided bucket URL and writes them using the provided LogWriter
-func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string, authSvc auth.ConfigService) <-chan LogLine {
+func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)
-		err := t.streamPipelinePersistentLogs(logsURL, authSvc, ch)
+		err := t.streamPipelinePersistentLogs(logsURL, ch)
 		if err != nil {
 			t.err = err
 		}
@@ -364,42 +358,12 @@ func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string, authSvc auth
 	return ch
 }
 
-func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, authSvc auth.ConfigService, out chan<- LogLine) error {
-	u, err := url.Parse(logsURL)
+func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, out chan<- LogLine) error {
+	reader, err := buckets.ReadURL(logsURL, 30*time.Second, t.CreateBucketHTTPFn())
 	if err != nil {
-		return errors.Wrapf(err, "unable to parse logs URL %s to retrieve scheme", logsURL)
+		return errors.Wrapf(err, "there was a problem obtaining the log file from the github pages URL %s", logsURL)
 	}
-	switch u.Scheme {
-	case "gs":
-		reader, err := performProviderDownload(logsURL, t.JXClient, t.Namespace)
-		if err != nil {
-			// TODO: This is only here as long as we keep supporting non boot clusters, as GKE are the only ones with LTS supported outside of boot
-			var err2 error
-			reader, err2 = gke.StreamTransferFileFromBucket(logsURL)
-			if err2 != nil {
-				return errorutil.CombineErrors(err, err2)
-			}
-			return t.streamPipedLogs(reader, out)
-		}
-		return t.streamPipedLogs(reader, out)
-	case "s3":
-		reader, err := performProviderDownload(logsURL, t.JXClient, t.Namespace)
-		if err != nil {
-			return errors.Wrap(err, "there was a problem downloading logs from s3 bucket")
-		}
-		return t.streamPipedLogs(reader, out)
-	case "http", "https":
-		reader, err := downloadLogFile(logsURL, authSvc)
-		if err != nil {
-			return errors.Wrapf(err, "there was a problem obtaining the log file from the github pages URL %s", logsURL)
-		}
-		return t.streamPipedLogs(reader, out)
-	default:
-		out <- LogLine{
-			Line: fmt.Sprintf("The provided logsURL scheme is not supported: %s", u.Scheme),
-		}
-	}
-	return nil
+	return t.streamPipedLogs(reader, out)
 }
 
 func (t *TektonLogger) streamPipedLogs(src io.ReadCloser, out chan<- LogLine) (err error) {
@@ -435,29 +399,4 @@ func retrieveLogsFromPod(pod *corev1.Pod, container *corev1.Container, limitByte
 		return nil, errors.Wrapf(err, "there was an error creating the logs stream for pod %s", pod.Name)
 	}
 	return stream, nil
-}
-
-func downloadLogFile(logsURL string, authSvc auth.ConfigService) (io.ReadCloser, error) {
-	reader, err := buckets.ReadURL(logsURL, 30*time.Second, step.CreateBucketHTTPFn(authSvc))
-	return reader, err
-}
-
-func performProviderDownload(logsURL string, jxClient versioned.Interface, ns string) (io.ReadCloser, error) {
-	provider, err := NewBucketProviderFromTeamSettingsConfiguration(jxClient, ns)
-	if err != nil {
-		return nil, errors.Wrap(err, "There was a problem obtaining a Bucket provider for bucket scheme gs://")
-	}
-	return provider.DownloadFileFromBucket(logsURL)
-}
-
-func NewBucketProviderFromTeamSettingsConfiguration(jxClient versioned.Interface, ns string) (buckets.Provider, error) {
-	teamSettings, err := jxenv.GetDevEnvTeamSettings(jxClient, ns)
-	if err != nil {
-		return nil, errors.Wrap(err, "error obtaining the dev environment teamSettings to select the correct bucket provider")
-	}
-	requirements, err := config.GetRequirementsConfigFromTeamSettings(teamSettings)
-	if err != nil || requirements == nil {
-		return nil, errorutil.CombineErrors(err, errors.New("error obtaining the requirements file to decide bucket provider"))
-	}
-	return factory.NewBucketProvider(requirements), nil
 }

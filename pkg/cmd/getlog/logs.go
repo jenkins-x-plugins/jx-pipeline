@@ -254,7 +254,7 @@ func (o *Options) getTektonLogs() (bool, error) {
 	}
 
 	if pa.Spec.BuildLogsURL != "" {
-		for line := range o.TektonLogger.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL, nil) {
+		for line := range o.TektonLogger.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL) {
 			fmt.Fprintln(o.Out, line.Line)
 		}
 		return false, o.TektonLogger.Err()
