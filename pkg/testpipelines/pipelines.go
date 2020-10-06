@@ -18,8 +18,8 @@ import (
 // CreateTestPipelineActivity creates a PipelineActivity with the given arguments
 func CreateTestPipelineActivity(jxClient versioned.Interface, ns string, folder string, repo string, branch string, build string, workflow string) (*v1.PipelineActivity, error) {
 	ctx := context.Background()
-	activities := jxClient.JenkinsV1().PipelineActivities(ns)
-	key := newPromoteStepActivityKey(folder, repo, branch, build, workflow)
+	resources := jxClient.JenkinsV1().PipelineActivities(ns)
+	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	version := "1.0." + build
 	a.Spec.GitOwner = folder
@@ -27,18 +27,18 @@ func CreateTestPipelineActivity(jxClient versioned.Interface, ns string, folder 
 	a.Spec.GitURL = "https://fake.git/" + folder + "/" + repo + ".git"
 	a.Spec.Version = version
 	a.Spec.Workflow = workflow
-	_, err = activities.Update(ctx, a, metav1.UpdateOptions{})
+	_, err = resources.Update(ctx, a, metav1.UpdateOptions{})
 	return a, err
 }
 
 // CreateTestPipelineActivityWithTime creates a PipelineActivity with the given timestamp and adds it to the list of activities
 func CreateTestPipelineActivityWithTime(jxClient versioned.Interface, ns string, folder string, repo string, branch string, build string, workflow string, t metav1.Time) (*v1.PipelineActivity, error) {
 	ctx := context.Background()
-	activities := jxClient.JenkinsV1().PipelineActivities(ns)
-	key := newPromoteStepActivityKey(folder, repo, branch, build, workflow)
+	resources := jxClient.JenkinsV1().PipelineActivities(ns)
+	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	a.Spec.StartedTimestamp = &t
-	_, err = activities.Update(ctx, a, metav1.UpdateOptions{})
+	_, err = resources.Update(ctx, a, metav1.UpdateOptions{})
 	return a, err
 }
 
@@ -83,7 +83,7 @@ func dumpFailedActivity(activity *v1.PipelineActivity) {
 	}
 }
 
-func newPromoteStepActivityKey(folder string, repo string, branch string, build string, workflow string) *activities.PromoteStepActivityKey {
+func newPromoteStepActivityKey(folder string, repo string, branch string, build string) *activities.PromoteStepActivityKey {
 	return &activities.PromoteStepActivityKey{
 		PipelineActivityKey: activities.PipelineActivityKey{
 			Name:     folder + "-" + repo + "-" + branch + "-" + build,

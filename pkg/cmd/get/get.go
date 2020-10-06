@@ -177,7 +177,7 @@ func (o *Options) renderPipelineRuns() error {
 		return errors.New(fmt.Sprintf("no PipelineRuns were found in namespace %s", ns))
 	}
 
-	var owner, repo, branch, context, buildNumber, status string
+	var owner, repo, branch, triggerContext, buildNumber, status string
 	var names []string
 	m := map[string]*pipelineapi.PipelineRun{}
 	for k := range prList.Items {
@@ -193,7 +193,7 @@ func (o *Options) renderPipelineRuns() error {
 		owner = labels[tektonlog.LabelOwner]
 		repo = labels[tektonlog.LabelRepo]
 		branch = labels[tektonlog.LabelBranch]
-		context = labels[tektonlog.LabelContext]
+		triggerContext = labels[tektonlog.LabelContext]
 		buildNumber = labels[tektonlog.LabelBuild]
 
 		if owner == "" {
@@ -211,8 +211,8 @@ func (o *Options) renderPipelineRuns() error {
 
 		name := fmt.Sprintf("%s/%s/%s #%s %s", owner, repo, branch, buildNumber, status)
 
-		if context != "" {
-			name = fmt.Sprintf("%s-%s", name, context)
+		if triggerContext != "" {
+			name = fmt.Sprintf("%s-%s", name, triggerContext)
 		}
 		names = append(names, name)
 		m[name] = &pr

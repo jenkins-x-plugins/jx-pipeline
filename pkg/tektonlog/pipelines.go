@@ -13,14 +13,6 @@ import (
 // aka meta pipelines.
 type PipelineType int
 
-const (
-	// BuildPipeline is the yype for the actual build pipeline
-	BuildPipeline PipelineType = iota
-
-	// MetaPipeline type for the meta pipeline used to generate the build pipeline
-	MetaPipeline
-)
-
 func (s PipelineType) String() string {
 	return [...]string{"build", "meta"}[s]
 }

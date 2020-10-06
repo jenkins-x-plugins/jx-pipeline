@@ -263,7 +263,7 @@ func (o *Options) getTektonLogs() (bool, error) {
 	log.Logger().Infof("Build logs for %s", termcolor.ColorInfo(name))
 	name = strings.TrimSuffix(name, " ")
 
-	for line := range o.TektonLogger.GetRunningBuildLogs(pa, prList, name, false) {
+	for line := range o.TektonLogger.GetRunningBuildLogs(pa, prList, name) {
 		fmt.Fprintln(o.Out, line.Line)
 	}
 	return false, o.TektonLogger.Err()

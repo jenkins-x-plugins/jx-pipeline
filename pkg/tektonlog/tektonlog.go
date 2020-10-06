@@ -143,7 +143,7 @@ func createPipelineActivityName(pa *v1.PipelineActivity) string {
 	owner := ps.GitOwner
 	repository := ps.GitRepository
 	branch := ps.GitBranch
-	context := ps.Context
+	triggerContext := ps.Context
 
 	baseName := fmt.Sprintf("%s/%s/%s #%s",
 		naming.ToValidName(owner),
@@ -151,14 +151,14 @@ func createPipelineActivityName(pa *v1.PipelineActivity) string {
 		naming.ToValidName(branch),
 		strings.ToLower(buildNumber))
 
-	if context != "" {
-		return fmt.Sprintf("%s %s", baseName, naming.ToValidName(context))
+	if triggerContext != "" {
+		return fmt.Sprintf("%s %s", baseName, naming.ToValidName(triggerContext))
 	}
 	return baseName
 }
 
 // GetRunningBuildLogs obtains the logs of the provided PipelineActivity and streams the running build pods' logs using the provided LogWriter
-func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, noWaitForRuns bool) <-chan LogLine {
+func (t *TektonLogger) GetRunningBuildLogs(pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)

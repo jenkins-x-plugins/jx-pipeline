@@ -154,7 +154,7 @@ func (o *Options) cancelPipelineRun() error {
 		owner := labels[tektonlog.LabelOwner]
 		repo := labels[tektonlog.LabelRepo]
 		branch := labels[tektonlog.LabelBranch]
-		context := labels[tektonlog.LabelContext]
+		triggerContext := labels[tektonlog.LabelContext]
 		buildNumber := labels[tektonlog.LabelBuild]
 
 		if owner == "" {
@@ -175,8 +175,8 @@ func (o *Options) cancelPipelineRun() error {
 
 		name := fmt.Sprintf("%s/%s/%s #%s", owner, repo, branch, buildNumber)
 
-		if context != "" {
-			name = fmt.Sprintf("%s-%s", name, context)
+		if triggerContext != "" {
+			name = fmt.Sprintf("%s-%s", name, triggerContext)
 		}
 		allNames = append(allNames, name)
 		m[name] = &pr

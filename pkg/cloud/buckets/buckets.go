@@ -26,11 +26,11 @@ import (
 func CreateBucketURL(name, kind, cloudProvider string) (string, error) {
 	if kind == "" {
 		if cloudProvider == "" {
-			return "", fmt.Errorf("No bucket kind provided nor is a kubernetes provider configured for this team so it could not be defaulted")
+			return "", fmt.Errorf("no bucket kind provided nor is a kubernetes provider configured for this team so it could not be defaulted")
 		}
 		kind = KubeProviderToBucketScheme(cloudProvider)
 		if kind == "" {
-			return "", fmt.Errorf("No bucket kind is associated with kubernetes provider %s", cloudProvider)
+			return "", fmt.Errorf("no bucket kind is associated with kubernetes provider %s", cloudProvider)
 		}
 	}
 	return kind + "://" + name, nil
