@@ -1,6 +1,7 @@
 package activities
 
 import (
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -37,15 +38,17 @@ const (
 type Options struct {
 	options.BaseOptions
 
-	KubeClient   kubernetes.Interface
-	JXClient     versioned.Interface
-	TektonClient tektonclient.Interface
 	Format       string
 	Namespace    string
 	Filter       string
 	BuildNumber  string
 	Watch        bool
 	Sort         bool
+	KubeClient   kubernetes.Interface
+	JXClient     versioned.Interface
+	TektonClient tektonclient.Interface
+	Out          io.Writer
+	Results      []v1.PipelineActivity
 }
 
 var (
@@ -114,6 +117,9 @@ func (o *Options) Validate() error {
 	if err != nil {
 		return errors.Wrap(err, "error building tekton client")
 	}
+	if o.Out == nil {
+		o.Out = os.Stdout
+	}
 	return nil
 }
 
@@ -130,8 +136,7 @@ func (o *Options) Run() error {
 	}
 	jxClient := o.JXClient
 
-	out := os.Stdout
-	t := table.CreateTable(out)
+	t := table.CreateTable(o.Out)
 	t.SetColumnAlign(1, table.ALIGN_RIGHT)
 	t.SetColumnAlign(2, table.ALIGN_RIGHT)
 	t.AddRow("STEP", "STARTED AGO", "DURATION", "STATUS")
@@ -144,15 +149,18 @@ func (o *Options) Run() error {
 	if err != nil {
 		return err
 	}
+	items := list.Items
 	if o.Sort {
-		activities.SortActivities(list.Items)
+		activities.SortActivities(items)
 	}
 
-	for i := range list.Items {
-		a := &list.Items[i]
+	for i := range items {
+		a := &items[i]
 		o.addTableRow(&t, a)
 	}
 	t.Render()
+
+	o.Results = items
 	return nil
 }
 
