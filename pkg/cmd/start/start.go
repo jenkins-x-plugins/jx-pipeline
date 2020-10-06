@@ -1,6 +1,7 @@
 package start
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -8,12 +9,14 @@ import (
 
 	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/jx-api/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-helpers/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/pkg/input"
 	"github.com/jenkins-x/jx-helpers/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/pkg/options"
+	"github.com/jenkins-x/jx-helpers/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-helpers/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-helpers/pkg/termcolor"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
@@ -25,7 +28,10 @@ import (
 	lhclient "github.com/jenkins-x/lighthouse/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/lighthouse/pkg/config"
 	"github.com/jenkins-x/lighthouse/pkg/config/job"
+	"github.com/jenkins-x/lighthouse/pkg/jobutil"
 	"github.com/jenkins-x/lighthouse/pkg/launcher"
+	"github.com/jenkins-x/lighthouse/pkg/plugins"
+	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
 
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -54,6 +60,8 @@ type Options struct {
 	LighthouseConfigMap string
 	ServiceAccount      string
 	Namespace           string
+	GitUsername         string
+	GitToken            string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
@@ -112,6 +120,8 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.PipelineKind, "kind", "", "", "The kind of pipeline such as release or pullrequest")
 	cmd.Flags().StringVar(&o.ServiceAccount, "service-account", tektonlog.DefaultPipelineSA, "The Kubernetes ServiceAccount to use to run the meta pipeline")
 	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
+	cmd.Flags().StringVarP(&o.GitToken, "git-token", "", "", "the git token used to access the git repository for in-repo configurations in lighthouse")
+	cmd.Flags().StringVarP(&o.GitUsername, "git-username", "", "", "the git username used to access the git repository for in-repo configurations in lighthouse")
 	cmd.Flags().StringArrayVarP(&o.CustomLabels, "label", "l", nil, "List of custom labels to be applied to the generated PipelineRun (can be use multiple times)")
 	cmd.Flags().StringArrayVarP(&o.CustomEnvs, "env", "e", nil, "List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)")
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "", false, "Waits until the trigger has been setup in Lighthouse for when a new repository is being imported via GitOps")
@@ -238,14 +248,52 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 
 	fullName := scm.Join(owner, repo)
 
-	if cfg.InRepoConfigEnabled(fullName) {
-		// TODO load the config from the in repo...
-		return errors.Errorf("TODO in repo config")
-	}
-
 	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(o.JXClient, ns, owner, repo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the SourceRepository %s", fullName)
+	}
+
+	gitServerURL := sr.Spec.Provider
+	if gitServerURL == "" {
+		gitInfo, err := giturl.ParseGitURL(sr.Spec.HTTPCloneURL)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse git clone URL %s", sr.Spec.HTTPCloneURL)
+		}
+		gitServerURL = gitInfo.HostURL()
+	}
+
+	f := scmhelpers.Factory{
+		GitServerURL: gitServerURL,
+		Owner:        owner,
+		GitUsername:  o.GitUsername,
+		GitToken:     o.GitToken,
+	}
+	scmClient, err := f.Create()
+	if err != nil {
+		return errors.Wrapf(err, "failed to create an ScmClient for %s", fullName)
+	}
+
+	ctx := context.Background()
+
+	commit, _, err := scmClient.Git.FindCommit(ctx, fullName, branch)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find commit on repo %s for branch %s", fullName, branch)
+	}
+	if commit == nil {
+		return errors.Errorf("no commit on repo %s for branch %s", fullName, branch)
+	}
+	if cfg.InRepoConfigEnabled(fullName) {
+		pluginCfg := &plugins.Configuration{
+			Plugins: map[string][]string{
+				fullName: []string{"trigger"},
+			},
+		}
+
+		scmProvider := lighthouses.NewScmProvider(scmClient)
+		cfg, _, err = inrepo.Generate(scmProvider, cfg, pluginCfg, owner, repo, "")
+		if err != nil {
+			return errors.Wrapf(err, "failed to calculate in repo configuration")
+		}
 	}
 
 	postsubmits := cfg.Postsubmits[fullName]
@@ -266,25 +314,25 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 				Org:      owner,
 				Repo:     repo,
 				RepoLink: sr.Spec.URL,
-				BaseRef:  "master",
-				BaseSHA:  "",
-				BaseLink: "",
+				BaseRef:  branch,
+				BaseSHA:  commit.Sha,
+				BaseLink: commit.Link,
 				CloneURI: sr.Spec.HTTPCloneURL,
 			},
 			ExtraRefs: nil,
 			Context:   postsubmit.Context,
-			//RerunCommand:      postsubmit.Context,
+			//RerunCommand:      postsubmit.RerunCommand,
 			MaxConcurrency:    postsubmit.MaxConcurrency,
 			PipelineRunSpec:   postsubmit.PipelineRunSpec,
 			PipelineRunParams: postsubmit.PipelineRunParams,
 		},
 	}
 
+	lhjob.Labels, lhjob.Annotations = jobutil.LabelsAndAnnotationsForSpec(lhjob.Spec, nil, nil)
 	lhjob.GenerateName = naming.ToValidName(owner+"-"+repo) + "-"
 
-	laucherClient := launcher.NewLauncher(o.LHClient, o.Namespace)
-
-	lhjob, err = laucherClient.Launch(lhjob)
+	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
+	lhjob, err = launchClient.Launch(lhjob)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create lighthousejob %s in namespace %s", lhjob.Name, ns)
 	}
