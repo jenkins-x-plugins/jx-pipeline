@@ -6,14 +6,14 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/google/go-cmp v0.4.1
-	github.com/jenkins-x/go-scm v1.5.177
+	github.com/jenkins-x/go-scm v1.5.178
 	github.com/jenkins-x/golang-jenkins v0.0.0-20180919102630-65b83ad42314
 	github.com/jenkins-x/jx-api v0.0.24
 	github.com/jenkins-x/jx-helpers v1.0.86
 	github.com/jenkins-x/jx-kube-client v0.0.8
 	github.com/jenkins-x/jx-logging v0.0.11
 	github.com/jenkins-x/jx/v2 v2.1.150
-	github.com/jenkins-x/lighthouse v0.0.841
+	github.com/jenkins-x/lighthouse v0.0.845
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
