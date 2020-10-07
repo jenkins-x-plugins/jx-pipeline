@@ -26,7 +26,7 @@ metadata:
     provider: github
     repository: nodey510
     tekton.dev/pipeline: release-b4849
-  name: release-b4849
+  name: jstrachan-nodey510-master-8vqh9
   namespace: jx
   resourceVersion: "5735853"
   selfLink: /apis/jenkins.io/v1/namespaces/jx/pipelineactivities/jstrachan-nodey510-master-8vqh9
@@ -49,60 +49,37 @@ spec:
   steps:
   - kind: Stage
     stage:
-      name: Git Clone
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Git Setup
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Next Version
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Tag Version
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Setup Builder Home
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Git Merge
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Jx Variables
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Build Npmrc
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Build Npm Install
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Build Npm Test
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Build Container Build
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Promote Changelog
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Promote Helm Release
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Promote Jx Promote
+      name: from build pack
       status: Failed
+      steps:
+      - name: Git Clone
+        status: Succeeded
+      - name: Git Setup
+        status: Succeeded
+      - name: Next Version
+        status: Succeeded
+      - name: Tag Version
+        status: Succeeded
+      - name: Setup Builder Home
+        status: Succeeded
+      - name: Git Merge
+        status: Succeeded
+      - name: Jx Variables
+        status: Succeeded
+      - name: Build Npmrc
+        status: Succeeded
+      - name: Build Npm Install
+        status: Succeeded
+      - name: Build Npm Test
+        status: Succeeded
+      - name: Build Container Build
+        status: Succeeded
+      - name: Promote Changelog
+        status: Succeeded
+      - name: Promote Helm Release
+        status: Succeeded
+      - name: Promote Jx Promote
+        status: Failed
   - kind: Promote
     promote:
       environment: staging

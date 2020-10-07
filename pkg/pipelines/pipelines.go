@@ -1,6 +1,8 @@
 package pipelines
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
@@ -42,37 +44,56 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	repository := label(labels, repoLabels)
 	branch := label(labels, branchLabels)
 
+	if owner == "" || repository == "" || branch == "" {
+		return ""
+	}
+
+	prefix := owner + "-" + repository + "-" + branch + "-"
 	if build == "" {
 		buildID := labels["lighthouse.jenkins-x.io/buildNum"]
 		if buildID == "" {
 			return ""
 		}
-		found := false
 		for i := range paList {
 			pa := &paList[i]
 			if pa.Labels == nil {
 				continue
 			}
-			if pa.Labels["buildID"] == buildID {
+			if pa.Labels["lighthouse.jenkins-x.io/buildNum"] == buildID {
 				if pa.Spec.Build != "" {
 					pr.Labels["build"] = pa.Spec.Build
-					build = pa.Spec.Build
+					return pa.Name
 				}
-				found = true
 			}
 		}
-		if !found && owner != "" && repository != "" && branch != "" {
-			build = "1"
-			pr.Labels["build"] = build
+
+		// no PA has the buildNum yet so lets try find the next PA build number...
+		b := 1
+		for {
+			build = strconv.Itoa(b)
+			name := naming.ToValidName(prefix + build)
+			found := false
+			for i := range paList {
+				pa := &paList[i]
+				if pa.Name == name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				pr.Labels["build"] = build
+				return name
+			}
+			b++
 		}
 	}
-	if owner != "" && repository != "" && branch != "" && build != "" {
-		return naming.ToValidName(owner + "-" + repository + "-" + branch + "-" + build)
+	if build == "" {
+		return ""
 	}
-	return ""
+	return naming.ToValidName(prefix + build)
 }
 
-func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
 	annotations := pr.Annotations
 	labels := pr.Labels
 	if pa.APIVersion == "" {
@@ -81,7 +102,6 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
 	if pa.Kind == "" {
 		pa.Kind = "PipelineActivity"
 	}
-	pa.Name = pr.Name
 	pa.Namespace = pr.Namespace
 
 	if pa.Annotations == nil {
@@ -121,6 +141,9 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
 			ps.LastCommitSHA = labels["lighthouse.jenkins-x.io/lastCommitSHA"]
 		}
 	}
+	if ps.GitOwner != "" && ps.GitRepository != "" && ps.GitBranch != "" && ps.Pipeline == "" {
+		ps.Pipeline = fmt.Sprintf("%s/%s/%s", ps.GitOwner, ps.GitRepository, ps.GitBranch)
+	}
 	if annotations != nil {
 		if ps.GitURL == "" {
 			ps.GitURL = annotations["lighthouse.jenkins-x.io/cloneURI"]
@@ -128,9 +151,13 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
 	}
 
 	podName := ""
+	stageNames := map[string]bool{}
 	var steps []v1.PipelineActivityStep
 	if pr.Status.TaskRuns != nil {
 		for _, v := range pr.Status.TaskRuns {
+			stageName := strings.ReplaceAll(v.PipelineTaskName, "-", " ")
+			stageNames[stageName] = true
+			var stage *v1.PipelineActivityStep
 			if v.Status == nil {
 				continue
 			}
@@ -163,43 +190,92 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
 					previousStepTerminated = false
 				}
 
-				paStep := v1.PipelineActivityStep{
-					Kind: v1.ActivityStepKindTypeStage,
-					Stage: &v1.StageActivityStep{
-						CoreActivityStep: v1.CoreActivityStep{
-							Name:               Humanize(name),
-							Description:        "",
-							Status:             status,
-							StartedTimestamp:   started,
-							CompletedTimestamp: completed,
-						},
-					},
+				step := v1.CoreActivityStep{
+					Name:               Humanize(name),
+					Description:        "",
+					Status:             status,
+					StartedTimestamp:   started,
+					CompletedTimestamp: completed,
 				}
-				steps = append(steps, paStep)
+
+				if stage == nil {
+					stage = &v1.PipelineActivityStep{
+						Kind: v1.ActivityStepKindTypeStage,
+						Stage: &v1.StageActivityStep{
+							CoreActivityStep: v1.CoreActivityStep{
+								//Name:               Humanize(stageName),
+								Name:             stageName,
+								Description:      "",
+								Status:           status,
+								StartedTimestamp: started,
+							},
+						},
+					}
+				}
+				stage.Stage.Steps = append(stage.Stage.Steps, step)
+			}
+			if stage != nil {
+				steps = append(steps, *stage)
 			}
 		}
 	}
 
-	// if the PipelineActivity has some real steps lets trust it; otherise lets merge any prevew/promote steps
-	// with steps from the PipelineRun
-	// lets add any missing steps from the PipelineActivity as they may have been created via a `jx promote` step
-	hasStep := false
-	for _, s := range ps.Steps {
-		if s.Kind == v1.ActivityStepKindTypeStage && s.Stage != nil && s.Stage.Name != "Release" {
-			hasStep = true
-			break
+	if overwriteSteps {
+		for _, stage := range steps {
+			if stage.Stage == nil {
+				continue
+			}
+			idx := -1
+			found := false
+			for i := range ps.Steps {
+				s := &ps.Steps[i]
+				if s.Stage != nil && s.Stage.Name == stage.Stage.Name {
+					s.Stage = stage.Stage
+					found = true
+					break
+				}
+				if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
+					if idx < 9 {
+						idx = i
+					}
+				}
+			}
+			if !found {
+				if idx < 0 {
+					ps.Steps = append(ps.Steps, stage)
+				} else {
+					// lets add the new stage before the preview/promote stages
+					var remaining []v1.PipelineActivityStep
+					if idx < len(ps.Steps) {
+						remaining = ps.Steps[idx:]
+					}
+					ps.Steps = append(ps.Steps[0:idx], stage)
+					ps.Steps = append(ps.Steps, remaining...)
+				}
+			}
 		}
-	}
-	if !hasStep {
+	} else {
+		// if the PipelineActivity has some real steps lets trust it; otherwise lets merge any preview/promote steps
+		// with steps from the PipelineRun
+		// lets add any missing steps from the PipelineActivity as they may have been created via a `jx promote` step
+		hasStep := false
 		for _, s := range ps.Steps {
-			if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
-				steps = append(steps, s)
+			if s.Kind == v1.ActivityStepKindTypeStage && s.Stage != nil && s.Stage.Name != "Release" {
+				hasStep = true
+				break
 			}
 		}
-		ps.Steps = steps
+		if !hasStep {
+			for _, s := range ps.Steps {
+				if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
+					steps = append(steps, s)
+				}
+			}
+			ps.Steps = steps
+		}
 	}
 
-	if len(ps.Steps) == 0 {
+	if len(ps.Steps) == 0 && !overwriteSteps {
 		ps.Steps = append(ps.Steps, v1.PipelineActivityStep{
 			Kind: v1.ActivityStepKindTypeStage,
 			Stage: &v1.StageActivityStep{

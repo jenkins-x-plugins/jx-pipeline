@@ -93,7 +93,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 			pa.Name = paName
 			paNameMap[paName] = pa
 		}
-		pipelines.ToPipelineActivity(p, pa)
+		pipelines.ToPipelineActivity(p, pa, false)
 
 		fullBuildName := createPipelineActivityName(pa)
 		prMap[fullBuildName] = append(prMap[fullBuildName], p)
