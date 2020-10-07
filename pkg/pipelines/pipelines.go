@@ -62,7 +62,6 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 			if pa.Labels["lighthouse.jenkins-x.io/buildNum"] == buildID {
 				if pa.Spec.Build != "" {
 					pr.Labels["build"] = pa.Spec.Build
-					build = pa.Spec.Build
 					return pa.Name
 				}
 			}
@@ -71,7 +70,7 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 		// no PA has the buildNum yet so lets try find the next PA build number...
 		b := 1
 		for {
-			build := strconv.Itoa(b)
+			build = strconv.Itoa(b)
 			name := naming.ToValidName(prefix + build)
 			found := false
 			for i := range paList {
