@@ -20,7 +20,6 @@ metadata:
     lighthouse.jenkins-x.io/type: postsubmit
     podName: main-rvs7k-from-build-pack-6n942-pod-j8l2d
     tekton.dev/pipeline: main-rvs7k
-  name: main-rvs7k
   namespace: jx
 spec:
   baseSHA: 5a694a615045f2821aa40aefe86aab9192667193
@@ -32,58 +31,38 @@ spec:
   gitRepository: nodey510
   gitUrl: https://github.com/jstrachan/nodey510.git
   lastCommitSHA: 5a694a615045f2821aa40aefe86aab9192667193
+  pipeline: jstrachan/nodey510/master
   status: Running
   steps:
   - kind: Stage
     stage:
-      name: Git Clone
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Git Setup
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Next Version
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Tag Version
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Setup Builder Home
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Git Merge
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Build Npmrc
-      status: Succeeded
-  - kind: Stage
-    stage:
-      name: Build Npm Install
+      name: from build pack
       status: Running
-  - kind: Stage
-    stage:
-      name: Build Npm Test
-      status: Pending
-  - kind: Stage
-    stage:
-      name: Build Container Build
-      status: Pending
-  - kind: Stage
-    stage:
-      name: Promote Changelog
-      status: Pending
-  - kind: Stage
-    stage:
-      name: Promote Helm Release
-      status: Pending
-  - kind: Stage
-    stage:
-      name: Promote Jx Promote
-      status: Pending
+      steps:
+      - name: Git Clone
+        status: Succeeded
+      - name: Git Setup
+        status: Succeeded
+      - name: Next Version
+        status: Succeeded
+      - name: Tag Version
+        status: Succeeded
+      - name: Setup Builder Home
+        status: Succeeded
+      - name: Git Merge
+        status: Succeeded
+      - name: Build Npmrc
+        status: Succeeded
+      - name: Build Npm Install
+        status: Running
+      - name: Build Npm Test
+        status: Pending
+      - name: Build Container Build
+        status: Pending
+      - name: Promote Changelog
+        status: Pending
+      - name: Promote Helm Release
+        status: Pending
+      - name: Promote Jx Promote
+        status: Pending
 status: {}

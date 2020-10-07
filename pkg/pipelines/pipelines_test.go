@@ -36,7 +36,7 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 	require.NoError(t, err, "failed to unmarshal %s", prFile)
 
 	pa := &v1.PipelineActivity{}
-	ToPipelineActivity(pr, pa)
+	ToPipelineActivity(pr, pa, false)
 
 	ClearTimestamps(pa)
 
@@ -67,7 +67,7 @@ func TestMergePipelineActivity(t *testing.T) {
 	err = yamls.LoadFile(paFile, pa)
 	require.NoError(t, err, "failed to load %s", paFile)
 
-	ToPipelineActivity(pr, pa)
+	ToPipelineActivity(pr, pa, false)
 
 	ClearTimestamps(pa)
 
