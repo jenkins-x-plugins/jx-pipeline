@@ -57,7 +57,7 @@ func KubeProviderToBucketScheme(provider string) string {
 
 // ReadURL reads the given URL from either a http/https endpoint or a bucket URL path.
 // if specified the httpFn is a function which can append the user/password or token and/or add a header with the token if using a git provider
-func ReadURL(urlText string, timeout time.Duration, httpFn func(urlString string) (string, func(*http.Request), error)) (io.ReadCloser, error) {
+func ReadURL(ctx context.Context, urlText string, timeout time.Duration, httpFn func(urlString string) (string, func(*http.Request), error)) (io.ReadCloser, error) {
 	u, err := url.Parse(urlText)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse URL %s", urlText)
@@ -73,7 +73,7 @@ func ReadURL(urlText string, timeout time.Duration, httpFn func(urlString string
 		}
 		return ReadHTTPURL(urlText, headerFunc, timeout)
 	default:
-		return ReadBucketURL(u, timeout)
+		return ReadBucketURL(ctx, u, timeout)
 	}
 }
 
@@ -102,11 +102,9 @@ func ReadHTTPURL(u string, headerFunc func(*http.Request), timeout time.Duration
 // ReadBucketURL reads the content of a bucket URL of the for 's3://bucketName/foo/bar/whatnot.txt?param=123'
 // where any of the query arguments are applied to the underlying Bucket URL and the path is extracted and resolved
 // within the bucket
-func ReadBucketURL(u *url.URL, timeout time.Duration) (io.ReadCloser, error) {
+func ReadBucketURL(ctx context.Context, u *url.URL, timeout time.Duration) (io.ReadCloser, error) {
 	bucketURL, key := SplitBucketURL(u)
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open bucket %s", bucketURL)
@@ -120,16 +118,14 @@ func ReadBucketURL(u *url.URL, timeout time.Duration) (io.ReadCloser, error) {
 
 // WriteBucketURL writes the data to a bucket URL of the for 's3://bucketName/foo/bar/whatnot.txt?param=123'
 // with the given timeout
-func WriteBucketURL(u *url.URL, data io.Reader, timeout time.Duration) error {
+func WriteBucketURL(ctx context.Context, u *url.URL, data io.Reader, timeout time.Duration) error {
 	bucketURL, key := SplitBucketURL(u)
-	return WriteBucket(bucketURL, key, data, timeout)
+	return WriteBucket(ctx, bucketURL, key, data, timeout)
 }
 
 // WriteBucket writes the data to a bucket URL and key of the for 's3://bucketName' and key 'foo/bar/whatnot.txt'
 // with the given timeout
-func WriteBucket(bucketURL, key string, reader io.Reader, timeout time.Duration) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+func WriteBucket(ctx context.Context, bucketURL, key string, reader io.Reader, timeout time.Duration) (err error) {
 	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open bucket %s", bucketURL)
