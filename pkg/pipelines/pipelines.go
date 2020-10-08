@@ -59,7 +59,7 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 			if pa.Labels == nil {
 				continue
 			}
-			if pa.Labels["lighthouse.jenkins-x.io/buildNum"] == buildID {
+			if labels["buildID"] == buildID || labels["lighthouse.jenkins-x.io/buildNum"] == buildID {
 				if pa.Spec.Build != "" {
 					pr.Labels["build"] = pa.Spec.Build
 					return pa.Name
