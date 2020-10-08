@@ -9,7 +9,7 @@ require (
 	github.com/jenkins-x/golang-jenkins v0.0.0-20180919102630-65b83ad42314
 	github.com/jenkins-x/jx-api/v3 v3.0.0
 	github.com/jenkins-x/jx-helpers/v3 v3.0.0
-	github.com/jenkins-x/jx-kube-client/v3 v3.0.0
+	github.com/jenkins-x/jx-kube-client/v3 v3.0.1
 	github.com/jenkins-x/jx-logging/v3 v3.0.0
 	github.com/jenkins-x/lighthouse v0.0.841
 	github.com/mattn/go-colorable v0.1.6 // indirect
@@ -25,7 +25,6 @@ require (
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	sigs.k8s.io/yaml v1.2.0
 )
-
 
 replace (
 	github.com/jenkins-x/lighthouse => github.com/rawlingsj/lighthouse v0.0.0-20201005083317-4d21277f7992
