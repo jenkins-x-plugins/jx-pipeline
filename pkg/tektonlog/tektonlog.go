@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	typev1 "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/typed/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
@@ -136,6 +137,23 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 	}
 
 	return names, paMap, prMap, nil
+}
+
+// GetPipelineActivityForPipelineRun returns the PipelineActivity for the PipelineRun if it can be found
+func GetPipelineActivityForPipelineRun(activityInterface typev1.PipelineActivityInterface, pr *tektonapis.PipelineRun) (*v1.PipelineActivity, error) {
+	name := pipelines.ToPipelineActivityName(pr, nil)
+	if name == "" {
+		return nil, nil
+	}
+	ctx := context.Background()
+	pa, err := activityInterface.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return pa, errors.Wrapf(err, "failed to find PipelineActivity %s", name)
+	}
+	return pa, nil
 }
 
 func createPipelineActivityName(pa *v1.PipelineActivity) string {
