@@ -35,16 +35,17 @@ var (
 // TektonLogger contains the necessary clients and the namespace to get data from the cluster, an implementation of
 // LogWriter to write logs to and a logs retriever function to override the default way to obtain logs
 type TektonLogger struct {
-	JXClient          versioned.Interface
-	TektonClient      tektonclient.Interface
-	KubeClient        kubernetes.Interface
-	Namespace         string
-	GitUsername       string
-	GitToken          string
-	BytesLimit        int64
-	FailIfPodFails    bool
-	LogsRetrieverFunc retrieverFunc
-	err               error
+	JXClient           versioned.Interface
+	TektonClient       tektonclient.Interface
+	KubeClient         kubernetes.Interface
+	Namespace          string
+	GitUsername        string
+	GitToken           string
+	BytesLimit         int64
+	FailIfPodFails     bool
+	StorageReadTimeout time.Duration
+	LogsRetrieverFunc  retrieverFunc
+	err                error
 }
 
 // Err returns the last error that occurred during streaming logs.
@@ -364,7 +365,13 @@ func (t *TektonLogger) StreamPipelinePersistentLogs(logsURL string) <-chan LogLi
 }
 
 func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, out chan<- LogLine) error {
-	reader, err := buckets.ReadURL(logsURL, 30*time.Second, t.CreateBucketHTTPFn())
+	if t.StorageReadTimeout.Nanoseconds() == 0 {
+		t.StorageReadTimeout = 30 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), t.StorageReadTimeout)
+	defer cancel()
+
+	reader, err := buckets.ReadURL(ctx, logsURL, 30*time.Second, t.CreateBucketHTTPFn())
 	if err != nil {
 		return errors.Wrapf(err, "there was a problem obtaining the log file from the github pages URL %s", logsURL)
 	}
