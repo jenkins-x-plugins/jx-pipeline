@@ -102,7 +102,7 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 	cmd.Flags().BoolVarP(&o.Tail, "tail", "t", true, "Tails the build log to the current terminal")
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "w", false, "Waits for the build to start before failing")
 	cmd.Flags().BoolVarP(&o.FailIfPodFails, "fail-with-pod", "", false, "Return an error if the pod fails")
-	cmd.Flags().DurationVarP(&o.WaitForPipelineDuration, "wait-duration", "d", time.Minute*5, "Timeout period waiting for the given pipeline to be created")
+	cmd.Flags().DurationVarP(&o.WaitForPipelineDuration, "wait-duration", "d", time.Minute*20, "Timeout period waiting for the given pipeline to be created")
 	cmd.Flags().BoolVarP(&o.CurrentFolder, "current", "c", false, "Display logs using current folder as repo name, and parent folder as owner")
 
 	o.BaseOptions.AddBaseFlags(cmd)
