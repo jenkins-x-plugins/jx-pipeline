@@ -224,8 +224,10 @@ func (o *Options) getTektonLogs() (bool, error) {
 	}
 
 	var filteredNames []string
+	lowerFilter := strings.ToLower(filter)
 	for _, n := range names {
-		if strings.Contains(strings.ToLower(n), strings.ToLower(filter)) {
+		lowerName := strings.ToLower(n)
+		if strings.Contains(lowerName, lowerFilter) {
 			filteredNames = append(filteredNames, n)
 		}
 	}
