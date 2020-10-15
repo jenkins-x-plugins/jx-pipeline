@@ -248,6 +248,9 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the SourceRepository %s", fullName)
 	}
+	if sr == nil {
+		return errors.Errorf("could not find a SourceRepository with owner %s name %s in namespace %s", owner, repo, ns)
+	}
 
 	gitServerURL := sr.Spec.Provider
 	if gitServerURL == "" {
