@@ -12,6 +12,7 @@ import (
 	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,12 +72,20 @@ func FindSourceRepository(jxClient versioned.Interface, ns, owner, name, provide
 	repo, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, resourceName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			labelSelector := fmt.Sprintf("%s=%s,%s=%s", v1.LabelOwner, owner, v1.LabelRepository, name)
-			if providerName != "" {
-				labelSelector += fmt.Sprintf(",%s=%s", v1.LabelProvider, providerName)
+			log.Logger().Debugf("could not find SourceRepository %s in namespace %s", name, ns)
+
+			repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return nil, errors.Wrapf(err, "listing SourceRepository resources in namespace %s", ns)
 			}
 
-			return findSourceRepositoryByLabels(jxClient, ns, labelSelector)
+			for i := range repos.Items {
+				repo := &repos.Items[i]
+				if repo.Spec.Org == owner && repo.Spec.Repo == name {
+					return repo, nil
+				}
+			}
+			return nil, nil
 		}
 		return nil, errors.Wrapf(err, "getting SourceRepository %s in namespace %s", resourceName, ns)
 	}
