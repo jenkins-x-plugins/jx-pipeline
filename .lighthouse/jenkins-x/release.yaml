@@ -276,7 +276,7 @@ spec:
           name: build-and-push-image
           resources: {}
         - args:
-          - [ -d "/workspace/source/charts/$REPO_NAME" ] && cd /workspace/source/charts/$REPO_NAME && helm-docs
+          - '[ -d "/workspace/source/charts/$REPO_NAME" ] && cd /workspace/source/charts/$REPO_NAME && helm-docs'
           command:
           - /bin/sh
           - -c
@@ -284,8 +284,7 @@ spec:
           name: chart-docs
           resources: {}
         - args:
-          - [ -d "/workspace/source/charts/$REPO_NAME" ] && source .jx/variables.sh && cd /workspace/source/charts/$REPO_NAME && make
-            release
+          - '[ -d "/workspace/source/charts/$REPO_NAME" ] && source .jx/variables.sh && cd /workspace/source/charts/$REPO_NAME && make release'
           command:
           - /bin/bash
           - -c
