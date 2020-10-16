@@ -141,11 +141,19 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(filter *Buil
 
 // GetPipelineActivityForPipelineRun returns the PipelineActivity for the PipelineRun if it can be found
 func GetPipelineActivityForPipelineRun(activityInterface typev1.PipelineActivityInterface, pr *tektonapis.PipelineRun) (*v1.PipelineActivity, error) {
-	name := pipelines.ToPipelineActivityName(pr, nil)
+	ctx := context.Background()
+	resources, err := activityInterface.List(ctx, metav1.ListOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, errors.Wrapf(err, "failed to load PipelineActivity resources")
+	}
+	var paList []v1.PipelineActivity
+	if resources != nil {
+		paList = resources.Items
+	}
+	name := pipelines.ToPipelineActivityName(pr, paList)
 	if name == "" {
 		return nil, nil
 	}
-	ctx := context.Background()
 	pa, err := activityInterface.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {

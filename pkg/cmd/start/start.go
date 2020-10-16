@@ -262,11 +262,18 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		gitServerURL = gitInfo.HostURL()
 	}
 
+	gitKind := sr.Spec.ProviderKind
+	if gitKind == "" {
+		gitKind = giturl.SaasGitKind(gitServerURL)
+	}
+
 	f := scmhelpers.Factory{
 		GitServerURL: gitServerURL,
 		GitUsername:  o.GitUsername,
 		GitToken:     o.GitToken,
+		GitKind:      gitKind,
 	}
+
 	scmClient, err := f.Create()
 	if err != nil {
 		return errors.Wrapf(err, "failed to create an ScmClient for %s", fullName)
