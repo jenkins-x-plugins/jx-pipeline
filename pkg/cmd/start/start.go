@@ -58,6 +58,7 @@ type Options struct {
 	Namespace           string
 	GitUsername         string
 	GitToken            string
+	GitKind				string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
@@ -118,6 +119,7 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
 	cmd.Flags().StringVarP(&o.GitToken, "git-token", "", "", "the git token used to access the git repository for in-repo configurations in lighthouse")
 	cmd.Flags().StringVarP(&o.GitUsername, "git-username", "", "", "the git username used to access the git repository for in-repo configurations in lighthouse")
+	cmd.Flags().StringVarP(&o.Gitkind, "git-kind", "", "", "the git provider kind used to access the git repository for in-repo configurations in lighthouse")
 	cmd.Flags().StringArrayVarP(&o.CustomLabels, "label", "l", nil, "List of custom labels to be applied to the generated PipelineRun (can be use multiple times)")
 	cmd.Flags().StringArrayVarP(&o.CustomEnvs, "env", "e", nil, "List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)")
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "", false, "Waits until the trigger has been setup in Lighthouse for when a new repository is being imported via GitOps")
@@ -266,6 +268,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		GitServerURL: gitServerURL,
 		GitUsername:  o.GitUsername,
 		GitToken:     o.GitToken,
+		GitKind: 	  o.GitKind,
 	}
 	scmClient, err := f.Create()
 	if err != nil {
