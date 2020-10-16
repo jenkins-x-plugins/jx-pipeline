@@ -58,7 +58,7 @@ type Options struct {
 	Namespace           string
 	GitUsername         string
 	GitToken            string
-	GitKind				string
+	GitKind		    string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
@@ -268,7 +268,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		GitServerURL: gitServerURL,
 		GitUsername:  o.GitUsername,
 		GitToken:     o.GitToken,
-		GitKind: 	  o.GitKind,
+		GitKind:      o.GitKind,
 	}
 	scmClient, err := f.Create()
 	if err != nil {
