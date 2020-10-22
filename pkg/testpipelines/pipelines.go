@@ -105,3 +105,29 @@ func newPromoteStepActivityKey(folder, repo, branch, build string) *activities.P
 		},
 	}
 }
+
+func ClearTimestamps(pa *v1.PipelineActivity) {
+	pa.Spec.StartedTimestamp = nil
+	pa.Spec.CompletedTimestamp = nil
+	for i := range pa.Spec.Steps {
+		step := &pa.Spec.Steps[i]
+		if step.Stage != nil {
+			step.Stage.StartedTimestamp = nil
+			step.Stage.CompletedTimestamp = nil
+
+			for j := range step.Stage.Steps {
+				s2 := &step.Stage.Steps[j]
+				s2.StartedTimestamp = nil
+				s2.CompletedTimestamp = nil
+			}
+		}
+		if step.Promote != nil {
+			step.Promote.StartedTimestamp = nil
+			step.Promote.CompletedTimestamp = nil
+		}
+		if step.Preview != nil {
+			step.Preview.StartedTimestamp = nil
+			step.Preview.CompletedTimestamp = nil
+		}
+	}
+}
