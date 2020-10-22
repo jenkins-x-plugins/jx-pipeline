@@ -8,6 +8,7 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/jenkins-x/jx-pipeline/pkg/testpipelines"
 	"github.com/stretchr/testify/require"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -38,7 +39,7 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 	pa := &v1.PipelineActivity{}
 	ToPipelineActivity(pr, pa, false)
 
-	ClearTimestamps(pa)
+	testpipelines.ClearTimestamps(pa)
 
 	paFile := filepath.Join(tmpDir, "pa.yaml")
 	err = yamls.SaveFile(pa, paFile)
@@ -69,7 +70,7 @@ func TestMergePipelineActivity(t *testing.T) {
 
 	ToPipelineActivity(pr, pa, false)
 
-	ClearTimestamps(pa)
+	testpipelines.ClearTimestamps(pa)
 
 	paFile = filepath.Join(tmpDir, "pa.yaml")
 	err = yamls.SaveFile(pa, paFile)
@@ -78,30 +79,4 @@ func TestMergePipelineActivity(t *testing.T) {
 	t.Logf("created PipelineActivity %s\n", paFile)
 
 	testhelpers.AssertTextFilesEqual(t, filepath.Join("test_data", "merge", "expected.yaml"), paFile, "generated git credentials file")
-}
-
-func ClearTimestamps(pa *v1.PipelineActivity) {
-	pa.Spec.StartedTimestamp = nil
-	pa.Spec.CompletedTimestamp = nil
-	for i := range pa.Spec.Steps {
-		step := &pa.Spec.Steps[i]
-		if step.Stage != nil {
-			step.Stage.StartedTimestamp = nil
-			step.Stage.CompletedTimestamp = nil
-
-			for j := range step.Stage.Steps {
-				s2 := &step.Stage.Steps[j]
-				s2.StartedTimestamp = nil
-				s2.CompletedTimestamp = nil
-			}
-		}
-		if step.Promote != nil {
-			step.Promote.StartedTimestamp = nil
-			step.Promote.CompletedTimestamp = nil
-		}
-		if step.Preview != nil {
-			step.Preview.StartedTimestamp = nil
-			step.Preview.CompletedTimestamp = nil
-		}
-	}
 }

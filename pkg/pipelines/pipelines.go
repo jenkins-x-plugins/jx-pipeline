@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
@@ -215,6 +216,17 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 				stage.Stage.Steps = append(stage.Stage.Steps, step)
 			}
 			if stage != nil {
+				// lets check we have a started time if we have at least 1 step
+				if stage.Stage != nil && len(stage.Stage.Steps) > 0 {
+					if stage.Stage.Steps[0].StartedTimestamp == nil {
+						stage.Stage.Steps[0].StartedTimestamp = &metav1.Time{
+							Time: time.Now(),
+						}
+					}
+					if stage.Stage.StartedTimestamp == nil {
+						stage.Stage.StartedTimestamp = stage.Stage.Steps[0].StartedTimestamp
+					}
+				}
 				steps = append(steps, *stage)
 			}
 		}
@@ -272,6 +284,18 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 				}
 			}
 			ps.Steps = steps
+		}
+	}
+
+	if len(ps.Steps) > 0 && ps.StartedTimestamp == nil {
+		// lets default a start time
+		if ps.Steps[0].Stage != nil {
+			ps.StartedTimestamp = ps.Steps[0].Stage.StartedTimestamp
+		}
+	}
+	if ps.StartedTimestamp == nil {
+		ps.StartedTimestamp = &metav1.Time{
+			Time: time.Now(),
 		}
 	}
 
