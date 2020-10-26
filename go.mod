@@ -11,7 +11,7 @@ require (
 	github.com/jenkins-x/jx-helpers/v3 v3.0.9
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.1
 	github.com/jenkins-x/jx-logging/v3 v3.0.2
-	github.com/jenkins-x/lighthouse v0.0.856
+	github.com/jenkins-x/lighthouse v0.0.858
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.0.0
