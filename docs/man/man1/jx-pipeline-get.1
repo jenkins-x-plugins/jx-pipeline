@@ -20,6 +20,10 @@ Display one or more pipelines.
 
 .SH OPTIONS
 .PP
+\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
+    Runs in batch mode without prompting for user input
+
+.PP
 \fB\-\-configmap\fP="config"
     The name of the Lighthouse ConfigMap to find the trigger configurations
 
@@ -46,12 +50,6 @@ Display one or more pipelines.
 .PP
 \fB\-\-presubmit\fP[=false]
     Views the available lighthouse presubmit triggers rather than just the current PipelineRuns
-
-
-.SH OPTIONS INHERITED FROM PARENT COMMANDS
-.PP
-\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
-    Runs in batch mode without prompting for user input
 
 .PP
 \fB\-\-verbose\fP[=false]

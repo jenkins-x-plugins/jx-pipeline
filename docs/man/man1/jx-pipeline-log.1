@@ -20,6 +20,10 @@ Display a build log
 
 .SH OPTIONS
 .PP
+\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
+    Runs in batch mode without prompting for user input
+
+.PP
 \fB\-\-branch\fP=""
     Filters the branch
 
@@ -34,6 +38,10 @@ Display a build log
 .PP
 \fB\-c\fP, \fB\-\-current\fP[=false]
     Display logs using current folder as repo name, and parent folder as owner
+
+.PP
+\fB\-\-dir\fP="."
+    the directory to search for the .git to discover the git source URL
 
 .PP
 \fB\-\-fail\-with\-pod\fP[=false]
@@ -76,22 +84,16 @@ Display a build log
     Tails the build log to the current terminal
 
 .PP
+\fB\-\-verbose\fP[=false]
+    Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
+
+.PP
 \fB\-w\fP, \fB\-\-wait\fP[=false]
     Waits for the build to start before failing
 
 .PP
-\fB\-d\fP, \fB\-\-wait\-duration\fP=5m0s
+\fB\-d\fP, \fB\-\-wait\-duration\fP=20m0s
     Timeout period waiting for the given pipeline to be created
-
-
-.SH OPTIONS INHERITED FROM PARENT COMMANDS
-.PP
-\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
-    Runs in batch mode without prompting for user input
-
-.PP
-\fB\-\-verbose\fP[=false]
-    Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
 
 
 .SH EXAMPLE
