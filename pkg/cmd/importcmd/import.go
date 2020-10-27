@@ -113,16 +113,9 @@ func (o *Options) Validate() error {
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
-	if o.QuietCommandRunner == nil {
-		o.QuietCommandRunner = cmdrunner.QuietCommandRunner
-	}
 	if o.CommandRunner == nil {
 		o.CommandRunner = cmdrunner.DefaultCommandRunner
 	}
-	if o.GitClient == nil {
-		o.GitClient = cli.NewCLIClient("", o.QuietCommandRunner)
-	}
-
 	if o.KptBinary == "" {
 		var err error
 		o.KptBinary, err = plugins.GetKptBinary(plugins.KptVersion)
@@ -130,6 +123,8 @@ func (o *Options) Validate() error {
 			return errors.Wrapf(err, "failed to download the kpt binary")
 		}
 	}
+	// lazy create
+	o.Git()
 	return nil
 }
 
@@ -256,7 +251,7 @@ func (o *Options) Run() error {
 	sort.Strings(fileNames)
 
 	if len(fileNames) == 0 {
-		return errors.Errorf("task version folder %s has no *.yaml files")
+		return errors.Errorf("task version folder %s has no *.yaml files", folder)
 	}
 
 	log.Logger().Infof("importing files %s from %s version %s", info(strings.Join(fileNames, " ")), info(o.TaskFolder), info(o.TaskVersion))
@@ -381,4 +376,15 @@ func (o *Options) addLighthouseTriggers(sourceDir string, fileNames []string, to
 		log.Logger().Infof("created lighthouse triggers file %s", info(outFile))
 	}
 	return nil
+}
+
+// Git returns the git client lazy creating one if it does not exist
+func (o *Options) Git() gitclient.Interface {
+	if o.QuietCommandRunner == nil {
+		o.QuietCommandRunner = cmdrunner.QuietCommandRunner
+	}
+	if o.GitClient == nil {
+		o.GitClient = cli.NewCLIClient("", o.QuietCommandRunner)
+	}
+	return o.GitClient
 }
