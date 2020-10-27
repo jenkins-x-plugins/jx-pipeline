@@ -16,8 +16,11 @@ Imports tekton pipelines from a catalog.
 
 ### Examples
 
-  # Import pipeline resources; being prompted for what pipelines/tasks to import
+  # import tekton tasks from the tekton catalog: be prompted for what tasks/version to import an whether to enable triggers
   jx pipeline import
+  
+  # import tasks filtering the list of folders for those matching 'build' and disabling the automatic lighthouse trigger
+  jx pipeline import -f build --no-trigger
 
 ### Options
 
