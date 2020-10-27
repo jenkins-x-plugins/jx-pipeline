@@ -20,12 +20,16 @@ Display the Tekton build pods
 
 .SH OPTIONS
 .PP
+\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
+    Runs in batch mode without prompting for user input
+
+.PP
 \fB\-\-branch\fP=""
     Filters the branch
 
 .PP
 \fB\-\-build\fP=""
-    Filter a specific build number
+    The build number to view
 
 .PP
 \fB\-\-context\fP=""
@@ -33,7 +37,7 @@ Display the Tekton build pods
 
 .PP
 \fB\-f\fP, \fB\-\-filter\fP=""
-    Filters the build name by the given text
+    Filters all the available jobs by those that contain the given text
 
 .PP
 \fB\-g\fP, \fB\-\-giturl\fP=""
@@ -57,17 +61,15 @@ Display the Tekton build pods
 
 .PP
 \fB\-p\fP, \fB\-\-pending\fP[=false]
-    Filter builds which are currently pending or running
+    Only display logs which are currently pending to choose from if no build name is supplied
+
+.PP
+\fB\-\-pod\fP=""
+    The pod name to view
 
 .PP
 \fB\-r\fP, \fB\-\-repo\fP=""
     Filters the build repository
-
-
-.SH OPTIONS INHERITED FROM PARENT COMMANDS
-.PP
-\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
-    Runs in batch mode without prompting for user input
 
 .PP
 \fB\-\-verbose\fP[=false]

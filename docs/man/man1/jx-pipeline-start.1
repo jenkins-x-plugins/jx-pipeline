@@ -44,6 +44,14 @@ Starts the pipeline build.
     Filters all the available jobs by those that contain the given text
 
 .PP
+\fB\-\-git\-token\fP=""
+    the git token used to access the git repository for in\-repo configurations in lighthouse
+
+.PP
+\fB\-\-git\-username\fP=""
+    the git username used to access the git repository for in\-repo configurations in lighthouse
+
+.PP
 \fB\-h\fP, \fB\-\-help\fP[=false]
     help for start
 
@@ -70,16 +78,6 @@ Starts the pipeline build.
 .PP
 \fB\-\-wait\fP[=false]
     Waits until the trigger has been setup in Lighthouse for when a new repository is being imported via GitOps
-
-
-.SH OPTIONS INHERITED FROM PARENT COMMANDS
-.PP
-\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
-    Runs in batch mode without prompting for user input
-
-.PP
-\fB\-\-verbose\fP[=false]
-    Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
 
 
 .SH EXAMPLE

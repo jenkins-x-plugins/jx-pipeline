@@ -20,6 +20,10 @@ Display the current activities for one or more projects.
 
 .SH OPTIONS
 .PP
+\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
+    Runs in batch mode without prompting for user input
+
+.PP
 \fB\-\-build\fP=""
     The build number to filter on
 
@@ -40,18 +44,12 @@ Display the current activities for one or more projects.
     Sort activities by timestamp
 
 .PP
-\fB\-w\fP, \fB\-\-watch\fP[=false]
-    Whether to watch the activities for changes
-
-
-.SH OPTIONS INHERITED FROM PARENT COMMANDS
-.PP
-\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
-    Runs in batch mode without prompting for user input
-
-.PP
 \fB\-\-verbose\fP[=false]
     Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
+
+.PP
+\fB\-w\fP, \fB\-\-watch\fP[=false]
+    Whether to watch the activities for changes
 
 
 .SH EXAMPLE

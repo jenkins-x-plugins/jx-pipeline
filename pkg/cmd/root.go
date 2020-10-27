@@ -6,6 +6,7 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/activities"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/getlog"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/importcmd"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/pod"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/start"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/stop"
@@ -31,6 +32,7 @@ func Main() *cobra.Command {
 	cmd.AddCommand(cobras.SplitCommand(activities.NewCmdActivities()))
 	cmd.AddCommand(cobras.SplitCommand(get.NewCmdPipelineGet()))
 	cmd.AddCommand(cobras.SplitCommand(getlog.NewCmdGetBuildLogs()))
+	cmd.AddCommand(cobras.SplitCommand(importcmd.NewCmdPipelineImport()))
 	cmd.AddCommand(cobras.SplitCommand(pod.NewCmdGetBuildPods()))
 	cmd.AddCommand(cobras.SplitCommand(start.NewCmdPipelineStart()))
 	cmd.AddCommand(cobras.SplitCommand(stop.NewCmdPipelineStop()))
