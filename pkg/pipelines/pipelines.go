@@ -191,6 +191,12 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 					previousStepTerminated = false
 				}
 
+				if status.IsTerminated() && completed == nil {
+					completed = &metav1.Time{
+						Time: time.Now(),
+					}
+				}
+
 				step := v1.CoreActivityStep{
 					Name:               Humanize(name),
 					Description:        "",
@@ -225,6 +231,11 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 					}
 					if stage.Stage.StartedTimestamp == nil {
 						stage.Stage.StartedTimestamp = stage.Stage.Steps[0].StartedTimestamp
+					}
+					// lets check the last step
+					lastStep := stage.Stage.Steps[len(stage.Stage.Steps)-1]
+					if stage.Stage.CompletedTimestamp == nil {
+						stage.Stage.CompletedTimestamp = lastStep.CompletedTimestamp
 					}
 				}
 				steps = append(steps, *stage)
