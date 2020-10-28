@@ -68,9 +68,14 @@ type Options struct {
 	Input               input.Interface
 
 	// meta pipeline options
-	Context      string
-	CustomLabels []string
-	CustomEnvs   []string
+	Context          string
+	CustomLabels     []string
+	CustomEnvs       []string
+	CustomParameters []string
+
+	// ScmClients cache of Scm Clients mostly used for testing
+	ScmClients         map[string]*scm.Client
+	customParameterMap map[string]string
 }
 
 var (
@@ -120,6 +125,7 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.GitUsername, "git-username", "", "", "the git username used to access the git repository for in-repo configurations in lighthouse")
 	cmd.Flags().StringArrayVarP(&o.CustomLabels, "label", "l", nil, "List of custom labels to be applied to the generated PipelineRun (can be use multiple times)")
 	cmd.Flags().StringArrayVarP(&o.CustomEnvs, "env", "e", nil, "List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)")
+	cmd.Flags().StringArrayVarP(&o.CustomParameters, "param", "", nil, "List of name=value PipelineRun parameters passed into the ligthhousejob which add or override any parameter values in the lighthouse postsubmit configuration")
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "", false, "Waits until the trigger has been setup in Lighthouse for when a new repository is being imported via GitOps")
 	cmd.Flags().DurationVarP(&o.WaitDuration, "duration", "", time.Minute*20, "Maximum duration to wait for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
 	cmd.Flags().DurationVarP(&o.PollPeriod, "poll-period", "", time.Second*2, "Poll period when waiting for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
@@ -145,6 +151,14 @@ func (o *Options) Validate() error {
 
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
+	}
+	o.customParameterMap = map[string]string{}
+	for _, cp := range o.CustomParameters {
+		paths := strings.SplitN(cp, "=", 2)
+		if len(paths) != 2 {
+			return options.InvalidOptionf("param", cp, "should be of the form 'name=value'")
+		}
+		o.customParameterMap[paths[0]] = paths[1]
 	}
 	return nil
 }
@@ -273,10 +287,15 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		GitToken:     o.GitToken,
 		GitKind:      gitKind,
 	}
-
-	scmClient, err := f.Create()
-	if err != nil {
-		return errors.Wrapf(err, "failed to create an ScmClient for %s", fullName)
+	var scmClient *scm.Client
+	if o.ScmClients != nil {
+		scmClient = o.ScmClients[gitServerURL]
+	}
+	if scmClient == nil {
+		scmClient, err = f.Create()
+		if err != nil {
+			return errors.Wrapf(err, "failed to create an ScmClient for %s", fullName)
+		}
 	}
 
 	ctx := context.Background()
@@ -310,6 +329,8 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	// TODO pick the first one for now?
 	postsubmit := postsubmits[0]
 
+	pipelineRunParams := o.combineWithCustomParameters(postsubmit.PipelineRunParams)
+
 	lhjob := &v1alpha1.LighthouseJob{
 		Spec: v1alpha1.LighthouseJobSpec{
 			Type:  jobType,
@@ -330,7 +351,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			//RerunCommand:      postsubmit.RerunCommand,
 			MaxConcurrency:    postsubmit.MaxConcurrency,
 			PipelineRunSpec:   postsubmit.PipelineRunSpec,
-			PipelineRunParams: postsubmit.PipelineRunParams,
+			PipelineRunParams: pipelineRunParams,
 		},
 	}
 
@@ -345,6 +366,27 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 
 	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
 	return nil
+}
+
+func (o *Options) combineWithCustomParameters(params []job.PipelineRunParam) []job.PipelineRunParam {
+	for name, value := range o.customParameterMap {
+		found := false
+		for i := range params {
+			p := &params[i]
+			if p.Name == name {
+				p.ValueTemplate = value
+				found = true
+				break
+			}
+		}
+		if !found {
+			params = append(params, job.PipelineRunParam{
+				Name:          name,
+				ValueTemplate: value,
+			})
+		}
+	}
+	return params
 }
 
 // pipelineNames returns the pipeline names to trigger
