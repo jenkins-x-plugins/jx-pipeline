@@ -64,6 +64,10 @@ Starts the pipeline build.
     List of custom labels to be applied to the generated PipelineRun (can be use multiple times)
 
 .PP
+\fB\-\-param\fP=[]
+    List of name=value PipelineRun parameters passed into the ligthhousejob which add or override any parameter values in the lighthouse postsubmit configuration
+
+.PP
 \fB\-\-poll\-period\fP=2s
     Poll period when waiting for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps
 
