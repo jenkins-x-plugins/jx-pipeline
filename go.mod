@@ -27,7 +27,7 @@ require (
 )
 
 replace (
-	github.com/jenkins-x/lighthouse => github.com/rawlingsj/lighthouse v0.0.0-20201005083317-4d21277f7992
+	github.com/jenkins-x/lighthouse => github.com/jstrachan/lighthouse v0.0.0-20201101080323-11ce13b69e8e
 	github.com/tektoncd/pipeline => github.com/jenkins-x/pipeline v0.0.0-20201002150609-ca0741e5d19a
 	k8s.io/client-go => k8s.io/client-go v0.19.2
 )

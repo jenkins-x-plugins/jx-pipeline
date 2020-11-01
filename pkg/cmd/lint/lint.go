@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/lighthouse/pkg/config/job"
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig"
+	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
@@ -120,7 +122,7 @@ func loadConfigFile(repoConfig *triggerconfig.Config, dir string) (*triggerconfi
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
-			err := loadJobBaseFromSourcePath(filepath.Join(dir, r.SourcePath) + ".yaml")
+			err := loadJobBaseFromSourcePath(filepath.Join(dir, r.SourcePath))
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to load Source for Presubmit %d", i)
 			}
@@ -133,7 +135,7 @@ func loadConfigFile(repoConfig *triggerconfig.Config, dir string) (*triggerconfi
 	for i := range repoConfig.Spec.Postsubmits {
 		r := &repoConfig.Spec.Postsubmits[i]
 		if r.SourcePath != "" {
-			err := loadJobBaseFromSourcePath(filepath.Join(dir, r.SourcePath) + ".yaml")
+			err := loadJobBaseFromSourcePath(filepath.Join(dir, r.SourcePath))
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to load Source for Presubmit %d", i)
 			}
@@ -146,7 +148,6 @@ func loadConfigFile(repoConfig *triggerconfig.Config, dir string) (*triggerconfi
 }
 
 func loadJobBaseFromSourcePath(path string) error {
-	/* TODO
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load file %s", path)
@@ -155,9 +156,7 @@ func loadJobBaseFromSourcePath(path string) error {
 		return errors.Errorf("empty file file %s", path)
 	}
 
-
 	dir := filepath.Dir(path)
-
 	message := fmt.Sprintf("file %s", path)
 
 	getData := func(name string) ([]byte, error) {
@@ -173,6 +172,5 @@ func loadJobBaseFromSourcePath(path string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
 	}
-	*/
 	return nil
 }

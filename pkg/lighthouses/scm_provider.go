@@ -38,3 +38,10 @@ func (c *ScmProvider) ListFiles(owner, repo, filepath, commit string) ([]*scm.Fi
 	answer, _, err := c.ScmClient.Contents.List(ctx, fullName, filepath, commit)
 	return answer, err
 }
+
+// ListFiles returns the files from git
+func (c *ScmProvider) GetRepositoryByFullName(fullName string) (*scm.Repository, error) {
+	ctx := context.Background()
+	answer, _, err := c.ScmClient.Repositories.Find(ctx, fullName)
+	return answer, err
+}
