@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
@@ -11,7 +12,9 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/lighthouse/pkg/config/job"
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
@@ -31,15 +34,24 @@ type Options struct {
 
 	Dir          string
 	Namespace    string
+	OutFile      string
 	Input        input.Interface
 	KubeClient   kubernetes.Interface
 	JXClient     versioned.Interface
 	TektonClient tektonclient.Interface
+	Jobs         map[string]gojenkins.Job
+	Tests        []*Test
+}
 
-	Jobs map[string]gojenkins.Job
+type Test struct {
+	File    string
+	Error   error
+	Message string
 }
 
 var (
+	info = termcolor.ColorInfo
+
 	cmdLong = templates.LongDesc(`
 		Lints the lighthouse trigger and tekton pipelines
 `)
@@ -66,7 +78,7 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 		},
 	}
 	cmd.Flags().StringVarP(&o.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
-
+	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The TAP format file to output with the results. If not specified the tap file is output to the terminal")
 	return cmd, o
 }
 
@@ -104,29 +116,74 @@ func (o *Options) Run() error {
 			continue
 		}
 
+		test := &Test{
+			File: triggersFile,
+		}
+		o.Tests = append(o.Tests, test)
 		triggers := &triggerconfig.Config{}
 		err = yamls.LoadFile(triggersFile, triggers)
 		if err != nil {
-			return errors.Wrapf(err, "failed to ")
+			test.Error = err
+			continue
 		}
 
-		_, err = loadConfigFile(triggers, triggerDir)
-		if err != nil {
-			return errors.Wrapf(err, "failed to load triggers file %s", triggersFile)
+		o.loadConfigFile(triggers, triggerDir)
+	}
+	return o.logResults()
+}
+
+func (o *Options) logResults() error {
+	buf := strings.Builder{}
+	buf.WriteString("TAP version 13\n")
+	count := len(o.Tests)
+	buf.WriteString(fmt.Sprintf("1..%d\n", count))
+	var failed []string
+	for i, test := range o.Tests {
+		n := i + 1
+		if test.Error != nil {
+			failed = append(failed, strconv.Itoa(n))
+			buf.WriteString(fmt.Sprintf("not ok %d - %s\n", n, test.File))
+		} else {
+			buf.WriteString(fmt.Sprintf("ok %d - %s\n", n, test.File))
 		}
 	}
+	failedCount := len(failed)
+	if failedCount > 0 {
+		buf.WriteString(fmt.Sprintf("FAILED tests %s\n", strings.Join(failed, ", ")))
+	}
+	var p float32
+	if count > 0 {
+		p = float32(100 * (count - failedCount) / count)
+	}
+	buf.WriteString(fmt.Sprintf("Failed %d/%d tests, %.2f", failedCount, count, p))
+	buf.WriteString("%% okay\n")
+
+	text := buf.String()
+	if o.OutFile != "" {
+		err := ioutil.WriteFile(o.OutFile, []byte(text), files.DefaultFileWritePermissions)
+		if err != nil {
+			return errors.Wrapf(err, "failed to save file %s", o.OutFile)
+		}
+		log.Logger().Info("saved file %s", info(o.OutFile))
+		return nil
+	}
+	log.Logger().Infof(text)
 	return nil
 }
 
-func loadConfigFile(repoConfig *triggerconfig.Config, dir string) (*triggerconfig.Config, error) {
+func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *triggerconfig.Config {
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
-			err := loadJobBaseFromSourcePath(filepath.Join(dir, r.SourcePath))
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to load Source for Presubmit %d", i)
+			path := filepath.Join(dir, r.SourcePath)
+			test := &Test{
+				File: path,
 			}
-
+			o.Tests = append(o.Tests, test)
+			err := loadJobBaseFromSourcePath(path)
+			if err != nil {
+				test.Error = err
+			}
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
@@ -135,16 +192,21 @@ func loadConfigFile(repoConfig *triggerconfig.Config, dir string) (*triggerconfi
 	for i := range repoConfig.Spec.Postsubmits {
 		r := &repoConfig.Spec.Postsubmits[i]
 		if r.SourcePath != "" {
-			err := loadJobBaseFromSourcePath(filepath.Join(dir, r.SourcePath))
+			path := filepath.Join(dir, r.SourcePath)
+			test := &Test{
+				File: path,
+			}
+			o.Tests = append(o.Tests, test)
+			err := loadJobBaseFromSourcePath(path)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to load Source for Presubmit %d", i)
+				test.Error = err
 			}
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
 		}
 	}
-	return repoConfig, nil
+	return repoConfig
 }
 
 func loadJobBaseFromSourcePath(path string) error {
