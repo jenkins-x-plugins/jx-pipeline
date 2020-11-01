@@ -146,7 +146,7 @@ func (o *Options) processFile(path string) error {
 	}
 
 	kindPrefix := "kind:"
-	kind := "PipelineRun"
+	kind := ""
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		if !strings.HasPrefix(line, kindPrefix) {
