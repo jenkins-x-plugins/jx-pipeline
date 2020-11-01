@@ -61,6 +61,13 @@ var (
 		"git-setup":          true,
 		"setup-builder-home": true,
 	}
+
+	shellBinaries = map[string]bool{
+		"/bin/ash":    true,
+		"/bin/bash":   true,
+		"/bin/sh":     true,
+		"/busybox/sh": true,
+	}
 )
 
 // NewCmdPipelineFormat creates the command
@@ -221,6 +228,7 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec, path string) e
 			for j := range ts.Steps {
 				s := ts.Steps[j]
 				if !removeStepNames[s.Name] {
+					s = o.convertToScriptStep(s)
 					steps = append(steps, s)
 				}
 			}
@@ -248,6 +256,37 @@ func (o *Options) processPipeline(pipeline *v1beta1.Pipeline, path string) error
 
 func (o *Options) processTask(task *v1beta1.Task, path string) error {
 	return nil
+}
+
+func (o *Options) convertToScriptStep(s v1beta1.Step) v1beta1.Step {
+	if len(s.Command) == 0 || len(s.Args) == 0 {
+		return s
+	}
+	bin := s.Command[0]
+	arg := ""
+	if bin == "jx" {
+		arg = "jx " + strings.Join(s.Args, " ")
+		bin = "/usr/bin/env bash"
+	} else {
+		if !shellBinaries[bin] {
+			return s
+		}
+		if len(s.Command) == 2 && s.Command[1] == "-c" && len(s.Args) == 1 {
+			arg = s.Args[0]
+		} else if len(s.Command) == 1 && len(s.Args) == 2 && s.Args[0] == "-c" {
+			arg = s.Args[1]
+		}
+	}
+	if arg == "" {
+		return s
+	}
+	if strings.HasPrefix(arg, "jx ") {
+		bin = "/usr/bin/env bash"
+	}
+	s.Command = nil
+	s.Args = nil
+	s.Script = "#!" + bin + "\n" + strings.ReplaceAll(arg, " && ", "\n") + "\n"
+	return s
 }
 
 // RemoveDefaultParamSpecs removes default parameters
