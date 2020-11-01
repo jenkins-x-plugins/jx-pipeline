@@ -164,7 +164,7 @@ func (o *Options) logResults() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to save file %s", o.OutFile)
 		}
-		log.Logger().Info("saved file %s", info(o.OutFile))
+		log.Logger().Infof("saved file %s", info(o.OutFile))
 		return nil
 	}
 	log.Logger().Infof(text)
