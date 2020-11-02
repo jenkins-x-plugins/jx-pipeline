@@ -3,6 +3,7 @@ package lint
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -35,6 +37,7 @@ type Options struct {
 	Dir          string
 	Namespace    string
 	OutFile      string
+	Format       string
 	Input        input.Interface
 	KubeClient   kubernetes.Interface
 	JXClient     versioned.Interface
@@ -79,6 +82,7 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 	}
 	cmd.Flags().StringVarP(&o.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The TAP format file to output with the results. If not specified the tap file is output to the terminal")
+	cmd.Flags().StringVarP(&o.Format, "format", "", "", "If specify 'tap' lets use the TAP output otherwise use simple text output")
 	return cmd, o
 }
 
@@ -133,6 +137,27 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) logResults() error {
+	if o.Format == "tap" || o.OutFile != "" {
+		return o.logTapResults()
+	}
+
+	t := table.CreateTable(os.Stdout)
+	t.AddRow("FILE", "STATUS")
+
+	for _, test := range o.Tests {
+		name := test.File
+		err := test.Error
+		status := info("OK")
+		if err != nil {
+			status = termcolor.ColorWarning(err.Error())
+		}
+		t.AddRow(name, status)
+	}
+	t.Render()
+	return nil
+}
+
+func (o *Options) logTapResults() error {
 	buf := strings.Builder{}
 	buf.WriteString("TAP version 13\n")
 	count := len(o.Tests)
