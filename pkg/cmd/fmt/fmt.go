@@ -109,10 +109,10 @@ func (o *Options) Validate() error {
 		}
 	}
 	if o.GitCloneURL == "" {
-		o.GitCloneURL = "https://raw.githubusercontent.com/jenkins-x/jx3-pipeline-catalog/" + o.CatalogSHA + "/tasks/git-clone/git-clone-pr.yaml"
+		o.GitCloneURL = "https://raw.githubusercontent.com/jenkins-x/jx3-pipeline-catalog/" + o.CatalogSHA + "/tasks/git-clone/git-clone.yaml"
 	}
 	if o.GitClonePullRequestURL == "" {
-		o.GitClonePullRequestURL = "https://raw.githubusercontent.com/jenkins-x/jx3-pipeline-catalog/" + o.CatalogSHA + "/tasks/git-clone/git-clone.yaml"
+		o.GitClonePullRequestURL = "https://raw.githubusercontent.com/jenkins-x/jx3-pipeline-catalog/" + o.CatalogSHA + "/tasks/git-clone/git-clone-pr.yaml"
 	}
 	return nil
 }
