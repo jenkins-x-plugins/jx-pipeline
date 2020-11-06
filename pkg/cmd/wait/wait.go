@@ -142,12 +142,19 @@ func (o *Options) waitForRepositoryToBeSetup(kubeClient kubernetes.Interface, ns
 		}
 
 		if time.Now().After(end) {
+			log.Logger().Info("")
+			log.Logger().Warn("It looks like the boot job failed to setup this project.")
+			log.Logger().Infof("You can view the log via: %s", info("jx admnin log"))
 			return false, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
 		}
 
 		if !logWaiting {
 			logWaiting = true
+			log.Logger().Info("")
 			log.Logger().Infof("waiting up to %s for a trigger to be added to the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s", info(o.WaitDuration.String()), info(name), info(ns), info(fullName))
+			log.Logger().Infof("you can watch the boot job to update the configuration via: %s", info("jx admnin log"))
+			log.Logger().Info("for more information on how this works see: https://jenkins-x.io/docs/v3/about/how-it-works/#importing--creating-quickstarts")
+			log.Logger().Info("")
 		}
 		time.Sleep(o.PollPeriod)
 	}
@@ -201,6 +208,11 @@ func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns, owner, rep
 		}
 
 		if time.Now().After(end) {
+			log.Logger().Info("")
+			log.Logger().Warn("It looks like the boot job failed to setup the webhooks. It could be related to the git token permissions.")
+			log.Logger().Infof("You can view the log via: %s", info("jx admnin log"))
+			log.Logger().Info("")
+
 			return errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
 		}
 
