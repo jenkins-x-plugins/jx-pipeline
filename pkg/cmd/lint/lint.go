@@ -8,10 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
@@ -21,29 +19,20 @@ import (
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
-	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/spf13/cobra"
 
-	gojenkins "github.com/jenkins-x/golang-jenkins"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
-// StopPipelineOptions contains the command line options
+// Options contains the command line options
 type Options struct {
 	options.BaseOptions
 
-	Dir          string
-	Namespace    string
-	OutFile      string
-	Format       string
-	Input        input.Interface
-	KubeClient   kubernetes.Interface
-	JXClient     versioned.Interface
-	TektonClient tektonclient.Interface
-	Jobs         map[string]gojenkins.Job
-	Tests        []*Test
+	Dir       string
+	Namespace string
+	OutFile   string
+	Format    string
+	Tests     []*Test
 }
 
 type Test struct {
@@ -86,19 +75,8 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 	return cmd, o
 }
 
-// Validate verifies things are setup correctly
-func (o *Options) Validate() error {
-
-	return nil
-}
-
 // Run implements this command
 func (o *Options) Run() error {
-	err := o.Validate()
-	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
-	}
-
 	dir := filepath.Join(o.Dir, ".lighthouse")
 	fs, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -246,8 +224,7 @@ func loadJobBaseFromSourcePath(path string) error {
 	dir := filepath.Dir(path)
 	message := fmt.Sprintf("file %s", path)
 
-	getData := func(name string) ([]byte, error) {
-		path := filepath.Join(dir, name)
+	getData := func(path string) ([]byte, error) {
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read file %s", path)
