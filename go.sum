@@ -894,8 +894,10 @@ github.com/jenkins-x/jx-api/v3 v3.0.1 h1:kB3f6r/xUzwdMjeh/R+nE72bLHLaQHCB8Cxs96l
 github.com/jenkins-x/jx-api/v3 v3.0.1/go.mod h1:T/Q15bSgPAq9+4k5gMZIuVVmj6rfCDqF4XYLJXkM3Q8=
 github.com/jenkins-x/jx-api/v3 v3.0.2 h1:LgXQ4lGl8cIspyUpQXCIgR7qIH+iOLcQN4h4Al4KnO0=
 github.com/jenkins-x/jx-api/v3 v3.0.2/go.mod h1:T/Q15bSgPAq9+4k5gMZIuVVmj6rfCDqF4XYLJXkM3Q8=
+github.com/jenkins-x/jx-api/v3 v3.0.3/go.mod h1:8akIl/53O1P/DfyXz6ZysWl/9AfdVlJpZK/xOajgXos=
 github.com/jenkins-x/jx-gitops v0.0.417 h1:PtW8KRgH/m6n7th+ZF/xJ8dgCgK8Va8zZkxuN6LLAA8=
 github.com/jenkins-x/jx-gitops v0.0.417/go.mod h1:Cl5wv+pH390VbDrAxYgFN5zTwoEAQOtxPXXaGLb01mE=
+github.com/jenkins-x/jx-gitops v0.0.426/go.mod h1:jiSUkwNrQj17FvfHoOipjRE9piQqSL87d9eDELbVPMU=
 github.com/jenkins-x/jx-helpers/v3 v3.0.9/go.mod h1:YulZCWgM+W49nkW7juaOwIEOyXkmwfaMdsC6/W5b+H8=
 github.com/jenkins-x/jx-helpers/v3 v3.0.15 h1:AQ0H2krcz6NbugyiqXzhNAZY5Os8PFdDhk+5FZYTU1g=
 github.com/jenkins-x/jx-helpers/v3 v3.0.15/go.mod h1:YulZCWgM+W49nkW7juaOwIEOyXkmwfaMdsC6/W5b+H8=
