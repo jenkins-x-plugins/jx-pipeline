@@ -28,7 +28,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
-// PipelineOptions is the start of the data required to perform the operation.
+// Options is the start of the data required to perform the operation.
 // As new fields are added, add them here instead of
 // referencing the cmd.Flags()
 type Options struct {

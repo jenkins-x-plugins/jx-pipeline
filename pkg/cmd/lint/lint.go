@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
@@ -20,8 +22,6 @@ import (
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-
-	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
 // Options contains the command line options
@@ -232,9 +232,15 @@ func loadJobBaseFromSourcePath(path string) error {
 		return data, nil
 	}
 
-	_, err = inrepo.LoadTektonResourceAsPipelineRun(data, dir, message, getData, nil)
+	pr, err := inrepo.LoadTektonResourceAsPipelineRun(data, dir, message, getData, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
+	}
+
+	ctx := context.Background()
+	fieldError := pr.Validate(ctx)
+	if fieldError != nil {
+		return errors.Wrapf(fieldError, "failed to validate YAML file %s", path)
 	}
 	return nil
 }
