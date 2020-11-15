@@ -144,7 +144,7 @@ func (o *Options) waitForRepositoryToBeSetup(kubeClient kubernetes.Interface, ns
 		if time.Now().After(end) {
 			log.Logger().Info("")
 			log.Logger().Warn("It looks like the boot job failed to setup this project.")
-			log.Logger().Infof("You can view the log via: %s", info("jx admnin log"))
+			log.Logger().Infof("You can view the log via: %s", info("jx admin log"))
 			return false, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
 		}
 
@@ -210,7 +210,7 @@ func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns, owner, rep
 		if time.Now().After(end) {
 			log.Logger().Info("")
 			log.Logger().Warn("It looks like the boot job failed to setup the webhooks. It could be related to the git token permissions.")
-			log.Logger().Infof("You can view the log via: %s", info("jx admnin log"))
+			log.Logger().Infof("You can view the log via: %s", info("jx admin log"))
 			log.Logger().Info("")
 
 			return errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
