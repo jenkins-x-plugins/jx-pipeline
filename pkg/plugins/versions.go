@@ -5,5 +5,5 @@ const (
 	KptPluginName = "kpt"
 
 	// KptVersion the default version of kpt to use
-	KptVersion = "0.33.0"
+	KptVersion = "0.37.0"
 )
