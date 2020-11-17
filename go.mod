@@ -5,7 +5,7 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.10
 	github.com/fatih/color v1.9.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/jenkins-x/go-scm v1.5.190
+	github.com/jenkins-x/go-scm v1.5.191
 	github.com/jenkins-x/golang-jenkins v0.0.0-20180919102630-65b83ad42314
 	github.com/jenkins-x/jx-api/v3 v3.0.3
 	github.com/jenkins-x/jx-gitops v0.0.434
