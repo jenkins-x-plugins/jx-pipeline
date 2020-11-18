@@ -1,7 +1,6 @@
 package stop
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -19,10 +18,9 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/spf13/cobra"
 
 	gojenkins "github.com/jenkins-x/golang-jenkins"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -128,7 +126,7 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) cancelPipelineRun() error {
-	ctx := context.Background()
+	ctx := o.GetContext()
 	tektonClient := o.TektonClient
 	ns := o.Namespace
 	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
@@ -222,7 +220,7 @@ func (o *Options) cancelPipelineRun() error {
 			log.Logger().Infof("PipelineRun %s has already completed", termcolor.ColorInfo(prName))
 			continue
 		}
-		err = tektonlog.CancelPipelineRun(tektonClient, ns, pr)
+		err = tektonlog.CancelPipelineRun(ctx, tektonClient, ns, pr)
 		if err != nil {
 			return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
 		}

@@ -130,7 +130,9 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	names, paMap, _, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(&o.BuildFilter)
+	ctx := o.GetContext()
+
+	names, paMap, _, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(ctx, &o.BuildFilter)
 	if err != nil {
 		return err
 	}

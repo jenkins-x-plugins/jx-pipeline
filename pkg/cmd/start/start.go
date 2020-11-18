@@ -32,7 +32,6 @@ import (
 	"github.com/jenkins-x/lighthouse/pkg/launcher"
 	"github.com/jenkins-x/lighthouse/pkg/plugins"
 	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
-
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 
@@ -172,7 +171,8 @@ func (o *Options) Run() error {
 
 	args := o.Args
 
-	names, cfg, err := o.getFilteredTriggerNames(o.KubeClient, o.Namespace)
+	ctx := o.GetContext()
+	names, cfg, err := o.getFilteredTriggerNames(ctx, o.KubeClient, o.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get trigger names")
 	}
@@ -206,13 +206,13 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns string) ([]string, *config.Config, error) {
+func (o *Options) getFilteredTriggerNames(ctx context.Context, kubeClient kubernetes.Interface, ns string) ([]string, *config.Config, error) {
 	end := time.Now().Add(o.WaitDuration)
 	name := o.LighthouseConfigMap
 	logWaiting := false
 
 	for {
-		cfg, err := triggers.LoadLighthouseConfig(kubeClient, ns, name, o.Wait)
+		cfg, err := triggers.LoadLighthouseConfig(ctx, kubeClient, ns, name, o.Wait)
 		if err != nil {
 			return nil, cfg, errors.Wrapf(err, "failed to load lighthouse config")
 		}
@@ -236,6 +236,8 @@ func (o *Options) getFilteredTriggerNames(kubeClient kubernetes.Interface, ns st
 }
 
 func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error {
+	ctx := o.GetContext()
+
 	parts := strings.Split(jobName, "/")
 	if len(parts) < 2 {
 		return fmt.Errorf("job name [%s] does not match org/repo/branch format", jobName)
@@ -258,7 +260,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 
 	fullName := scm.Join(owner, repo)
 
-	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(o.JXClient, ns, owner, repo)
+	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(ctx, o.JXClient, ns, owner, repo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the SourceRepository %s", fullName)
 	}
@@ -298,8 +300,6 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		}
 	}
 
-	ctx := context.Background()
-
 	commit, _, err := scmClient.Git.FindCommit(ctx, fullName, branch)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find commit on repo %s for branch %s", fullName, branch)
@@ -314,7 +314,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 		}
 
-		scmProvider := lighthouses.NewScmProvider(scmClient)
+		scmProvider := lighthouses.NewScmProvider(ctx, scmClient)
 		cfg, _, err = inrepo.Generate(scmProvider, cfg, pluginCfg, owner, repo, "")
 		if err != nil {
 			return errors.Wrapf(err, "failed to calculate in repo configuration")

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jenkins-x/go-scm/scm"
 	jxc "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
@@ -16,12 +17,10 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/lighthouse/pkg/config"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
-	"github.com/spf13/cobra"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -29,6 +28,8 @@ import (
 
 // Options contains the command line options
 type Options struct {
+	options.BaseOptions
+
 	WaitDuration        time.Duration
 	PollPeriod          time.Duration
 	Owner               string
@@ -76,6 +77,7 @@ func NewCmdPipelineWait() (*cobra.Command, *Options) {
 	cmd.Flags().DurationVarP(&o.WaitDuration, "duration", "", time.Minute*20, "Maximum duration to wait for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
 	cmd.Flags().DurationVarP(&o.PollPeriod, "poll-period", "", time.Second*2, "Poll period when waiting for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
 
+	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
 }
 
@@ -109,7 +111,8 @@ func (o *Options) Run() error {
 
 	fullName := scm.Join(o.Owner, o.Repository)
 
-	exists, err := o.waitForRepositoryToBeSetup(o.KubeClient, o.Namespace, fullName)
+	ctx := o.GetContext()
+	exists, err := o.waitForRepositoryToBeSetup(ctx, o.KubeClient, o.Namespace, fullName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to wait for repository to be setup in lighthouse")
 	}
@@ -117,7 +120,7 @@ func (o *Options) Run() error {
 		return errors.Errorf("repository %s is not yet setup in lighthouse", fullName)
 	}
 
-	err = o.waitForWebHookToBeSetup(o.JXClient, o.Namespace, o.Owner, o.Repository)
+	err = o.waitForWebHookToBeSetup(ctx, o.JXClient, o.Namespace, o.Owner, o.Repository)
 	if err != nil {
 		return errors.Wrapf(err, "failed to wait for repository to have its webhook enabled")
 	}
@@ -126,13 +129,13 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) waitForRepositoryToBeSetup(kubeClient kubernetes.Interface, ns, fullName string) (bool, error) {
+func (o *Options) waitForRepositoryToBeSetup(ctx context.Context, kubeClient kubernetes.Interface, ns, fullName string) (bool, error) {
 	end := time.Now().Add(o.WaitDuration)
 	name := o.LighthouseConfigMap
 	logWaiting := false
 
 	for {
-		cfg, err := triggers.LoadLighthouseConfig(kubeClient, ns, name, true)
+		cfg, err := triggers.LoadLighthouseConfig(ctx, kubeClient, ns, name, true)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to load lighthouse config")
 		}
@@ -160,7 +163,7 @@ func (o *Options) waitForRepositoryToBeSetup(kubeClient kubernetes.Interface, ns
 	}
 }
 
-func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns, owner, repository string) error {
+func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Interface, ns, owner, repository string) error {
 	end := time.Now().Add(o.WaitDuration)
 	name := naming.ToValidName(o.Owner + "-" + o.Repository)
 	logWaiting := false
@@ -169,8 +172,6 @@ func (o *Options) waitForWebHookToBeSetup(jxClient jxc.Interface, ns, owner, rep
 	lastValue := ""
 	found := false
 	lastFailMessage := ""
-	ctx := context.Background()
-
 	for {
 		sr, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {

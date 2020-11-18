@@ -3,6 +3,7 @@
 package activities_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -24,8 +25,9 @@ func TestGetActivity(t *testing.T) {
 
 	jxClient := fakejx.NewSimpleClientset()
 
-	testpipelines.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "1", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
-	testpipelines.CreateTestPipelineActivityWithTime(jxClient, ns, "jx-testing", "jx-testing", "job", "2", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
+	ctx := context.Background()
+	testpipelines.CreateTestPipelineActivityWithTime(ctx, jxClient, ns, "jx-testing", "jx-testing", "job", "1", v1.Date(2019, time.October, 10, 23, 0, 0, 0, time.UTC))
+	testpipelines.CreateTestPipelineActivityWithTime(ctx, jxClient, ns, "jx-testing", "jx-testing", "job", "2", v1.Date(2019, time.January, 10, 23, 0, 0, 0, time.UTC))
 
 	kubeClient := fake.NewSimpleClientset(
 		&corev1.Namespace{

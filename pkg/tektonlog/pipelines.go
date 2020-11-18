@@ -42,8 +42,7 @@ func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
 }
 
 // CancelPipelineRun cancels a Pipeline
-func CancelPipelineRun(tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
-	ctx := context.Background()
+func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
 	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
 	_, err := tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
 	if err != nil {

@@ -18,12 +18,11 @@ import (
 	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/spf13/cobra"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
@@ -110,18 +109,20 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
+	ctx := o.GetContext()
+
 	if o.ViewPresubmits {
-		return o.renderPresubmits()
+		return o.renderPresubmits(ctx)
 	}
 	if o.ViewPostsubmits {
-		return o.renderPostsubmits()
+		return o.renderPostsubmits(ctx)
 	}
-	return o.renderPipelineRuns()
+	return o.renderPipelineRuns(ctx)
 }
 
 // renderPostsubmits renders the current Lighthouse postsubmit triggers
-func (o *Options) renderPostsubmits() error {
-	cfg, err := triggers.LoadLighthouseConfig(o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
+func (o *Options) renderPostsubmits(ctx context.Context) error {
+	cfg, err := triggers.LoadLighthouseConfig(ctx, o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load lighthouse config")
 	}
@@ -141,8 +142,8 @@ func (o *Options) renderPostsubmits() error {
 }
 
 // renderPresubmits renders the current Lighthouse presubmit triggers
-func (o *Options) renderPresubmits() error {
-	cfg, err := triggers.LoadLighthouseConfig(o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
+func (o *Options) renderPresubmits(ctx context.Context) error {
+	cfg, err := triggers.LoadLighthouseConfig(ctx, o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load lighthouse config")
 	}
@@ -162,8 +163,7 @@ func (o *Options) renderPresubmits() error {
 }
 
 // renderPipelines view the current tekton PipelineRuns
-func (o *Options) renderPipelineRuns() error {
-	ctx := context.Background()
+func (o *Options) renderPipelineRuns(ctx context.Context) error {
 	ns := o.Namespace
 	tektonClient := o.TektonClient
 

@@ -175,6 +175,7 @@ func (o *Options) logTapResults() error {
 }
 
 func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *triggerconfig.Config {
+	ctx := o.GetContext()
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
@@ -183,7 +184,7 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 				File: path,
 			}
 			o.Tests = append(o.Tests, test)
-			err := loadJobBaseFromSourcePath(path)
+			err := loadJobBaseFromSourcePath(ctx, path)
 			if err != nil {
 				test.Error = err
 			}
@@ -200,7 +201,7 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 				File: path,
 			}
 			o.Tests = append(o.Tests, test)
-			err := loadJobBaseFromSourcePath(path)
+			err := loadJobBaseFromSourcePath(ctx, path)
 			if err != nil {
 				test.Error = err
 			}
@@ -212,7 +213,7 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 	return repoConfig
 }
 
-func loadJobBaseFromSourcePath(path string) error {
+func loadJobBaseFromSourcePath(ctx context.Context, path string) error {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load file %s", path)
@@ -237,7 +238,6 @@ func loadJobBaseFromSourcePath(path string) error {
 		return errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
 	}
 
-	ctx := context.Background()
 	fieldError := pr.Validate(ctx)
 	if fieldError != nil {
 		return errors.Wrapf(fieldError, "failed to validate YAML file %s", path)

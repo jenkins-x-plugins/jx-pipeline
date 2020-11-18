@@ -145,6 +145,7 @@ func TestPipelineStart(t *testing.T) {
 		o.GitUsername = "myuser"
 		o.GitToken = "mytoken"
 		o.Branch = branch
+		o.Ctx = context.Background()
 
 		if tc.init != nil {
 			tc.init(o)
