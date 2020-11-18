@@ -211,7 +211,8 @@ func Retry(maxElapsedTime time.Duration, f func() error) error {
 func (o *Options) getTektonLogs() (bool, error) {
 	var defaultName string
 
-	names, paMap, prMap, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(&o.BuildFilter)
+	ctx := o.GetContext()
+	names, paMap, prMap, err := o.TektonLogger.GetTektonPipelinesWithActivePipelineActivity(ctx, &o.BuildFilter)
 	if err != nil {
 		return true, err
 	}
@@ -263,7 +264,7 @@ func (o *Options) getTektonLogs() (bool, error) {
 	log.Logger().Infof("Build logs for %s", termcolor.ColorInfo(name))
 	name = strings.TrimSuffix(name, " ")
 
-	for line := range o.TektonLogger.GetRunningBuildLogs(pa, prList, name) {
+	for line := range o.TektonLogger.GetRunningBuildLogs(ctx, pa, prList, name) {
 		fmt.Fprintln(o.Out, line.Line)
 	}
 	return false, o.TektonLogger.Err()

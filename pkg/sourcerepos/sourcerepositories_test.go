@@ -3,6 +3,7 @@
 package sourcerepos_test
 
 import (
+	"context"
 	"testing"
 
 	jenkinsio "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io"
@@ -31,20 +32,21 @@ func TestFindSourceRepository(t *testing.T) {
 	}
 	jxClient := fake.NewSimpleClientset(existingRepos)
 
+	ctx := context.Background()
 	// Test the standard auto-created
-	firstSr, err := sourcerepos.FindSourceRepository(jxClient, ns, "first-org", "first-repo", "github")
+	firstSr, err := sourcerepos.FindSourceRepository(ctx, jxClient, ns, "first-org", "first-repo", "github")
 	assert.NoError(t, err)
 	assert.NotNil(t, firstSr)
 	assert.Equal(t, "first-org-first-repo", firstSr.Name)
 
 	// Test the arbitrary name
-	secondSr, err := sourcerepos.FindSourceRepository(jxClient, ns, "second-org", "second-repo", "github")
+	secondSr, err := sourcerepos.FindSourceRepository(ctx, jxClient, ns, "second-org", "second-repo", "github")
 	assert.NoError(t, err)
 	assert.NotNil(t, secondSr)
 	assert.Equal(t, "random-name", secondSr.Name)
 
 	// Test the unlabeled case
-	thirdSr, err := sourcerepos.FindSourceRepository(jxClient, ns, "third-org", "third-repo", "github")
+	thirdSr, err := sourcerepos.FindSourceRepository(ctx, jxClient, ns, "third-org", "third-repo", "github")
 	assert.NoError(t, err)
 	assert.NotNil(t, thirdSr)
 	assert.Equal(t, "third-org-third-repo", thirdSr.Name)
@@ -81,6 +83,8 @@ func TestGetOrCreateSourceRepositories(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var existingRepo v1.SourceRepository
@@ -94,7 +98,7 @@ func TestGetOrCreateSourceRepositories(t *testing.T) {
 				jxClient = fake.NewSimpleClientset()
 			}
 
-			createdOrExisting, err := sourcerepos.GetOrCreateSourceRepository(jxClient, ns, tt.repo, tt.org, tt.providerURL)
+			createdOrExisting, err := sourcerepos.GetOrCreateSourceRepository(ctx, jxClient, ns, tt.repo, tt.org, tt.providerURL)
 			assert.NoError(t, err)
 			assert.NotNil(t, createdOrExisting)
 

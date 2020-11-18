@@ -1,13 +1,16 @@
 package activities
 
 import (
-	"context"
 	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/ghodss/yaml"
+	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
@@ -16,19 +19,15 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
-	"github.com/pkg/errors"
-	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/ghodss/yaml"
-	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/signals"
 )
 
 const (
@@ -146,7 +145,7 @@ func (o *Options) Run() error {
 		return o.WatchActivities(&t, jxClient, ns)
 	}
 
-	ctx := context.Background()
+	ctx := o.GetContext()
 	list, err := jxClient.JenkinsV1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -197,6 +196,7 @@ func (o *Options) addTableRow(t *table.Table, activity *v1.PipelineActivity) boo
 func (o *Options) WatchActivities(t *table.Table, jxClient versioned.Interface, ns string) error {
 	yamlSpecMap := map[string]string{}
 	activity := &v1.PipelineActivity{}
+
 	listWatch := cache.NewListWatchFromClient(jxClient.JenkinsV1().RESTClient(), "pipelineactivities", ns, fields.Everything())
 	kube.SortListWatchByName(listWatch)
 	_, controller := cache.NewInformer(
@@ -215,7 +215,7 @@ func (o *Options) WatchActivities(t *table.Table, jxClient versioned.Interface, 
 		},
 	)
 
-	stop := make(chan struct{})
+	stop := signals.SetupSignalHandler()
 	go controller.Run(stop)
 
 	// Wait forever

@@ -13,8 +13,7 @@ import (
 )
 
 // LoadLighthouseConfig loads the lighthouse configuration from the given ConfigMap namespace and name
-func LoadLighthouseConfig(kubeClient kubernetes.Interface, ns, name string, allowEmpty bool) (*config.Config, error) {
-	ctx := context.Background()
+func LoadLighthouseConfig(ctx context.Context, kubeClient kubernetes.Interface, ns, name string, allowEmpty bool) (*config.Config, error) {
 	cm, err := kubeClient.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {

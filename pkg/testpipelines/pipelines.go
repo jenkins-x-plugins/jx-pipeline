@@ -17,8 +17,7 @@ import (
 )
 
 // CreateTestPipelineActivity creates a PipelineActivity with the given arguments
-func CreateTestPipelineActivity(jxClient versioned.Interface, ns, folder, repo, branch, build string) (*v1.PipelineActivity, error) {
-	ctx := context.Background()
+func CreateTestPipelineActivity(ctx context.Context, jxClient versioned.Interface, ns, folder, repo, branch, build string) (*v1.PipelineActivity, error) {
 	resources := jxClient.JenkinsV1().PipelineActivities(ns)
 	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
@@ -35,8 +34,7 @@ func CreateTestPipelineActivity(jxClient versioned.Interface, ns, folder, repo, 
 }
 
 // CreateTestPipelineActivityWithTime creates a PipelineActivity with the given timestamp and adds it to the list of activities
-func CreateTestPipelineActivityWithTime(jxClient versioned.Interface, ns, folder, repo, branch, build string, t metav1.Time) (*v1.PipelineActivity, error) {
-	ctx := context.Background()
+func CreateTestPipelineActivityWithTime(ctx context.Context, jxClient versioned.Interface, ns, folder, repo, branch, build string, t metav1.Time) (*v1.PipelineActivity, error) {
 	resources := jxClient.JenkinsV1().PipelineActivities(ns)
 	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
@@ -48,8 +46,7 @@ func CreateTestPipelineActivityWithTime(jxClient versioned.Interface, ns, folder
 	return a, err
 }
 
-func AssertHasPullRequestForEnv(t *testing.T, activities typev1.PipelineActivityInterface, name, envName string) {
-	ctx := context.Background()
+func AssertHasPullRequestForEnv(t *testing.T, ctx context.Context, activities typev1.PipelineActivityInterface, name, envName string) {
 	activity, err := activities.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		assert.NoError(t, err, "Could not find PipelineActivity %s", name)

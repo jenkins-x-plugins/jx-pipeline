@@ -3,6 +3,7 @@
 package get_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
@@ -78,6 +79,7 @@ func TestExecuteGetPipelines(t *testing.T) {
 			o.TektonClient = faketekton.NewSimpleClientset(pipelineRun(v.namespace, v.repo, v.branch, v.owner, v.context, metav1.Now()))
 			o.Namespace = v.namespace
 			o.BatchMode = true
+			o.Ctx = context.Background()
 
 			err := o.Run()
 
