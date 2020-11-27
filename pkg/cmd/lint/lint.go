@@ -32,6 +32,7 @@ type Options struct {
 	Namespace string
 	OutFile   string
 	Format    string
+	Recursive bool
 	Tests     []*Test
 }
 
@@ -72,12 +73,37 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The TAP format file to output with the results. If not specified the tap file is output to the terminal")
 	cmd.Flags().StringVarP(&o.Format, "format", "", "", "If specify 'tap' lets use the TAP output otherwise use simple text output")
+	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
 	return cmd, o
 }
 
 // Run implements this command
 func (o *Options) Run() error {
-	dir := filepath.Join(o.Dir, ".lighthouse")
+	if o.Recursive {
+		err := filepath.Walk(o.Dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info == nil || !info.IsDir() || info.Name() != ".lighthouse" {
+				return nil
+			}
+			return o.LintDir(path)
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		dir := filepath.Join(o.Dir, ".lighthouse")
+		err := o.LintDir(dir)
+		if err != nil {
+			return err
+		}
+	}
+
+	return o.logResults()
+}
+
+func (o *Options) LintDir(dir string) error {
 	fs, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read dir %s", dir)
@@ -111,7 +137,7 @@ func (o *Options) Run() error {
 
 		o.loadConfigFile(triggers, triggerDir)
 	}
-	return o.logResults()
+	return nil
 }
 
 func (o *Options) logResults() error {
