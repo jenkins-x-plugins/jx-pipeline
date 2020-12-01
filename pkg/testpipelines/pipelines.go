@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
-	typev1 "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/typed/jenkins.io/v1"
+	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/core/v4beta1"
+	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
+	typev1 "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/typed/core/v4beta1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -18,7 +18,7 @@ import (
 
 // CreateTestPipelineActivity creates a PipelineActivity with the given arguments
 func CreateTestPipelineActivity(ctx context.Context, jxClient versioned.Interface, ns, folder, repo, branch, build string) (*v1.PipelineActivity, error) {
-	resources := jxClient.JenkinsV1().PipelineActivities(ns)
+	resources := jxClient.CoreV4beta1().PipelineActivities(ns)
 	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	if err != nil {
@@ -35,7 +35,7 @@ func CreateTestPipelineActivity(ctx context.Context, jxClient versioned.Interfac
 
 // CreateTestPipelineActivityWithTime creates a PipelineActivity with the given timestamp and adds it to the list of activities
 func CreateTestPipelineActivityWithTime(ctx context.Context, jxClient versioned.Interface, ns, folder, repo, branch, build string, t metav1.Time) (*v1.PipelineActivity, error) {
-	resources := jxClient.JenkinsV1().PipelineActivities(ns)
+	resources := jxClient.CoreV4beta1().PipelineActivities(ns)
 	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	if err != nil {

@@ -44,4 +44,3 @@ spec:
       startedTimestamp: "2020-09-25T08:19:12Z"
       status: Running
   version: 0.0.1
-  workflowStatus: Running

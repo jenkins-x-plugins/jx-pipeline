@@ -89,5 +89,4 @@ spec:
         status: Running
       status: Running
   version: 0.0.1
-  workflowStatus: Running
 status: {}
