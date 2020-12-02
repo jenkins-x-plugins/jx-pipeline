@@ -173,7 +173,7 @@ func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Inte
 	found := false
 	lastFailMessage := ""
 	for {
-		sr, err := jxClient.CoreV4beta1().SourceRepositories(ns).Get(ctx, name, metav1.GetOptions{})
+		sr, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return errors.Wrapf(err, "failed to find SourceRepository %s in namespace %s", name, ns)

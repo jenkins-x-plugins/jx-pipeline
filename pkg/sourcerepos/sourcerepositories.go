@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	jenkinsio "github.com/jenkins-x/jx-api/v4/pkg/apis/core"
-	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/core/v4beta1"
+	jenkinsio "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io"
+	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
@@ -50,7 +50,7 @@ func FindSourceRepositoryWithoutProvider(ctx context.Context, jxClient versioned
 
 // findSourceRepositoryByLabels returns a SourceRepository matching the given label selector, if it exists.
 func findSourceRepositoryByLabels(ctx context.Context, jxClient versioned.Interface, ns, labelSelector string) (*v1.SourceRepository, error) {
-	repos, err := jxClient.CoreV4beta1().SourceRepositories(ns).List(ctx, metav1.ListOptions{
+	repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -67,12 +67,12 @@ func findSourceRepositoryByLabels(ctx context.Context, jxClient versioned.Interf
 func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns, owner, name, providerName string) (*v1.SourceRepository, error) {
 	// Look up by resource name is retained for compatibility with SourceRepositorys created before they were always created with labels
 	resourceName := naming.ToValidName(owner + "-" + name)
-	repo, err := jxClient.CoreV4beta1().SourceRepositories(ns).Get(ctx, resourceName, metav1.GetOptions{})
+	repo, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, resourceName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Logger().Debugf("could not find SourceRepository %s in namespace %s", name, ns)
 
-			repos, err := jxClient.CoreV4beta1().SourceRepositories(ns).List(ctx, metav1.ListOptions{})
+			repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{})
 			if err != nil {
 				return nil, errors.Wrapf(err, "listing SourceRepository resources in namespace %s", ns)
 			}
@@ -95,7 +95,7 @@ func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns,
 func GetOrCreateSourceRepositoryCallback(ctx context.Context, jxClient versioned.Interface, ns, name, organisation, providerURL string, callback func(*v1.SourceRepository)) (*v1.SourceRepository, error) {
 	resourceName := naming.ToValidName(organisation + "-" + name)
 
-	repositories := jxClient.CoreV4beta1().SourceRepositories(ns)
+	repositories := jxClient.JenkinsV1().SourceRepositories(ns)
 
 	providerName := ToProviderName(providerURL)
 
@@ -208,7 +208,7 @@ func createSourceRepositoryCallback(ctx context.Context, client versioned.Interf
 		callback(sr)
 	}
 	sr.Sanitize()
-	answer, err := client.CoreV4beta1().SourceRepositories(namespace).Create(ctx, sr, metav1.CreateOptions{})
+	answer, err := client.JenkinsV1().SourceRepositories(namespace).Create(ctx, sr, metav1.CreateOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create new SourceRepository for organisation %s and repository %s", organisation, name)
 	}

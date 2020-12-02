@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	jenkinsio "github.com/jenkins-x/jx-api/v4/pkg/apis/core"
-	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/core/v4beta1"
+	jenkinsio "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io"
+	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/fake"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-pipeline/pkg/sourcerepos"
