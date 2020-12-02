@@ -13,7 +13,7 @@ type ScmProvider struct {
 
 // NewScmProvider creates a new ScmProvider for working with lighthouse
 func NewScmProvider(ctx context.Context, scmClient *scm.Client) *ScmProvider {
-	return &ScmProvider{ScmClient: scmClient}
+	return &ScmProvider{ScmClient: scmClient, Ctx: ctx}
 }
 
 // GetFile returns the file from git
