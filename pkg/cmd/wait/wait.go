@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jenkins-x/go-scm/scm"
-	jxc "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	jxc "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
@@ -173,7 +173,7 @@ func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Inte
 	found := false
 	lastFailMessage := ""
 	for {
-		sr, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, name, metav1.GetOptions{})
+		sr, err := jxClient.CoreV4beta1().SourceRepositories(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return errors.Wrapf(err, "failed to find SourceRepository %s in namespace %s", name, ns)

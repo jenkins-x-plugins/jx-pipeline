@@ -6,9 +6,9 @@ import (
 
 	"github.com/jenkins-x/go-scm/scm"
 	fakescm "github.com/jenkins-x/go-scm/scm/driver/fake"
-	jenkinsio "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io"
-	jenkinsv1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
-	fakejx "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/fake"
+	jenkinsio "github.com/jenkins-x/jx-api/v4/pkg/apis/core"
+	jenkinsv1 "github.com/jenkins-x/jx-api/v4/pkg/apis/core/v4beta1"
+	fakejx "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/fake"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/start"
 	fakelh "github.com/jenkins-x/lighthouse/pkg/client/clientset/versioned/fake"
 	"github.com/jenkins-x/lighthouse/pkg/config"

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	fakejx "github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned/fake"
+	fakejx "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/fake"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/activities"
 	"github.com/jenkins-x/jx-pipeline/pkg/testpipelines"
 	"github.com/stretchr/testify/require"

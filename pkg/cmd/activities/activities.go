@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	v1 "github.com/jenkins-x/jx-api/v3/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-api/v3/pkg/client/clientset/versioned"
+	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/core/v4beta1"
+	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
@@ -146,7 +146,7 @@ func (o *Options) Run() error {
 	}
 
 	ctx := o.GetContext()
-	list, err := jxClient.JenkinsV1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
+	list, err := jxClient.CoreV4beta1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (o *Options) WatchActivities(t *table.Table, jxClient versioned.Interface, 
 	yamlSpecMap := map[string]string{}
 	activity := &v1.PipelineActivity{}
 
-	listWatch := cache.NewListWatchFromClient(jxClient.JenkinsV1().RESTClient(), "pipelineactivities", ns, fields.Everything())
+	listWatch := cache.NewListWatchFromClient(jxClient.CoreV4beta1().RESTClient(), "pipelineactivities", ns, fields.Everything())
 	kube.SortListWatchByName(listWatch)
 	_, controller := cache.NewInformer(
 		listWatch,
