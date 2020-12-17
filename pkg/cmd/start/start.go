@@ -115,9 +115,9 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	}
 	cmd.Flags().BoolVarP(&o.Tail, "tail", "t", false, "Tails the build log to the current terminal")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "", "Filters all the available jobs by those that contain the given text")
-	cmd.Flags().StringVarP(&o.Context, "context", "c", "", "An optional Prow pipeline context")
+	cmd.Flags().StringVarP(&o.Context, "context", "c", "", "An optional context name to find the specific kind of postsubmit/presubmit if there are more than one triggers")
 	cmd.Flags().StringVarP(&o.Branch, "branch", "", "", "The branch to start. If not specified defaults to master")
-	cmd.Flags().StringVarP(&o.PipelineKind, "kind", "", "", "The kind of pipeline such as release or pullrequest")
+	cmd.Flags().StringVarP(&o.PipelineKind, "kind", "", "", "The kind of pipeline such as presubmit or post submit. If not specified defaults to postsubmit (i.e. release)")
 	cmd.Flags().StringVar(&o.ServiceAccount, "service-account", tektonlog.DefaultPipelineSA, "The Kubernetes ServiceAccount to use to run the meta pipeline")
 	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
 	cmd.Flags().StringVarP(&o.GitToken, "git-token", "", "", "the git token used to access the git repository for in-repo configurations in lighthouse")
@@ -260,7 +260,8 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 
 	fullName := scm.Join(owner, repo)
 
-	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(ctx, o.JXClient, ns, owner, repo)
+	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(ctx,
+		o.JXClient, ns, owner, repo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the SourceRepository %s", fullName)
 	}
@@ -321,22 +322,18 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		}
 	}
 
-	postsubmits := cfg.Postsubmits[fullName]
-	if len(postsubmits) == 0 {
-		return errors.Errorf("could not find Postsubmit for repository %s", fullName)
+	contextName, base, err := o.pickTrigger(cfg, fullName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to pick trigger to start")
 	}
-
-	// TODO pick the first one for now?
-	postsubmit := postsubmits[0]
-
-	pipelineRunParams := o.combineWithCustomParameters(postsubmit.PipelineRunParams)
+	pipelineRunParams := o.combineWithCustomParameters(base.PipelineRunParams)
 
 	lhjob := &v1alpha1.LighthouseJob{
 		Spec: v1alpha1.LighthouseJobSpec{
 			Type:  jobType,
 			Agent: job.TektonPipelineAgent,
 			//Namespace: ns,
-			Job: postsubmit.Name,
+			Job: base.Name,
 			Refs: &v1alpha1.Refs{
 				Org:      owner,
 				Repo:     repo,
@@ -347,10 +344,10 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 				CloneURI: sr.Spec.HTTPCloneURL,
 			},
 			ExtraRefs: nil,
-			Context:   postsubmit.Context,
-			//RerunCommand:      postsubmit.RerunCommand,
-			MaxConcurrency:    postsubmit.MaxConcurrency,
-			PipelineRunSpec:   postsubmit.PipelineRunSpec,
+			Context:   contextName,
+			//RerunCommand:      base.RerunCommand,
+			MaxConcurrency:    base.MaxConcurrency,
+			PipelineRunSpec:   base.PipelineRunSpec,
 			PipelineRunParams: pipelineRunParams,
 		},
 	}
@@ -407,4 +404,43 @@ func (o *Options) pipelineNames(cfg *config.Config) []string {
 	}
 	sort.Strings(answer)
 	return answer
+}
+
+func (o *Options) pickTrigger(cfg *config.Config, fullName string) (string, job.Base, error) {
+	var names []string
+	kind := strings.ToLower(o.PipelineKind)
+	if strings.HasPrefix(kind, "pull") || strings.HasPrefix(kind, "pre") {
+		triggers := cfg.Presubmits[fullName]
+		if len(triggers) == 0 {
+			return "", job.Base{}, errors.Errorf("could not find presubmit for repository %s", fullName)
+		}
+		if o.Context == "" {
+			trigger := triggers[0]
+			return trigger.Context, trigger.Base, nil
+		}
+		for _, trigger := range triggers {
+			name := trigger.Context
+			if name == o.Context {
+				return name, trigger.Base, nil
+			}
+			names = append(names, name)
+		}
+		return "", job.Base{}, errors.Errorf("no presubmit for context %s found. Have contexts %s", o.Context, strings.Join(names, " "))
+	}
+	triggers := cfg.Postsubmits[fullName]
+	if len(triggers) == 0 {
+		return "", job.Base{}, errors.Errorf("could not find postsubmit for repository %s", fullName)
+	}
+	if o.Context == "" {
+		trigger := triggers[0]
+		return trigger.Context, trigger.Base, nil
+	}
+	for _, trigger := range triggers {
+		name := trigger.Context
+		if name == o.Context {
+			return name, trigger.Base, nil
+		}
+		names = append(names, name)
+	}
+	return "", job.Base{}, errors.Errorf("no postsubmit for context %s found. Have contexts %s", o.Context, strings.Join(names, " "))
 }

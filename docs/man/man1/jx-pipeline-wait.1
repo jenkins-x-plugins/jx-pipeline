@@ -20,6 +20,10 @@ Waits for a pipeline to be imported and activated by the boot Job
 
 .SH OPTIONS
 .PP
+\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
+    Runs in batch mode without prompting for user input
+
+.PP
 \fB\-\-configmap\fP="config"
     The name of the Lighthouse ConfigMap to find the trigger configurations
 
@@ -30,6 +34,10 @@ Waits for a pipeline to be imported and activated by the boot Job
 .PP
 \fB\-h\fP, \fB\-\-help\fP[=false]
     help for wait
+
+.PP
+\fB\-\-log\-level\fP=""
+    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
 
 .PP
 \fB\-n\fP, \fB\-\-namespace\fP=""
@@ -46,6 +54,10 @@ Waits for a pipeline to be imported and activated by the boot Job
 .PP
 \fB\-r\fP, \fB\-\-repo\fP=""
     The repository name o wait for
+
+.PP
+\fB\-\-verbose\fP[=false]
+    Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
 
 
 .SH EXAMPLE
