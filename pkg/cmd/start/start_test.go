@@ -32,9 +32,10 @@ func TestPipelineStart(t *testing.T) {
 	fullName := scm.Join(owner, repo)
 
 	testCases := []struct {
-		name   string
-		init   func(o *start.Options)
-		verify func(o *start.Options, params map[string]string)
+		name       string
+		shouldFail bool
+		init       func(o *start.Options)
+		verify     func(o *start.Options, params map[string]string)
 	}{
 		{
 			name: "defaults",
@@ -43,6 +44,41 @@ func TestPipelineStart(t *testing.T) {
 				assert.Equal(t, "defaultValue", params["myparam"], "myparam value")
 				assert.Len(t, params, 1, "parameter count")
 			},
+		},
+		{
+			name: "presubmit-lint",
+			init: func(o *start.Options) {
+				o.Context = "lint"
+				o.PipelineKind = "presubmit"
+			},
+			verify: func(o *start.Options, params map[string]string) {
+				assert.Equal(t, "linter", params["prParam"], "prParam value")
+			},
+		},
+		{
+			name: "presubmit-test",
+			init: func(o *start.Options) {
+				o.Context = "tests"
+				o.PipelineKind = "presubmit"
+			},
+			verify: func(o *start.Options, params map[string]string) {
+				assert.Equal(t, "tester", params["prParam"], "prParam value")
+			},
+		},
+		{
+			name: "fail-on-missing-presubmit",
+			init: func(o *start.Options) {
+				o.Context = "does-not-exist"
+				o.PipelineKind = "presubmit"
+			},
+			shouldFail: true,
+		},
+		{
+			name: "fail-on-missing-postsubmit",
+			init: func(o *start.Options) {
+				o.Context = "does-not-exist"
+			},
+			shouldFail: true,
 		},
 		{
 			name: "add-parameter",
@@ -108,6 +144,52 @@ func TestPipelineStart(t *testing.T) {
 					},
 				},
 			},
+			Presubmits: map[string][]job.Presubmit{
+				fullName: {
+					{
+						Base: job.Base{
+							Name:  "lint",
+							Agent: job.TektonPipelineAgent,
+							PipelineRunSpec: &v1beta1.PipelineRunSpec{
+								PipelineRef: &v1beta1.PipelineRef{
+									Name:       "my-pipeline",
+									APIVersion: "v1beta1",
+								},
+							},
+							PipelineRunParams: []job.PipelineRunParam{
+								{
+									Name:          "prParam",
+									ValueTemplate: "linter",
+								},
+							},
+						},
+						Reporter: job.Reporter{
+							Context: "lint",
+						},
+					},
+					{
+						Base: job.Base{
+							Name:  "tests",
+							Agent: job.TektonPipelineAgent,
+							PipelineRunSpec: &v1beta1.PipelineRunSpec{
+								PipelineRef: &v1beta1.PipelineRef{
+									Name:       "my-pipeline",
+									APIVersion: "v1beta1",
+								},
+							},
+							PipelineRunParams: []job.PipelineRunParam{
+								{
+									Name:          "prParam",
+									ValueTemplate: "tester",
+								},
+							},
+						},
+						Reporter: job.Reporter{
+							Context: "tests",
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -152,6 +234,12 @@ func TestPipelineStart(t *testing.T) {
 		}
 
 		err = o.Run()
+		if tc.shouldFail {
+			require.Error(t, err, "should have failed for test %s", name)
+			t.Logf("test %s returned expected error %s\n", name, err.Error())
+			continue
+		}
+
 		require.NoError(t, err, "failed to run command for test %s", name)
 
 		ctx := context.Background()
