@@ -29,7 +29,7 @@ Starts the pipeline build.
 
 .PP
 \fB\-c\fP, \fB\-\-context\fP=""
-    An optional Prow pipeline context
+    An optional context name to find the specific kind of postsubmit/presubmit if there are more than one triggers
 
 .PP
 \fB\-\-duration\fP=20m0s
@@ -57,7 +57,7 @@ Starts the pipeline build.
 
 .PP
 \fB\-\-kind\fP=""
-    The kind of pipeline such as release or pullrequest
+    The kind of pipeline such as presubmit or post submit. If not specified defaults to postsubmit (i.e. release)
 
 .PP
 \fB\-l\fP, \fB\-\-label\fP=[]
