@@ -28,6 +28,7 @@ require (
 )
 
 replace (
+	github.com/jenkins-x/jx-helpers/v3 => /Users/jstrachan/workspace/workspace/go/src/github.com/jenkins-x/jx-helpers
 	github.com/jenkins-x/lighthouse => github.com/jstrachan/lighthouse v0.0.0-20201116155709-614d66231eb3
 	github.com/tektoncd/pipeline => github.com/jenkins-x/pipeline v0.0.0-20201002150609-ca0741e5d19a
 	k8s.io/client-go => k8s.io/client-go v0.19.2
