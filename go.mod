@@ -9,7 +9,7 @@ require (
 	github.com/jenkins-x/golang-jenkins v0.0.0-20180919102630-65b83ad42314
 	github.com/jenkins-x/jx-api/v4 v4.0.14
 	github.com/jenkins-x/jx-gitops v0.0.508
-	github.com/jenkins-x/jx-helpers/v3 v3.0.45
+	github.com/jenkins-x/jx-helpers/v3 v3.0.47
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.1
 	github.com/jenkins-x/jx-logging/v3 v3.0.2
 	github.com/jenkins-x/lighthouse v0.0.903
