@@ -7,9 +7,9 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/jenkins-x/go-scm v1.5.202
 	github.com/jenkins-x/golang-jenkins v0.0.0-20180919102630-65b83ad42314
-	github.com/jenkins-x/jx-api/v4 v4.0.14
+	github.com/jenkins-x/jx-api/v4 v4.0.16
 	github.com/jenkins-x/jx-gitops v0.0.508
-	github.com/jenkins-x/jx-helpers/v3 v3.0.45
+	github.com/jenkins-x/jx-helpers/v3 v3.0.49
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.1
 	github.com/jenkins-x/jx-logging/v3 v3.0.2
 	github.com/jenkins-x/lighthouse v0.0.903
@@ -20,8 +20,8 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tektoncd/pipeline v0.16.3
 	gocloud.dev v0.21.0
-	k8s.io/api v0.19.4
-	k8s.io/apimachinery v0.19.4
+	k8s.io/api v0.20.1
+	k8s.io/apimachinery v0.20.1
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	knative.dev/pkg v0.0.0-20201002052829-735a38c03260
 	sigs.k8s.io/yaml v1.2.0
