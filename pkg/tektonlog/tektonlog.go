@@ -197,6 +197,7 @@ func (t *TektonLogger) GetRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 type podTime struct {
 	name      string
 	startTime *metav1.Time
+	task      string
 }
 
 func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, out chan<- LogLine) error {
@@ -212,6 +213,7 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 				podTimes = append(podTimes, podTime{
 					name:      taskStatus.Status.PodName,
 					startTime: taskStatus.Status.StartTime,
+					task:      taskStatus.PipelineTaskName,
 				})
 			}
 		}
@@ -235,7 +237,8 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 			if completedPods[podName] {
 				continue
 			}
-			log.Logger().Infof("logging pod: %s", info(podName))
+			stageName := pt.task
+			log.Logger().Infof("logging pod: %s for task %s", info(podName), stageName)
 
 			pod, err := t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
 			if err != nil {
@@ -245,7 +248,6 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 				completedPods[podName] = true
 			}
 
-			stageName := "pipeline"
 			err = t.getContainerLogsFromPod(ctx, pod, pa, buildName, stageName, out)
 			if err != nil {
 				return errors.Wrapf(err, "failed to get logs for pod %s", podName)
