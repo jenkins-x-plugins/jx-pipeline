@@ -20,7 +20,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	gojenkins "github.com/jenkins-x/golang-jenkins"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 )
 
@@ -35,7 +34,6 @@ type Options struct {
 	CatalogSHA             string
 	GitClient              gitclient.Interface
 	CommandRunner          cmdrunner.CommandRunner
-	Jobs                   map[string]gojenkins.Job
 }
 
 const (

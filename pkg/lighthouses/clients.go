@@ -2,7 +2,7 @@ package lighthouses
 
 import (
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
-	lhclient "github.com/jenkins-x/lighthouse/pkg/client/clientset/versioned"
+	lhclient "github.com/jenkins-x/lighthouse-client/pkg/client/clientset/versioned"
 	"github.com/pkg/errors"
 )
 
