@@ -15,7 +15,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
-	"github.com/jenkins-x/lighthouse/pkg/config"
+	"github.com/jenkins-x/lighthouse-client/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

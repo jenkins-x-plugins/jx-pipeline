@@ -3,8 +3,8 @@ package triggers
 import (
 	"context"
 
-	"github.com/jenkins-x/lighthouse/pkg/config"
-	"github.com/jenkins-x/lighthouse/pkg/config/job"
+	"github.com/jenkins-x/lighthouse-client/pkg/config"
+	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

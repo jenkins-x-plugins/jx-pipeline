@@ -14,9 +14,9 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/linter"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
-	"github.com/jenkins-x/lighthouse/pkg/config/job"
-	"github.com/jenkins-x/lighthouse/pkg/triggerconfig"
-	"github.com/jenkins-x/lighthouse/pkg/triggerconfig/inrepo"
+	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
+	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
+	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

@@ -2,6 +2,8 @@ package lighthouses
 
 import (
 	"context"
+	"github.com/pkg/errors"
+	"strings"
 
 	"github.com/jenkins-x/go-scm/scm"
 )
@@ -42,4 +44,26 @@ func (c *ScmProvider) ListFiles(owner, repo, filepath, commit string) ([]*scm.Fi
 func (c *ScmProvider) GetRepositoryByFullName(fullName string) (*scm.Repository, error) {
 	answer, _, err := c.ScmClient.Repositories.Find(c.Ctx, fullName)
 	return answer, err
+}
+
+// GetMainAndCurrentBranchRefs find the main branch
+func (c *ScmProvider) GetMainAndCurrentBranchRefs(owner, repo, eventRef string) ([]string, error) {
+	fullName := scm.Join(owner, repo)
+	repository, _, err := c.ScmClient.Repositories.Find(c.Ctx, fullName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to find repository %s", fullName)
+	}
+	mainBranch := repository.Branch
+	if mainBranch == "" {
+		mainBranch = "master"
+	}
+
+	refs := []string{mainBranch}
+
+	eventRef = strings.TrimPrefix(eventRef, "refs/heads/")
+	eventRef = strings.TrimPrefix(eventRef, "refs/tags/")
+	if eventRef != mainBranch && eventRef != "" {
+		refs = append(refs, eventRef)
+	}
+	return refs, nil
 }

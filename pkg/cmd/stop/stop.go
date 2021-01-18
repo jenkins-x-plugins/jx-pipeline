@@ -22,7 +22,6 @@ import (
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 
-	gojenkins "github.com/jenkins-x/golang-jenkins"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -41,8 +40,6 @@ type Options struct {
 	KubeClient   kubernetes.Interface
 	JXClient     versioned.Interface
 	TektonClient tektonclient.Interface
-
-	Jobs map[string]gojenkins.Job
 }
 
 var (
