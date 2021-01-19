@@ -3,6 +3,7 @@ package get
 import (
 	"context"
 	"fmt"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
 	"os"
 	"sort"
 	"strings"
@@ -167,8 +168,8 @@ func (o *Options) renderPipelineRuns(ctx context.Context) error {
 	ns := o.Namespace
 	tektonClient := o.TektonClient
 
-	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
-	prList, err := pipelines.List(ctx, metav1.ListOptions{})
+	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
+	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
 	}
@@ -190,11 +191,12 @@ func (o *Options) renderPipelineRuns(ctx context.Context) error {
 		if labels == nil {
 			continue
 		}
-		owner = labels[tektonlog.LabelOwner]
-		repo = labels[tektonlog.LabelRepo]
-		branch = labels[tektonlog.LabelBranch]
-		triggerContext = labels[tektonlog.LabelContext]
-		buildNumber = labels[tektonlog.LabelBuild]
+
+		owner = pipelines.GetLabel(labels, pipelines.OwnerLabels)
+		repo = pipelines.GetLabel(labels, pipelines.RepoLabels)
+		branch = pipelines.GetLabel(labels, pipelines.BranchLabels)
+		triggerContext = pipelines.GetLabel(labels, pipelines.ContextLabels)
+		buildNumber = pipelines.GetLabel(labels, pipelines.BuildLabels)
 
 		if owner == "" {
 			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner, pr.Name, labels)

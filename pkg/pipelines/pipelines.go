@@ -14,14 +14,15 @@ import (
 )
 
 var (
-	ownerLabels   = []string{"owner", "lighthouse.jenkins-x.io/refs.org"}
-	repoLabels    = []string{"repository", "lighthouse.jenkins-x.io/refs.repo"}
-	branchLabels  = []string{"branch", "lighthouse.jenkins-x.io/branch"}
-	buildLabels   = []string{"build", "lighthouse.jenkins-x.io/buildNum"}
-	contextLabels = []string{"context", "lighthouse.jenkins-x.io/context"}
+	OwnerLabels   = []string{"owner", "lighthouse.jenkins-x.io/refs.org"}
+	RepoLabels    = []string{"repository", "lighthouse.jenkins-x.io/refs.repo"}
+	BranchLabels  = []string{"branch", "lighthouse.jenkins-x.io/branch"}
+	BuildLabels   = []string{"build", "lighthouse.jenkins-x.io/buildNum"}
+	ContextLabels = []string{"context", "lighthouse.jenkins-x.io/context"}
 )
 
-func label(m map[string]string, labels []string) string {
+// GetLabel returns the first label value for the given strings
+func GetLabel(m map[string]string, labels []string) string {
 	if m == nil {
 		return ""
 	}
@@ -41,9 +42,9 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	}
 
 	build := labels["build"]
-	owner := label(labels, ownerLabels)
-	repository := label(labels, repoLabels)
-	branch := label(labels, branchLabels)
+	owner := GetLabel(labels, OwnerLabels)
+	repository := GetLabel(labels, RepoLabels)
+	branch := GetLabel(labels, BranchLabels)
 
 	if owner == "" || repository == "" || branch == "" {
 		return ""
@@ -121,19 +122,19 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 	ps := &pa.Spec
 	if labels != nil {
 		if ps.GitOwner == "" {
-			ps.GitOwner = label(labels, ownerLabels)
+			ps.GitOwner = GetLabel(labels, OwnerLabels)
 		}
 		if ps.GitRepository == "" {
-			ps.GitRepository = label(labels, repoLabels)
+			ps.GitRepository = GetLabel(labels, RepoLabels)
 		}
 		if ps.GitBranch == "" {
-			ps.GitBranch = label(labels, branchLabels)
+			ps.GitBranch = GetLabel(labels, BranchLabels)
 		}
 		if ps.Build == "" {
-			ps.Build = label(labels, buildLabels)
+			ps.Build = GetLabel(labels, BuildLabels)
 		}
 		if ps.Context == "" {
-			ps.Context = label(labels, contextLabels)
+			ps.Context = GetLabel(labels, ContextLabels)
 		}
 		if ps.BaseSHA == "" {
 			ps.BaseSHA = labels["lighthouse.jenkins-x.io/baseSHA"]
