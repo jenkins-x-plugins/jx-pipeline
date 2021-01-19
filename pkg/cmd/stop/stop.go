@@ -2,6 +2,7 @@ package stop
 
 import (
 	"fmt"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
 	"sort"
 	"strings"
 
@@ -126,8 +127,8 @@ func (o *Options) cancelPipelineRun() error {
 	ctx := o.GetContext()
 	tektonClient := o.TektonClient
 	ns := o.Namespace
-	pipelines := tektonClient.TektonV1beta1().PipelineRuns(ns)
-	prList, err := pipelines.List(ctx, metav1.ListOptions{})
+	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
+	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
 	}
@@ -146,11 +147,11 @@ func (o *Options) cancelPipelineRun() error {
 		if labels == nil {
 			continue
 		}
-		owner := labels[tektonlog.LabelOwner]
-		repo := labels[tektonlog.LabelRepo]
-		branch := labels[tektonlog.LabelBranch]
-		triggerContext := labels[tektonlog.LabelContext]
-		buildNumber := labels[tektonlog.LabelBuild]
+		owner := pipelines.GetLabel(labels, pipelines.OwnerLabels)
+		repo := pipelines.GetLabel(labels, pipelines.RepoLabels)
+		branch := pipelines.GetLabel(labels, pipelines.BranchLabels)
+		triggerContext := pipelines.GetLabel(labels, pipelines.ContextLabels)
+		buildNumber := pipelines.GetLabel(labels, pipelines.BuildLabels)
 
 		if owner == "" {
 			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner,
@@ -196,6 +197,10 @@ func (o *Options) cancelPipelineRun() error {
 			return err
 		}
 
+		if len(names) == 0 {
+			log.Logger().Infof("no running pipelines available to stop")
+			return nil
+		}
 		var answer bool
 		if answer, err = o.Input.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
 			"you can always restart a cancelled pipeline with 'jx start pipeline'"); !answer {
@@ -209,7 +214,7 @@ func (o *Options) cancelPipelineRun() error {
 			return fmt.Errorf("no PipelineRun found for name %s", a)
 		}
 		prName := pr.Name
-		pr, err = pipelines.Get(ctx, prName, metav1.GetOptions{})
+		pr, err = pipelineRuns.Get(ctx, prName, metav1.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "getting PipelineRun %s", prName)
 		}
