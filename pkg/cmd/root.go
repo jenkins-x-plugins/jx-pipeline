@@ -5,6 +5,7 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/activities"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/convert"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/effective"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/fmt"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/getlog"
@@ -34,6 +35,7 @@ func Main() *cobra.Command {
 
 	cmd.AddCommand(cobras.SplitCommand(activities.NewCmdActivities()))
 	cmd.AddCommand(cobras.SplitCommand(convert.NewCmdPipelineConvert()))
+	cmd.AddCommand(cobras.SplitCommand(effective.NewCmdPipelineEffective()))
 	cmd.AddCommand(cobras.SplitCommand(get.NewCmdPipelineGet()))
 	cmd.AddCommand(cobras.SplitCommand(getlog.NewCmdGetBuildLogs()))
 	cmd.AddCommand(cobras.SplitCommand(fmt.NewCmdPipelineFormat()))

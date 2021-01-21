@@ -66,6 +66,7 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
+	o.ScmOptions.DiscoverFromGit = true
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")

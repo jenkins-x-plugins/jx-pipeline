@@ -27,7 +27,6 @@ type Options struct {
 	linter.Options
 	ScmOptions scmhelpers.Options
 
-	//Dir       string
 	Namespace string
 	OutFile   string
 	Format    string
@@ -63,6 +62,7 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
+	o.ScmOptions.DiscoverFromGit = true
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
 
@@ -104,14 +104,14 @@ func (o *Options) Run() error {
 			if info == nil || !info.IsDir() || info.Name() != ".lighthouse" {
 				return nil
 			}
-			return o.LintDir(path)
+			return o.ProcessDir(path)
 		})
 		if err != nil {
 			return err
 		}
 	} else {
 		dir := filepath.Join(rootDir, ".lighthouse")
-		err := o.LintDir(dir)
+		err := o.ProcessDir(dir)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func (o *Options) Run() error {
 	return o.LogResults()
 }
 
-func (o *Options) LintDir(dir string) error {
+func (o *Options) ProcessDir(dir string) error {
 	fs, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read dir %s", dir)
