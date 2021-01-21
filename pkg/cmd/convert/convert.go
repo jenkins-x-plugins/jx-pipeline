@@ -1,9 +1,10 @@
-package lint
+package convert
 
 import (
-	"context"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,36 +25,39 @@ import (
 
 // Options contains the command line options
 type Options struct {
-	linter.Options
+	options.BaseOptions
 	ScmOptions scmhelpers.Options
 
-	Namespace string
-	OutFile   string
-	Format    string
-	Recursive bool
-	Resolver  *inrepo.UsesResolver
+	Namespace   string
+	TasksFolder string
+	Format      string
+	Recursive   bool
+	Resolver    *inrepo.UsesResolver
+	Processor   processor.Interface
 }
 
 var (
 	info = termcolor.ColorInfo
 
 	cmdLong = templates.LongDesc(`
-		Lints the lighthouse trigger and tekton pipelines
+		Converts the pipelines to use the 'image: uses:sourceURI' include mechanism
+
+	So that pipeline catalogs copy smaller, simpler and easier to upgrade pipelines
 `)
 
 	cmdExample = templates.Examples(`
-		# Lints the lighthouse files and local pipeline files
-		jx pipeline lint
+		# Recurisvely convert all the pipelines in the .lighthouse/*/*.yaml folders
+		jx pipeline convert -r -d packs
 	`)
 )
 
-// NewCmdPipelineLint creates the command
-func NewCmdPipelineLint() (*cobra.Command, *Options) {
+// NewCmdPipelineConvert creates the command
+func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 	o := &Options{}
 
 	cmd := &cobra.Command{
-		Use:     "lint",
-		Short:   "Lints the lighthouse trigger and tekton pipelines",
+		Use:     "convert",
+		Short:   "Converts the pipelines to use the 'image: uses:sourceURI' include mechanism",
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"kill"},
@@ -64,20 +68,18 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 	}
 	o.ScmOptions.DiscoverFromGit = true
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
+	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
-
-	o.Options.AddFlags(cmd)
 
 	return cmd, o
 }
 
 // Validate verifies settings
 func (o *Options) Validate() error {
-	err := o.Options.Validate()
+	err := o.BaseOptions.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate base options")
 	}
-
 	if o.Resolver == nil {
 		o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
 		if err != nil {
@@ -95,7 +97,9 @@ func (o *Options) Run() error {
 	}
 
 	rootDir := o.ScmOptions.Dir
-
+	if o.Processor == nil {
+		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository)
+	}
 	if o.Recursive {
 		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -116,8 +120,7 @@ func (o *Options) Run() error {
 			return err
 		}
 	}
-
-	return o.LogResults()
+	return nil
 }
 
 func (o *Options) ProcessDir(dir string) error {
@@ -141,24 +144,18 @@ func (o *Options) ProcessDir(dir string) error {
 			continue
 		}
 
-		test := &linter.Test{
-			File: triggersFile,
-		}
-		o.Tests = append(o.Tests, test)
 		triggers := &triggerconfig.Config{}
 		err = yamls.LoadFile(triggersFile, triggers)
 		if err != nil {
-			test.Error = err
-			continue
+			return errors.Wrapf(err, "failed to load lighthouse triggers: %s", triggersFile)
 		}
 
-		o.loadConfigFile(triggers, triggerDir)
+		o.processTriggerFile(triggers, triggerDir)
 	}
 	return nil
 }
 
-func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *triggerconfig.Config {
-	ctx := o.GetContext()
+func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir string) *triggerconfig.Config {
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
@@ -166,8 +163,7 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 			test := &linter.Test{
 				File: path,
 			}
-			o.Tests = append(o.Tests, test)
-			err := loadJobBaseFromSourcePath(ctx, o.Resolver, path)
+			err := processor.ProcessFile(o.Processor, path)
 			if err != nil {
 				test.Error = err
 			}
@@ -183,8 +179,7 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 			test := &linter.Test{
 				File: path,
 			}
-			o.Tests = append(o.Tests, test)
-			err := loadJobBaseFromSourcePath(ctx, o.Resolver, path)
+			err := processor.ProcessFile(o.Processor, path)
 			if err != nil {
 				test.Error = err
 			}
@@ -194,27 +189,4 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 		}
 	}
 	return repoConfig
-}
-
-func loadJobBaseFromSourcePath(ctx context.Context, resolver *inrepo.UsesResolver, path string) error {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return errors.Wrapf(err, "failed to load file %s", path)
-	}
-	if len(data) == 0 {
-		return errors.Errorf("empty file file %s", path)
-	}
-
-	dir := filepath.Dir(path)
-	resolver.Dir = dir
-	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
-	}
-
-	fieldError := pr.Validate(ctx)
-	if fieldError != nil {
-		return errors.Wrapf(fieldError, "failed to validate YAML file %s", path)
-	}
-	return nil
 }
