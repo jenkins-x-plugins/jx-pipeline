@@ -28,6 +28,7 @@ commands for working with Jenkins X Pipelines
 * [jx-pipeline import](jx-pipeline_import.md)	 - Imports tekton pipelines from a catalog
 * [jx-pipeline lint](jx-pipeline_lint.md)	 - Lints the lighthouse trigger and tekton pipelines
 * [jx-pipeline log](jx-pipeline_log.md)	 - Display a build log
+* [jx-pipeline override](jx-pipeline_override.md)	 - Lets you pick a step to override locally in a pipeline
 * [jx-pipeline pods](jx-pipeline_pods.md)	 - Displays the build pods and their details
 * [jx-pipeline start](jx-pipeline_start.md)	 - Starts one or more pipelines
 * [jx-pipeline stop](jx-pipeline_stop.md)	 - Stops one or more pipelines
