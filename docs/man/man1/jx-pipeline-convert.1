@@ -18,10 +18,14 @@ jx\-pipeline\-convert \- Converts the pipelines to use the 'image: uses:sourceUR
 Converts the pipelines to use the 'image: uses:sourceURI' include mechanism
 
 .PP
-So that pipeline catalogs copy smaller, simpler and easier to upgrade pipelines
+So that pipelines are smaller, simpler and easier to upgrade pipelines with the version stream
 
 
 .SH OPTIONS
+.PP
+\fB\-c\fP, \fB\-\-catalog\fP[=false]
+    If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders
+
 .PP
 \fB\-d\fP, \fB\-\-dir\fP="."
     The directory to look for the .lighthouse folder
@@ -31,8 +35,8 @@ So that pipeline catalogs copy smaller, simpler and easier to upgrade pipelines
     help for convert
 
 .PP
-\fB\-r\fP, \fB\-\-recursive\fP[=false]
-    Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog
+\fB\-s\fP, \fB\-\-sha\fP="HEAD"
+    The default catalog SHA to use when resolving catalog pipelines to reuse
 
 .PP
 \fB\-\-tasks\-dir\fP="tasks"
@@ -41,8 +45,13 @@ So that pipeline catalogs copy smaller, simpler and easier to upgrade pipelines
 
 .SH EXAMPLE
 .PP
-# Recurisvely convert all the pipelines in the .lighthouse/\fI/\fP\&.yaml folders
-  jx pipeline convert \-r \-d packs
+# Convert a repository created using the alpha/beta of v3
+  # to use the nice new uses: syntax
+  jx pipeline convert
+
+.PP
+# Convert a pipeline catalog to the uses syntax and layout
+  jx pipeline convert \-\-catalog
 
 
 .SH SEE ALSO
