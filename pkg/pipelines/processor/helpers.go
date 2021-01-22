@@ -15,13 +15,13 @@ import (
 var info = termcolor.ColorInfo
 
 // ProcessFile processes the given file with the processor
-func ProcessFile(processor Interface, path string) error {
+func ProcessFile(processor Interface, path string) (bool, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load file %s", path)
+		return false, errors.Wrapf(err, "failed to load file %s", path)
 	}
 	if len(data) == 0 {
-		return errors.Errorf("empty file file %s", path)
+		return false, errors.Errorf("empty file file %s", path)
 	}
 
 	message := fmt.Sprintf("for file %s", path)
@@ -48,7 +48,7 @@ func ProcessFile(processor Interface, path string) error {
 		resource = pipeline
 		err := yaml.Unmarshal(data, pipeline)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal Pipeline YAML %s", message)
+			return false, errors.Wrapf(err, "failed to unmarshal Pipeline YAML %s", message)
 		}
 		modified, err = processor.ProcessPipeline(pipeline, path)
 
@@ -57,7 +57,7 @@ func ProcessFile(processor Interface, path string) error {
 		resource = prs
 		err := yaml.Unmarshal(data, prs)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal PipelineRun YAML %s", message)
+			return false, errors.Wrapf(err, "failed to unmarshal PipelineRun YAML %s", message)
 		}
 		modified, err = processor.ProcessPipelineRun(prs, path)
 
@@ -66,7 +66,7 @@ func ProcessFile(processor Interface, path string) error {
 		resource = task
 		err := yaml.Unmarshal(data, task)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal Task YAML %s", message)
+			return false, errors.Wrapf(err, "failed to unmarshal Task YAML %s", message)
 		}
 		modified, err = processor.ProcessTask(task, path)
 
@@ -75,27 +75,27 @@ func ProcessFile(processor Interface, path string) error {
 		resource = tr
 		err := yaml.Unmarshal(data, tr)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal TaskRun YAML %s", message)
+			return false, errors.Wrapf(err, "failed to unmarshal TaskRun YAML %s", message)
 		}
 		modified, err = processor.ProcessTaskRun(tr, path)
 
 	default:
-		return errors.Errorf("kind %s is not supported for %s", kind, message)
+		return false, errors.Errorf("kind %s is not supported for %s", kind, message)
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "failed to process %s", message)
+		return false, errors.Wrapf(err, "failed to process %s", message)
 	}
 	if !modified {
-		return nil
+		return false, nil
 	}
 
 	err = yamls.SaveFile(resource, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to save file %s", path)
+		return false, errors.Wrapf(err, "failed to save file %s", path)
 	}
 	log.Logger().Infof("saved file %s", info(path))
-	return nil
+	return modified, nil
 }
 
 // ProcessPipelineSpec default function for processing a pipeline spec which may be nil
