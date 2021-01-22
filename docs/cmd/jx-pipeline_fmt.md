@@ -2,8 +2,6 @@
 
 Formats the local pipeline files
 
-***Aliases**: kill*
-
 ### Usage
 
 ```

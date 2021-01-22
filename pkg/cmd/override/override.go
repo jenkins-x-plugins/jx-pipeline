@@ -1,17 +1,14 @@
-package effective
+package override
 
 import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
 	"io/ioutil"
-	"os"
 	"path/filepath"
-	"sigs.k8s.io/yaml"
 	"strings"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -32,10 +29,9 @@ type Options struct {
 	ScmOptions scmhelpers.Options
 
 	Namespace    string
-	OutFile      string
+	CatalogSHA   string
 	TriggerName  string
 	PipelineName string
-	Recursive    bool
 	Resolver     *inrepo.UsesResolver
 	Triggers     []*Trigger
 	Input        input.Interface
@@ -45,12 +41,12 @@ var (
 	info = termcolor.ColorInfo
 
 	cmdLong = templates.LongDesc(`
-		Displays the effective tekton pipeline
+		Lets you pick a step to override locally in a pipeline
 `)
 
 	cmdExample = templates.Examples(`
-		# View the effective pipeline 
-		jx pipeline effective
+		# Override locally a step in a pipeline
+		jx pipeline override
 	`)
 )
 
@@ -59,19 +55,19 @@ type Trigger struct {
 	Path      string
 	Config    *triggerconfig.Config
 	Names     []string
-	Pipelines map[string]*tektonv1beta1.PipelineRun
+	Pipelines map[string]string
 }
 
-// NewCmdPipelineEffective creates the command
-func NewCmdPipelineEffective() (*cobra.Command, *Options) {
+// NewCmdPipelineOverride creates the command
+func NewCmdPipelineOverride() (*cobra.Command, *Options) {
 	o := &Options{}
 
 	cmd := &cobra.Command{
-		Use:     "effective",
-		Short:   "Displays the effective tekton pipeline",
+		Use:     "override",
+		Short:   "Lets you pick a step to override locally in a pipeline",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Aliases: []string{"dump"},
+		Aliases: []string{"edit", "inline"},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
 			helper.CheckErr(err)
@@ -82,8 +78,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
-	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The output file to write the effective pipeline to. If not specified output to the terminal")
-	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
+	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
@@ -116,25 +111,10 @@ func (o *Options) Run() error {
 
 	rootDir := o.ScmOptions.Dir
 
-	if o.Recursive {
-		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info == nil || !info.IsDir() || info.Name() != ".lighthouse" {
-				return nil
-			}
-			return o.ProcessDir(path)
-		})
-		if err != nil {
-			return err
-		}
-	} else {
-		dir := filepath.Join(rootDir, ".lighthouse")
-		err := o.ProcessDir(dir)
-		if err != nil {
-			return err
-		}
+	dir := filepath.Join(rootDir, ".lighthouse")
+	err = o.ProcessDir(dir)
+	if err != nil {
+		return err
 	}
 	return o.processTriggers()
 }
@@ -167,7 +147,7 @@ func (o *Options) ProcessDir(dir string) error {
 		trigger := &Trigger{
 			Path:      triggersFile,
 			Config:    triggers,
-			Pipelines: map[string]*tektonv1beta1.PipelineRun{},
+			Pipelines: map[string]string{},
 		}
 		o.Triggers = append(o.Triggers, trigger)
 
@@ -185,13 +165,9 @@ func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
 			path := filepath.Join(dir, r.SourcePath)
-			pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
-			if err != nil {
-				return errors.Wrapf(err, "failed to load %s", path)
-			}
 			name := "presubmit/" + r.Name
 			trigger.Names = append(trigger.Names, name)
-			trigger.Pipelines[name] = pr
+			trigger.Pipelines[name] = path
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
@@ -201,13 +177,9 @@ func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
 		r := &repoConfig.Spec.Postsubmits[i]
 		if r.SourcePath != "" {
 			path := filepath.Join(dir, r.SourcePath)
-			pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
-			if err != nil {
-				return errors.Wrapf(err, "failed to load %s", path)
-			}
 			name := "postsubmit/" + r.Name
 			trigger.Names = append(trigger.Names, name)
-			trigger.Pipelines[name] = pr
+			trigger.Pipelines[name] = path
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
@@ -252,29 +224,15 @@ func (o *Options) processTriggers() error {
 		}
 	}
 	pipeline := trigger.Pipelines[pipelineName]
-	if pipeline == nil {
+	if pipeline == "" {
 		return options.InvalidOptionf("pipeline", o.PipelineName, "available names %s", strings.Join(trigger.Names, ", "))
 	}
 
-	return o.displayPipeline(trigger, pipelineName, pipeline)
+	return o.overridePipeline(trigger, pipelineName, pipeline)
 }
 
-func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tektonv1beta1.PipelineRun) error {
-	if o.OutFile != "" {
-		err := yamls.SaveFile(pipeline, o.OutFile)
-		if err != nil {
-			return errors.Wrapf(err, "failed to save file %s", o.OutFile)
-		}
-		log.Logger().Infof("saved file %s", info(o.OutFile))
-		return nil
-	}
-
-	data, err := yaml.Marshal(pipeline)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal pipeline for %s", name)
-	}
-
-	log.Logger().Infof("trigger %s pipeline %s", info(trigger.Path), info(name))
-	log.Logger().Infof(string(data))
+func (o *Options) overridePipeline(trigger *Trigger, name string, path string) error {
+	p := processor.NewInliner(o.Input, o.Resolver, o.CatalogSHA)
+	processor.ProcessFile(p, path)
 	return nil
 }

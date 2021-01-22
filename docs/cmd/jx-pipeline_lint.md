@@ -2,8 +2,6 @@
 
 Lints the lighthouse trigger and tekton pipelines
 
-***Aliases**: kill*
-
 ### Usage
 
 ```

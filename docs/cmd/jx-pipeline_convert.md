@@ -2,8 +2,6 @@
 
 Converts the pipelines to use the 'image: uses:sourceURI' include mechanism
 
-***Aliases**: kill*
-
 ### Usage
 
 ```
@@ -33,6 +31,7 @@ So that pipelines are smaller, simpler and easier to upgrade pipelines with the 
   -h, --help               help for convert
   -s, --sha string         The default catalog SHA to use when resolving catalog pipelines to reuse (default "HEAD")
       --tasks-dir string   The directory name to store the original tasks before we convert to uses: notation (default "tasks")
+      --use-kpt-ref        Keep the kpt ref value in the uses git URI
 ```
 
 ### SEE ALSO

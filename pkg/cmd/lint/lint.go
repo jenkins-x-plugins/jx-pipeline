@@ -56,7 +56,6 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 		Short:   "Lints the lighthouse trigger and tekton pipelines",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Aliases: []string{"kill"},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
 			helper.CheckErr(err)

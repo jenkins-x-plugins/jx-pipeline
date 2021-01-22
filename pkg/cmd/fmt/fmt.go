@@ -77,7 +77,6 @@ func NewCmdPipelineFormat() (*cobra.Command, *Options) {
 		Short:   "Formats the local pipeline files",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Aliases: []string{"kill"},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
 			helper.CheckErr(err)

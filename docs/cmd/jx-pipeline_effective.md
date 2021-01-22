@@ -2,7 +2,7 @@
 
 Displays the effective tekton pipeline
 
-***Aliases**: kill*
+***Aliases**: dump*
 
 ### Usage
 
