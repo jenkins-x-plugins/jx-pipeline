@@ -34,6 +34,7 @@ type Options struct {
 	Namespace   string
 	TasksFolder string
 	Format      string
+	CatalogSHA  string
 	Catalog     bool
 	Resolver    *inrepo.UsesResolver
 	Processor   *processor.UsesMigrator
@@ -48,12 +49,16 @@ var (
 	cmdLong = templates.LongDesc(`
 		Converts the pipelines to use the 'image: uses:sourceURI' include mechanism
 
-	So that pipeline catalogs copy smaller, simpler and easier to upgrade pipelines
+	So that pipelines are smaller, simpler and easier to upgrade pipelines with the version stream
 `)
 
 	cmdExample = templates.Examples(`
-		# Recurisvely convert all the pipelines in the .lighthouse/*/*.yaml folders
-		jx pipeline convert -r -d packs
+		# Convert a repository created using the alpha/beta of v3 
+        # to use the nice new uses: syntax 
+		jx pipeline convert
+
+		# Convert a pipeline catalog to the uses syntax and layout
+		jx pipeline convert --catalog
 	`)
 )
 
@@ -75,6 +80,7 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 	o.ScmOptions.DiscoverFromGit = true
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
+	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
 	cmd.Flags().BoolVarP(&o.Catalog, "catalog", "c", false, "If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders")
 
 	return cmd, o
@@ -291,11 +297,18 @@ func (o *Options) updateCatalogTask(sourceFile string) error {
 	resolver := o.Resolver
 
 	kptPath := filepath.Join(resolver.Dir, sourceFile)
+	owner := resolver.OwnerName
+	repo := resolver.RepoName
+	sha, err := o.getCatalogSHA(owner, repo)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find SHA for catalog repository %s/%s", owner, repo)
+	}
+
 	gu := &inrepo.GitURI{
-		Owner:      resolver.OwnerName,
-		Repository: resolver.RepoName,
+		Owner:      owner,
+		Repository: repo,
 		Path:       kptPath,
-		SHA:        resolver.SHA,
+		SHA:        sha,
 	}
 	gitURI := gu.String()
 	data, err := resolver.GetData(gitURI, false)
@@ -312,6 +325,12 @@ func (o *Options) updateCatalogTask(sourceFile string) error {
 		return errors.Wrapf(err, "failed to find catalog task at %s", gitURI)
 	}
 	return nil
+}
+
+func (o *Options) getCatalogSHA(owner string, repo string) (string, error) {
+	// we could some day find the sha from the version stream
+	// though using head is a good default really
+	return o.CatalogSHA, nil
 }
 
 func findCatalogTaskSpec(pr *v1beta1.PipelineRun) (*v1beta1.TaskSpec, error) {

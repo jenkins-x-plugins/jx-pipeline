@@ -51,7 +51,7 @@ func TestConvertCatalog(t *testing.T) {
 	require.NoError(t, err, "Failed to run")
 
 	if !generateTestOutput {
-		AssertFilesEqualText(t, expectedDir, tmpDir,
+		testhelpers.AssertFilesEqualText(t, expectedDir, tmpDir,
 			filepath.Join(packsDir, "pullrequest.yaml"),
 			filepath.Join(packsDir, "release.yaml"),
 			filepath.Join(tasksDir, "pullrequest.yaml"),
@@ -59,20 +59,7 @@ func TestConvertCatalog(t *testing.T) {
 		)
 	}
 }
-
-// AssertFilesEqualText asserts that all the given paths in the expected dir are equal to the files in the actual dir
-func AssertFilesEqualText(t *testing.T, expectedDir string, actualDir string, paths ...string) {
-	for _, f := range paths {
-		generated := filepath.Join(actualDir, f)
-		expected := filepath.Join(expectedDir, f)
-		testhelpers.AssertEqualFileText(t, expected, generated)
-		t.Logf("generated file %s matches expected\n", f)
-	}
-}
-
 func TestConvertRepository(t *testing.T) {
-	os.Setenv("LIGHTHOUSE_VERSIONSTREAM_JENKINS_X_JX3_PIPELINE_CATALOG", "myversionstreamref")
-
 	srcDir := filepath.Join("test_data", "repo", "jx-cli")
 	expectedDir := filepath.Join("test_data", "repo", "expected")
 
@@ -94,6 +81,7 @@ func TestConvertRepository(t *testing.T) {
 
 	_, o := convert.NewCmdPipelineConvert()
 
+	o.CatalogSHA = "myversionstreamref"
 	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-cli"
 	o.ScmOptions.ScmClient = scmClient
 	o.ScmOptions.Dir = tmpDir
@@ -102,7 +90,7 @@ func TestConvertRepository(t *testing.T) {
 	require.NoError(t, err, "Failed to run")
 
 	if !generateTestOutput {
-		AssertFilesEqualText(t, expectedDir, tmpDir,
+		testhelpers.AssertFilesEqualText(t, expectedDir, tmpDir,
 			filepath.Join(lighthouseJenkinsXDir, "pullrequest.yaml"),
 			filepath.Join(lighthouseJenkinsXDir, "release.yaml"),
 		)
