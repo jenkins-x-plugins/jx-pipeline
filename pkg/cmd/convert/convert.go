@@ -7,7 +7,6 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -36,6 +35,7 @@ type Options struct {
 	Format      string
 	CatalogSHA  string
 	Catalog     bool
+	UseKptRef   bool
 	Resolver    *inrepo.UsesResolver
 	Processor   *processor.UsesMigrator
 
@@ -71,7 +71,6 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 		Short:   "Converts the pipelines to use the 'image: uses:sourceURI' include mechanism",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Aliases: []string{"kill"},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
 			helper.CheckErr(err)
@@ -82,6 +81,7 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
 	cmd.Flags().BoolVarP(&o.Catalog, "catalog", "c", false, "If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders")
+	cmd.Flags().BoolVarP(&o.UseKptRef, "use-kpt-ref", "", false, "Keep the kpt ref value in the uses git URI")
 
 	return cmd, o
 }
@@ -279,12 +279,32 @@ func (o *Options) createNonCatalogResolver(triggerDir string) (*inrepo.UsesResol
 	}
 	repoOptions.Owner = gitInfo.Organisation
 	repoOptions.Repository = gitInfo.Name
+	if o.Processor.Owner == "" {
+		o.Processor.Owner = gitInfo.Organisation
+		o.Processor.Repository = gitInfo.Name
+	}
 
 	resolver, err := lighthouses.CreateResolver(&repoOptions)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create the resolver")
 	}
-	resolver.SHA = "versionStream"
+
+	// optionally keep the kpt ref
+	sha := "versionStream"
+	if o.UseKptRef && git.Ref != "" {
+		sha = git.Ref
+	}
+
+	// lets figure out the tasks folder from kpt
+	tasksFolder := "tasks"
+	paths := strings.Split(strings.TrimPrefix(git.Directory, "/"), string(os.PathSeparator))
+	if len(paths) > 1 && paths[0] == "packs" {
+		tasksFolder = filepath.Join(o.TasksFolder, paths[1])
+	}
+
+	o.Processor.TasksFolder = tasksFolder
+	o.Processor.SHA = sha
+	resolver.SHA = sha
 	resolver.Dir = git.Directory
 	return resolver, nil
 }
@@ -294,55 +314,7 @@ func (o *Options) updateCatalogTask(sourceFile string) error {
 	if o.Catalog {
 		return nil
 	}
-	resolver := o.Resolver
-
-	kptPath := filepath.Join(resolver.Dir, sourceFile)
-	owner := resolver.OwnerName
-	repo := resolver.RepoName
-	sha, err := o.getCatalogSHA(owner, repo)
-	if err != nil {
-		return errors.Wrapf(err, "failed to find SHA for catalog repository %s/%s", owner, repo)
-	}
-
-	gu := &inrepo.GitURI{
-		Owner:      owner,
-		Repository: repo,
-		Path:       kptPath,
-		SHA:        sha,
-	}
-	gitURI := gu.String()
-	data, err := resolver.GetData(gitURI, false)
-	if err != nil {
-		return errors.Wrapf(err, "failed to load %s", gitURI)
-	}
-
-	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal catalog YAML file %s", kptPath)
-	}
-	o.Processor.CatalogTaskSpec, err = findCatalogTaskSpec(pr)
-	if err != nil {
-		return errors.Wrapf(err, "failed to find catalog task at %s", gitURI)
-	}
-	return nil
-}
-
-func (o *Options) getCatalogSHA(owner string, repo string) (string, error) {
-	// we could some day find the sha from the version stream
-	// though using head is a good default really
-	return o.CatalogSHA, nil
-}
-
-func findCatalogTaskSpec(pr *v1beta1.PipelineRun) (*v1beta1.TaskSpec, error) {
-	ps := pr.Spec.PipelineSpec
-	if ps == nil {
-		return nil, errors.Errorf("no spec.pipelineSpec")
-	}
-	for i := range ps.Tasks {
-		pt := &ps.Tasks[i]
-		if pt.TaskSpec != nil {
-			return &pt.TaskSpec.TaskSpec, nil
-		}
-	}
-	return nil, errors.Errorf("no spec.tasks.taskSpec found")
+	var err error
+	o.Processor.CatalogTaskSpec, err = lighthouses.FindCatalogTaskSpec(o.Resolver, sourceFile, o.CatalogSHA)
+	return err
 }

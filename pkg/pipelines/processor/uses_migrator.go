@@ -20,10 +20,11 @@ import (
 
 type UsesMigrator struct {
 	CatalogTaskSpec *v1beta1.TaskSpec
-	dir             string
-	owner           string
-	repository      string
-	tasksFolder     string
+	Dir             string
+	Owner           string
+	Repository      string
+	TasksFolder     string
+	SHA             string
 	catalog         bool
 	concise         bool
 }
@@ -31,10 +32,10 @@ type UsesMigrator struct {
 // NewUsesMigrator creates a new uses migrator
 func NewUsesMigrator(dir, tasksFolder, owner, repository string, catalog bool) *UsesMigrator {
 	return &UsesMigrator{
-		dir:         dir,
-		tasksFolder: tasksFolder,
-		owner:       owner,
-		repository:  repository,
+		Dir:         dir,
+		TasksFolder: tasksFolder,
+		Owner:       owner,
+		Repository:  repository,
 		catalog:     catalog,
 		concise:     true,
 	}
@@ -118,7 +119,11 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 				continue
 			}
 		}
-		usesImage := fmt.Sprintf("uses:%s/%s/%s@versionStream", p.owner, p.repository, usesPath)
+		sha := p.SHA
+		if sha == "" {
+			sha = "versionStream"
+		}
+		usesImage := fmt.Sprintf("uses:%s/%s/%s@%s", p.Owner, p.Repository, usesPath, sha)
 
 		if ts.StepTemplate == nil {
 			ts.StepTemplate = &corev1.Container{}
@@ -235,31 +240,29 @@ func ConvertLegacyStepAnnotationURLToUsesImage(ann map[string]string, key string
 
 func (p *UsesMigrator) usesPath(path string) (string, error) {
 	// lets make sure we save the original file
-	rel, err := filepath.Rel(p.dir, path)
+	rel, err := filepath.Rel(p.Dir, path)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find relative path to %s for %s", p.dir, path)
+		return "", errors.Wrapf(err, "failed to find relative path to %s for %s", p.Dir, path)
 	}
+	paths := strings.Split(rel, string(os.PathSeparator))
 	if p.catalog {
 		// lets save the raw image in the tasks folder
-		paths := strings.Split(rel, string(os.PathSeparator))
 		if len(paths) < 3 || paths[0] != "packs" {
 			// lets ignore this file
 			return "", nil
 		}
 
-		return filepath.Join(p.tasksFolder, paths[1], paths[len(paths)-1]), nil
+		return filepath.Join(p.TasksFolder, paths[1], paths[len(paths)-1]), nil
 	}
-
-	// TODO figure out the correct uses path
-	return filepath.Join(p.tasksFolder, rel), nil
+	return filepath.Join(p.TasksFolder, paths[len(paths)-1]), nil
 }
 
 // saveOriginalResource lets copy the original to the tasks folder so we can then use it
 func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) error {
 	// lets make sure we save the original file
-	rel, err := filepath.Rel(p.dir, path)
+	rel, err := filepath.Rel(p.Dir, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find relative path to %s for %s", p.dir, path)
+		return errors.Wrapf(err, "failed to find relative path to %s for %s", p.Dir, path)
 	}
 
 	// lets save the raw image in the tasks folder
@@ -269,10 +272,10 @@ func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) e
 		return nil
 	}
 
-	outDir := filepath.Join(p.dir, p.tasksFolder, paths[1])
+	outDir := filepath.Join(p.Dir, p.TasksFolder, paths[1])
 	err = os.MkdirAll(outDir, files.DefaultDirWritePermissions)
 	if err != nil {
-		return errors.Wrapf(err, "failed to make dir %s", outDir)
+		return errors.Wrapf(err, "failed to make Dir %s", outDir)
 	}
 	outFile := filepath.Join(outDir, paths[len(paths)-1])
 

@@ -71,7 +71,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 		Short:   "Displays the effective tekton pipeline",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Aliases: []string{"kill"},
+		Aliases: []string{"dump"},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := o.Run()
 			helper.CheckErr(err)
