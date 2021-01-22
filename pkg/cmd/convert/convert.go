@@ -184,6 +184,7 @@ func (o *Options) ProcessDir(dir string) error {
 }
 
 func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir string) error {
+	modified := false
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
@@ -192,9 +193,12 @@ func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir strin
 				return errors.Wrapf(err, "failed to find catalog pipeline for %s", r.SourcePath)
 			}
 			path := filepath.Join(dir, r.SourcePath)
-			err = processor.ProcessFile(o.Processor, path)
+			flag, err := processor.ProcessFile(o.Processor, path)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s", r.SourcePath)
+			}
+			if flag {
+				modified = true
 			}
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
@@ -209,13 +213,30 @@ func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir strin
 				return errors.Wrapf(err, "failed to find catalog pipeline for %s", r.SourcePath)
 			}
 			path := filepath.Join(dir, r.SourcePath)
-			err = processor.ProcessFile(o.Processor, path)
+			flag, err := processor.ProcessFile(o.Processor, path)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s", r.SourcePath)
+			}
+			if flag {
+				modified = true
 			}
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
+		}
+	}
+	if !o.Catalog && modified {
+		// lets remove the kptfile if it exists
+		path := filepath.Join(dir, "Kptfile")
+		exists, err := files.FileExists(path)
+		if err != nil {
+			return errors.Wrapf(err, "failed to check if file exists %s", path)
+		}
+		if exists {
+			err = os.RemoveAll(path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to remove file %s", path)
+			}
 		}
 	}
 	return nil

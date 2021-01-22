@@ -5,6 +5,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/convert"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,6 +17,10 @@ import (
 var (
 	// generateTestOutput enable to regenerate the expected output
 	generateTestOutput = false
+
+	lighthouseJenkinsXDir = filepath.Join(".lighthouse", "jenkins-x")
+	packsDir              = filepath.Join("packs", "javascript", lighthouseJenkinsXDir)
+	tasksDir              = filepath.Join("tasks", "javascript")
 )
 
 func TestConvertCatalog(t *testing.T) {
@@ -47,10 +52,10 @@ func TestConvertCatalog(t *testing.T) {
 
 	if !generateTestOutput {
 		AssertFilesEqualText(t, expectedDir, tmpDir,
-			"packs/javascript/.lighthouse/jenkins-x/pullrequest.yaml",
-			"packs/javascript/.lighthouse/jenkins-x/release.yaml",
-			"tasks/javascript/pullrequest.yaml",
-			"tasks/javascript/release.yaml",
+			filepath.Join(packsDir, "pullrequest.yaml"),
+			filepath.Join(packsDir, "release.yaml"),
+			filepath.Join(tasksDir, "pullrequest.yaml"),
+			filepath.Join(tasksDir, "release.yaml"),
 		)
 	}
 }
@@ -98,8 +103,9 @@ func TestConvertRepository(t *testing.T) {
 
 	if !generateTestOutput {
 		AssertFilesEqualText(t, expectedDir, tmpDir,
-			".lighthouse/jenkins-x/pullrequest.yaml",
-			".lighthouse/jenkins-x/release.yaml",
+			filepath.Join(lighthouseJenkinsXDir, "pullrequest.yaml"),
+			filepath.Join(lighthouseJenkinsXDir, "release.yaml"),
 		)
+		assert.NoFileExists(t, filepath.Join(tmpDir, lighthouseJenkinsXDir, "Kptfile"))
 	}
 }
