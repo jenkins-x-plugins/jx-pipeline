@@ -3,6 +3,7 @@ package processor
 import (
 	"fmt"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
@@ -13,46 +14,50 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 )
 
-type usesMigrator struct {
-	dir         string
-	owner       string
-	repository  string
-	tasksFolder string
-	concise     bool
+type UsesMigrator struct {
+	CatalogTaskSpec *v1beta1.TaskSpec
+	dir             string
+	owner           string
+	repository      string
+	tasksFolder     string
+	catalog         bool
+	concise         bool
 }
 
 // NewUsesMigrator creates a new uses migrator
-func NewUsesMigrator(dir, tasksFolder, owner, repository string) Interface {
-	return &usesMigrator{
+func NewUsesMigrator(dir, tasksFolder, owner, repository string, catalog bool) *UsesMigrator {
+	return &UsesMigrator{
 		dir:         dir,
 		tasksFolder: tasksFolder,
 		owner:       owner,
 		repository:  repository,
+		catalog:     catalog,
 		concise:     true,
 	}
 }
 
-func (p *usesMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
+func (p *UsesMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
 	return p.processPipelineSpec(&pipeline.Spec, &pipeline.ObjectMeta, path, pipeline)
 }
 
-func (p *usesMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
+func (p *UsesMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
 	return p.processPipelineSpec(prs.Spec.PipelineSpec, &prs.ObjectMeta, path, prs)
 }
 
-func (p *usesMigrator) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
+func (p *UsesMigrator) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
 	return p.processTaskSpec(&task.Spec, &task.ObjectMeta, path, task.Name)
 }
 
-func (p *usesMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
+func (p *UsesMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
 	// TODO
 	return false, nil
 }
 
-func (p *usesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
+func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
 	hasRealImage, err := ProcessPipelineSpec(ps, path, hasRealImage)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to check for real times")
@@ -61,14 +66,16 @@ func (p *usesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 		return false, nil
 	}
 
-	// lets remove the old annotations
-	if metadata.Annotations != nil {
-		delete(metadata.Annotations, inrepo.AppendStepURL)
-		delete(metadata.Annotations, inrepo.PrependStepURL)
-	}
-	err = p.saveOriginalResource(path, resource)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to save original resource so we can reuse")
+	if p.catalog {
+		// lets remove the old annotations
+		if metadata.Annotations != nil {
+			delete(metadata.Annotations, inrepo.AppendStepURL)
+			delete(metadata.Annotations, inrepo.PrependStepURL)
+		}
+		err = p.saveOriginalResource(path, resource)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to save original resource so we can reuse")
+		}
 	}
 	fn := func(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
 		return p.processTaskSpec(ts, metadata, path, name)
@@ -76,7 +83,7 @@ func (p *usesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 	return ProcessPipelineSpec(ps, path, fn)
 }
 
-func (p *usesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.ObjectMeta, path, name string) (bool, error) {
+func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.ObjectMeta, path, name string) (bool, error) {
 	usesPath, err := p.usesPath(path)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get uses: path")
@@ -98,6 +105,19 @@ func (p *usesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		if uses != image {
 			continue
 		}
+		var catalogStep *v1beta1.Step
+		if !p.catalog {
+			catalogStep = FindStep(p.CatalogTaskSpec, step.Name)
+			if catalogStep == nil {
+				// this step is not in the catalog so don' replace with uses:
+				continue
+			}
+
+			// lets not reuse a step if the images are different (other than version)
+			if ImageWithoutVersionTag(image) != ImageWithoutVersionTag(catalogStep.Image) {
+				continue
+			}
+		}
 		usesImage := fmt.Sprintf("uses:%s/%s/%s@versionStream", p.owner, p.repository, usesPath)
 
 		if ts.StepTemplate == nil {
@@ -111,15 +131,43 @@ func (p *usesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		}
 
 		// lets translate to the uses string
-		ts.Steps[i] = v1beta1.Step{
+		replaceStep := v1beta1.Step{
 			Container: corev1.Container{
 				Name:  step.Name,
 				Image: usesImage,
 			},
 		}
+
+		if !p.catalog {
+			err = p.addLocalOverrides(replaceStep, step, catalogStep)
+		}
+		ts.Steps[i] = replaceStep
 		modified = true
 	}
 	return modified, nil
+}
+
+// ImageWithoutVersionTag returns the image string without any version tag.
+func ImageWithoutVersionTag(image string) string {
+	idx := strings.LastIndex(image, ":")
+	if idx < 0 {
+		return image
+	}
+	return image[0:idx]
+}
+
+// FindStep returns the named step or nil
+func FindStep(spec *v1beta1.TaskSpec, name string) *v1beta1.Step {
+	if spec == nil {
+		return nil
+	}
+	for i := range spec.Steps {
+		step := &spec.Steps[i]
+		if step.Name == name {
+			return step
+		}
+	}
+	return nil
 }
 
 func replaceStepAnnotations(ann map[string]string, ts *v1beta1.TaskSpec) bool {
@@ -185,25 +233,29 @@ func ConvertLegacyStepAnnotationURLToUsesImage(ann map[string]string, key string
 	return "uses:" + text
 }
 
-func (p *usesMigrator) usesPath(path string) (string, error) {
+func (p *UsesMigrator) usesPath(path string) (string, error) {
 	// lets make sure we save the original file
 	rel, err := filepath.Rel(p.dir, path)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to find relative path to %s for %s", p.dir, path)
 	}
+	if p.catalog {
+		// lets save the raw image in the tasks folder
+		paths := strings.Split(rel, string(os.PathSeparator))
+		if len(paths) < 3 || paths[0] != "packs" {
+			// lets ignore this file
+			return "", nil
+		}
 
-	// lets save the raw image in the tasks folder
-	paths := strings.Split(rel, string(os.PathSeparator))
-	if len(paths) < 3 || paths[0] != "packs" {
-		// lets ignore this file
-		return "", nil
+		return filepath.Join(p.tasksFolder, paths[1], paths[len(paths)-1]), nil
 	}
 
-	return filepath.Join(p.tasksFolder, paths[1], paths[len(paths)-1]), nil
+	// TODO figure out the correct uses path
+	return filepath.Join(p.tasksFolder, rel), nil
 }
 
 // saveOriginalResource lets copy the original to the tasks folder so we can then use it
-func (p *usesMigrator) saveOriginalResource(path string, resource interface{}) error {
+func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) error {
 	// lets make sure we save the original file
 	rel, err := filepath.Rel(p.dir, path)
 	if err != nil {
@@ -230,6 +282,83 @@ func (p *usesMigrator) saveOriginalResource(path string, resource interface{}) e
 	}
 	log.Logger().Infof("saved reuse file %s", info(outFile))
 	return nil
+}
+
+// addLocalOverrides lets compare the step in the current pipeline catalog to the local step and any differences lets
+// keep in the result step
+func (p *UsesMigrator) addLocalOverrides(resultStep v1beta1.Step, localStep *v1beta1.Step, catalogStep *v1beta1.Step) error {
+	if localStep.Script != catalogStep.Script {
+		resultStep.Script = localStep.Script
+	}
+	if !stringhelpers.StringArraysEqual(localStep.Command, catalogStep.Command) {
+		resultStep.Command = localStep.Command
+	}
+	if !stringhelpers.StringArraysEqual(localStep.Args, catalogStep.Args) {
+		resultStep.Args = localStep.Args
+	}
+	resultStep.Env = overrideEnv(localStep.Env, catalogStep.Env)
+	resultStep.EnvFrom = overrideEnvFrom(localStep.EnvFrom, catalogStep.EnvFrom)
+	resultStep.VolumeMounts = overrideVolumeMounts(localStep.VolumeMounts, catalogStep.VolumeMounts)
+	return nil
+}
+
+// overrideEnv returns any locally defined env vars that differ or don't exist in the catalog
+func overrideEnv(overrides []corev1.EnvVar, from []corev1.EnvVar) []corev1.EnvVar {
+	var answer []corev1.EnvVar
+	for _, override := range overrides {
+		found := false
+		for i := range from {
+			f := &from[i]
+			if f.Name == override.Name {
+				if reflect.DeepEqual(f, override) {
+					found = true
+				}
+				break
+			}
+		}
+		if !found {
+			answer = append(answer, override)
+		}
+	}
+	return answer
+}
+
+// overrideEnvFrom returns any locally defined env froms that differ or don't exist in the catalog
+func overrideEnvFrom(overrides []corev1.EnvFromSource, from []corev1.EnvFromSource) []corev1.EnvFromSource {
+	var answer []corev1.EnvFromSource
+	for _, override := range overrides {
+		found := false
+		for i := range from {
+			f := &from[i]
+			if reflect.DeepEqual(f, override) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			answer = append(answer, override)
+		}
+	}
+	return answer
+}
+
+// overrideVolumeMounts returns any locally defined volume mounts that differ or don't exist in the catalog
+func overrideVolumeMounts(overrides []corev1.VolumeMount, from []corev1.VolumeMount) []corev1.VolumeMount {
+	var answer []corev1.VolumeMount
+	for _, override := range overrides {
+		found := false
+		for i := range from {
+			f := &from[i]
+			if reflect.DeepEqual(f, override) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			answer = append(answer, override)
+		}
+	}
+	return answer
 }
 
 func hasRealImage(ts *v1beta1.TaskSpec, path, name string) (bool, error) {

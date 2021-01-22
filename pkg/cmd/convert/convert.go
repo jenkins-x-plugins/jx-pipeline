@@ -1,19 +1,22 @@
 package convert
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/linter"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
@@ -31,9 +34,12 @@ type Options struct {
 	Namespace   string
 	TasksFolder string
 	Format      string
-	Recursive   bool
+	Catalog     bool
 	Resolver    *inrepo.UsesResolver
-	Processor   processor.Interface
+	Processor   *processor.UsesMigrator
+
+	// KptPath is the imported path in the catalog for repository pipelines
+	KptPath string
 }
 
 var (
@@ -69,7 +75,7 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 	o.ScmOptions.DiscoverFromGit = true
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
-	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
+	cmd.Flags().BoolVarP(&o.Catalog, "catalog", "c", false, "If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders")
 
 	return cmd, o
 }
@@ -81,9 +87,13 @@ func (o *Options) Validate() error {
 		return errors.Wrapf(err, "failed to validate base options")
 	}
 	if o.Resolver == nil {
-		o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create a UsesResolver")
+		if o.Catalog {
+			o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
+			if err != nil {
+				return errors.Wrapf(err, "failed to create a UsesResolver")
+			}
+		} else {
+			// lets discover the resolver for each lighthouse folder using the Kptfile
 		}
 	}
 	return nil
@@ -97,11 +107,12 @@ func (o *Options) Run() error {
 	}
 
 	rootDir := o.ScmOptions.Dir
-	if o.Processor == nil {
-		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository)
-	}
-	if o.Recursive {
-		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	if o.Catalog {
+		if o.Processor == nil {
+			o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository, o.Catalog)
+		}
+		packsDir := filepath.Join(rootDir, "packs")
+		err := filepath.Walk(packsDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -113,12 +124,16 @@ func (o *Options) Run() error {
 		if err != nil {
 			return err
 		}
-	} else {
-		dir := filepath.Join(rootDir, ".lighthouse")
-		err := o.ProcessDir(dir)
-		if err != nil {
-			return err
-		}
+		return nil
+	}
+
+	if o.Processor == nil {
+		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository, o.Catalog)
+	}
+	dir := filepath.Join(rootDir, ".lighthouse")
+	err = o.ProcessDir(dir)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -150,22 +165,36 @@ func (o *Options) ProcessDir(dir string) error {
 			return errors.Wrapf(err, "failed to load lighthouse triggers: %s", triggersFile)
 		}
 
-		o.processTriggerFile(triggers, triggerDir)
+		if !o.Catalog {
+			o.Resolver, err = o.createNonCatalogResolver(triggerDir)
+			if err != nil {
+				return errors.Wrapf(err, "failed to create resolver for non catalog in dir %s", triggerDir)
+			}
+			if o.Resolver == nil {
+				log.Logger().Infof("no Kptfile found in dir %s so cannot convert", info(triggerDir))
+				continue
+			}
+		}
+		err = o.processTriggerFile(triggers, triggerDir)
+		if err != nil {
+			return errors.Wrapf(err, "failed to convert pipelines")
+		}
 	}
 	return nil
 }
 
-func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir string) *triggerconfig.Config {
+func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir string) error {
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
-			path := filepath.Join(dir, r.SourcePath)
-			test := &linter.Test{
-				File: path,
-			}
-			err := processor.ProcessFile(o.Processor, path)
+			err := o.updateCatalogTask(r.SourcePath)
 			if err != nil {
-				test.Error = err
+				return errors.Wrapf(err, "failed to find catalog pipeline for %s", r.SourcePath)
+			}
+			path := filepath.Join(dir, r.SourcePath)
+			err = processor.ProcessFile(o.Processor, path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to convert %s", r.SourcePath)
 			}
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
@@ -175,18 +204,105 @@ func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir strin
 	for i := range repoConfig.Spec.Postsubmits {
 		r := &repoConfig.Spec.Postsubmits[i]
 		if r.SourcePath != "" {
-			path := filepath.Join(dir, r.SourcePath)
-			test := &linter.Test{
-				File: path,
-			}
-			err := processor.ProcessFile(o.Processor, path)
+			err := o.updateCatalogTask(r.SourcePath)
 			if err != nil {
-				test.Error = err
+				return errors.Wrapf(err, "failed to find catalog pipeline for %s", r.SourcePath)
+			}
+			path := filepath.Join(dir, r.SourcePath)
+			err = processor.ProcessFile(o.Processor, path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to convert %s", r.SourcePath)
 			}
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
 		}
 	}
-	return repoConfig
+	return nil
+}
+
+func (o *Options) createNonCatalogResolver(triggerDir string) (*inrepo.UsesResolver, error) {
+	path := filepath.Join(triggerDir, "Kptfile")
+	exists, err := files.FileExists(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to check for file %s", path)
+	}
+	if !exists {
+		return nil, nil
+	}
+
+	// lets load the
+	kf := &kptfile.KptFile{}
+	err = yamls.LoadFile(path, kf)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to load the kptfile %s", path)
+	}
+
+	repoOptions := o.ScmOptions
+
+	// replace owner / repo / tag etc
+	git := kf.Upstream.Git
+	repoURL := git.Repo
+	if repoURL == "" {
+		return nil, errors.Errorf("missing upstream.git.repo in %s", path)
+	}
+	gitInfo, err := giturl.ParseGitURL(repoURL)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse git URL %s from %s", repoURL, path)
+	}
+	repoOptions.Owner = gitInfo.Organisation
+	repoOptions.Repository = gitInfo.Name
+
+	resolver, err := lighthouses.CreateResolver(&repoOptions)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create the resolver")
+	}
+	resolver.SHA = "versionStream"
+	resolver.Dir = git.Directory
+	return resolver, nil
+}
+
+// updateCatalogTask lets find the catalog task for the given file so that we can use it
+func (o *Options) updateCatalogTask(sourceFile string) error {
+	if o.Catalog {
+		return nil
+	}
+	resolver := o.Resolver
+
+	kptPath := filepath.Join(resolver.Dir, sourceFile)
+	gu := &inrepo.GitURI{
+		Owner:      resolver.OwnerName,
+		Repository: resolver.RepoName,
+		Path:       kptPath,
+		SHA:        resolver.SHA,
+	}
+	gitURI := gu.String()
+	data, err := resolver.GetData(gitURI, false)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load %s", gitURI)
+	}
+
+	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal catalog YAML file %s", kptPath)
+	}
+	o.Processor.CatalogTaskSpec, err = findCatalogTaskSpec(pr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find catalog task at %s", gitURI)
+	}
+	return nil
+}
+
+func findCatalogTaskSpec(pr *v1beta1.PipelineRun) (*v1beta1.TaskSpec, error) {
+	ps := pr.Spec.PipelineSpec
+	if ps == nil {
+		return nil, errors.Errorf("no spec.pipelineSpec")
+	}
+	for i := range ps.Tasks {
+		pt := &ps.Tasks[i]
+		if pt.TaskSpec != nil {
+			return &pt.TaskSpec.TaskSpec, nil
+		}
+	}
+	return nil, errors.Errorf("no spec.tasks.taskSpec found")
 }
