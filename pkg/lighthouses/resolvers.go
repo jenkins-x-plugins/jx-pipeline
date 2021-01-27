@@ -16,10 +16,15 @@ func CreateResolver(f *scmhelpers.Options) (*inrepo.UsesResolver, error) {
 	}
 
 	scmProvider := scmprovider.ToClient(f.ScmClient, "my-bot")
-	client := filebrowser.NewFileBrowserFromScmClient(scmProvider)
+	fb := filebrowser.NewFileBrowserFromScmClient(scmProvider)
+
+	fileBrowsers, err := filebrowser.NewFileBrowsers(f.GitServerURL, fb)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create file browsers")
+	}
 
 	return &inrepo.UsesResolver{
-		Client:           client,
+		FileBrowsers:     fileBrowsers,
 		OwnerName:        f.Owner,
 		RepoName:         f.Repository,
 		Dir:              f.Dir,

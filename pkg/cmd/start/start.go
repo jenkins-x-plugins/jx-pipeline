@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"fmt"
+	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 	"sort"
 	"strings"
 	"time"
@@ -316,7 +317,15 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		}
 
 		scmProvider := lighthouses.NewScmProvider(ctx, scmClient)
-		cfg, _, err = inrepo.Generate(scmProvider, cfg, pluginCfg, owner, repo, "")
+		fb := filebrowser.NewFileBrowserFromScmClient(scmProvider)
+
+		fileBrowsers, err := filebrowser.NewFileBrowsers(f.GitServerURL, fb)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create file browsers")
+		}
+		cache := inrepo.NewResolverCache()
+
+		cfg, _, err = inrepo.Generate(fileBrowsers, cache, cfg, pluginCfg, owner, repo, "")
 		if err != nil {
 			return errors.Wrapf(err, "failed to calculate in repo configuration")
 		}

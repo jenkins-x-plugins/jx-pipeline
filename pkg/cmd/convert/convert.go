@@ -94,6 +94,7 @@ func (o *Options) Validate() error {
 	}
 	if o.Resolver == nil {
 		if o.Catalog {
+			o.ScmOptions.PreferUpstream = true
 			o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create a UsesResolver")

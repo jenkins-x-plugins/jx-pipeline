@@ -68,8 +68,14 @@ func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 	}
 
 	if p.catalog {
+		originalMetadata := *metadata
+		originalMetadata.Annotations = map[string]string{}
+
 		// lets remove the old annotations
 		if metadata.Annotations != nil {
+			for k, v := range metadata.Annotations {
+				originalMetadata.Annotations[k] = v
+			}
 			delete(metadata.Annotations, inrepo.AppendStepURL)
 			delete(metadata.Annotations, inrepo.PrependStepURL)
 		}
@@ -77,6 +83,9 @@ func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to save original resource so we can reuse")
 		}
+
+		// lets use the original metadata for the migration of prepend/append steps
+		metadata = &originalMetadata
 	}
 	fn := func(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
 		return p.processTaskSpec(ts, metadata, path, name)
