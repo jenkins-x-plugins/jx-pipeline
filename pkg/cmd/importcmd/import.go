@@ -149,7 +149,7 @@ func (o *Options) Run() error {
 		}
 	}
 	if o.CatalogURL == "" {
-		o.CatalogURL, err = gitdiscovery.FindGitURLFromDir(o.CatalogDir)
+		o.CatalogURL, err = gitdiscovery.FindGitURLFromDir(o.CatalogDir, false)
 		if err != nil {
 			return errors.Wrapf(err, "failed to discover git clone URL from dir %s", o.CatalogDir)
 		}
