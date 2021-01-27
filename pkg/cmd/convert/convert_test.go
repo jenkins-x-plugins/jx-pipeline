@@ -2,6 +2,7 @@ package convert_test
 
 import (
 	"github.com/jenkins-x/go-scm/scm/driver/fake"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner/fakerunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/convert"
@@ -43,6 +44,8 @@ func TestConvertCatalog(t *testing.T) {
 
 	_, o := convert.NewCmdPipelineConvert()
 
+	runner := &fakerunner.FakeRunner{}
+	o.CommandRunner = runner.Run
 	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-pipeline"
 	o.ScmOptions.Dir = tmpDir
 	o.Catalog = true
@@ -81,6 +84,8 @@ func TestConvertRepository(t *testing.T) {
 
 	_, o := convert.NewCmdPipelineConvert()
 
+	runner := &fakerunner.FakeRunner{}
+	o.CommandRunner = runner.Run
 	o.CatalogSHA = "myversionstreamref"
 	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-cli"
 	o.ScmOptions.ScmClient = scmClient

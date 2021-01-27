@@ -1,6 +1,9 @@
 package convert
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
@@ -30,14 +33,16 @@ type Options struct {
 	options.BaseOptions
 	ScmOptions scmhelpers.Options
 
-	Namespace   string
-	TasksFolder string
-	Format      string
-	CatalogSHA  string
-	Catalog     bool
-	UseKptRef   bool
-	Resolver    *inrepo.UsesResolver
-	Processor   *processor.UsesMigrator
+	Namespace     string
+	TasksFolder   string
+	Format        string
+	CatalogSHA    string
+	Catalog       bool
+	UseKptRef     bool
+	Resolver      *inrepo.UsesResolver
+	Processor     *processor.UsesMigrator
+	CommandRunner cmdrunner.CommandRunner
+	GitClient     gitclient.Interface
 
 	// KptPath is the imported path in the catalog for repository pipelines
 	KptPath string
@@ -102,6 +107,12 @@ func (o *Options) Validate() error {
 		} else {
 			// lets discover the resolver for each lighthouse folder using the Kptfile
 		}
+	}
+	if o.CommandRunner == nil {
+		o.CommandRunner = cmdrunner.QuietCommandRunner
+	}
+	if o.GitClient == nil {
+		o.GitClient = cli.NewCLIClient("", o.CommandRunner)
 	}
 	return nil
 }
@@ -240,6 +251,10 @@ func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir strin
 			return errors.Wrapf(err, "failed to check if file exists %s", path)
 		}
 		if exists {
+			err = gitclient.Remove(o.GitClient, dir, "Kptfile")
+			if err != nil {
+				return errors.Wrapf(err, "failed to remove %s from git", path)
+			}
 			err = os.RemoveAll(path)
 			if err != nil {
 				return errors.Wrapf(err, "failed to remove file %s", path)
