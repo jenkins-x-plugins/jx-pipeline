@@ -10,7 +10,7 @@ require (
 	github.com/jenkins-x/go-scm v1.5.216
 	github.com/jenkins-x/jx-api/v4 v4.0.23
 	github.com/jenkins-x/jx-gitops v0.0.531
-	github.com/jenkins-x/jx-helpers/v3 v3.0.71
+	github.com/jenkins-x/jx-helpers/v3 v3.0.72
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.2
 	github.com/jenkins-x/jx-logging/v3 v3.0.3
 	github.com/jenkins-x/lighthouse-client v0.0.14
@@ -29,7 +29,6 @@ require (
 )
 
 replace (
-github.com/jenkins-x/jx-helpers/v3 => /Users/jstrachan/workspace/workspace/go/src/github.com/jenkins-x/jx-helpers
 	github.com/tektoncd/pipeline => github.com/jenkins-x/pipeline v0.3.2-0.20210118090417-1e821d85abf6
 	k8s.io/client-go => k8s.io/client-go v0.20.2
 	knative.dev/pkg => github.com/jstrachan/pkg v0.0.0-20210118084935-c7bdd6c14bd0
