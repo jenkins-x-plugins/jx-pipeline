@@ -146,5 +146,9 @@ func WriteBucket(ctx context.Context, bucketURL, key string, reader io.Reader, t
 func SplitBucketURL(u *url.URL) (string, string) {
 	u2 := *u
 	u2.Path = ""
-	return u2.String(), strings.TrimPrefix(u.Path, "/")
+	if strings.Contains(u2.RawQuery, "minio") {
+		return u2.Scheme + "://" + u2.Host + "?" + strings.SplitN(u.RawQuery, "/", 2)[0], strings.SplitN(u.RawQuery, "/", 2)[1]
+	} else {
+		return u2.String(), strings.TrimPrefix(u.Path, "/")
+	}
 }
