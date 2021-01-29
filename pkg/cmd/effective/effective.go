@@ -1,6 +1,7 @@
 package effective
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/yaml"
+	"strconv"
 	"strings"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -31,14 +33,17 @@ type Options struct {
 	options.BaseOptions
 	ScmOptions scmhelpers.Options
 
-	Namespace    string
-	OutFile      string
-	TriggerName  string
-	PipelineName string
-	Recursive    bool
-	Resolver     *inrepo.UsesResolver
-	Triggers     []*Trigger
-	Input        input.Interface
+	Namespace     string
+	OutFile       string
+	TriggerName   string
+	PipelineName  string
+	Editor        string
+	Line          string
+	Recursive     bool
+	Resolver      *inrepo.UsesResolver
+	Triggers      []*Trigger
+	Input         input.Interface
+	CommandRunner cmdrunner.CommandRunner
 }
 
 var (
@@ -50,6 +55,16 @@ var (
 
 	cmdExample = templates.Examples(`
 		# View the effective pipeline 
+		jx pipeline effective
+
+		# View the effective pipeline in VS Code 
+		jx pipeline effective -e code
+
+		# View the effective pipeline in IDEA 
+		jx pipeline effective -e idea
+
+		# Enable open in VS Code
+ 		export JX_EDITOR="code"
 		jx pipeline effective
 	`)
 )
@@ -83,10 +98,13 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The output file to write the effective pipeline to. If not specified output to the terminal")
+	cmd.Flags().StringVarP(&o.Editor, "editor", "e", "", "The editor to open the effective pipeline inside. e.g. use 'idea' or 'code'")
+	cmd.Flags().StringVarP(&o.Line, "line", "", "", "The line number to open the editor at")
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
+
 }
 
 // Validate verifies settings
@@ -103,6 +121,12 @@ func (o *Options) Validate() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to create a UsesResolver")
 		}
+	}
+	if o.CommandRunner == nil {
+		o.CommandRunner = cmdrunner.QuietCommandRunner
+	}
+	if o.Editor == "" {
+		o.Editor = os.Getenv("JX_EDITOR")
 	}
 	return nil
 }
@@ -260,12 +284,34 @@ func (o *Options) processTriggers() error {
 }
 
 func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tektonv1beta1.PipelineRun) error {
+	// lets create an output file if using editor
+	if o.Editor != "" && o.OutFile == "" {
+		fileName := ""
+		absRootDir, err := filepath.Abs(o.ScmOptions.Dir)
+		if err == nil {
+			_, fileName = filepath.Split(absRootDir)
+		}
+		if fileName == "" || len(fileName) == 1 {
+			fileName = "jx-pipeline"
+		}
+		tmpFileName := fileName + "-" + strings.ReplaceAll(name, string(os.PathSeparator), "-") + "-*.yaml"
+		tmpFile, err := ioutil.TempFile("", tmpFileName)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create temp file")
+		}
+		o.OutFile = tmpFile.Name()
+	}
+
 	if o.OutFile != "" {
 		err := yamls.SaveFile(pipeline, o.OutFile)
 		if err != nil {
 			return errors.Wrapf(err, "failed to save file %s", o.OutFile)
 		}
 		log.Logger().Infof("saved file %s", info(o.OutFile))
+
+		if o.Editor != "" {
+			return o.openInEditor(o.OutFile, o.Editor)
+		}
 		return nil
 	}
 
@@ -277,4 +323,56 @@ func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tekto
 	log.Logger().Infof("trigger %s pipeline %s", info(trigger.Path), info(name))
 	log.Logger().Infof(string(data))
 	return nil
+}
+
+func (o *Options) openInEditor(path string, editor string) error {
+	args := []string{path}
+	line := o.Line
+	if line == "" {
+		var err error
+		line, err = findFirstStepLine(path)
+		if err != nil {
+			return errors.Wrapf(err, "failed to ")
+		}
+		if line == "" {
+			// lets guess an approximate place after all the parameters
+			line = "161"
+		}
+	}
+	if line != "" {
+		switch editor {
+		case "idea":
+			args = []string{"--line", line, path}
+		case "code":
+			args = []string{"-g", path + ":" + line}
+		}
+	}
+
+	c := &cmdrunner.Command{
+		Name: editor,
+		Args: args,
+		Out:  os.Stdout,
+		Err:  os.Stderr,
+		In:   os.Stdin,
+	}
+	_, err := o.CommandRunner(c)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open editor via command: %s", c.CLI())
+	}
+	return nil
+}
+
+func findFirstStepLine(path string) (string, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to load pipeline file %s", path)
+	}
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "steps:" {
+			return strconv.Itoa(i + 2), nil
+		}
+	}
+	log.Logger().Infof("could not find line with 'steps:'")
+	return "", nil
 }
