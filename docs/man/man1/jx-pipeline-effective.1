@@ -28,8 +28,16 @@ Displays the effective tekton pipeline
     The directory to look for the .lighthouse folder
 
 .PP
+\fB\-e\fP, \fB\-\-editor\fP=""
+    The editor to open the effective pipeline inside. e.g. use 'idea' or 'code'
+
+.PP
 \fB\-h\fP, \fB\-\-help\fP[=false]
     help for effective
+
+.PP
+\fB\-\-line\fP=""
+    The line number to open the editor at
 
 .PP
 \fB\-\-log\-level\fP=""
@@ -59,6 +67,19 @@ Displays the effective tekton pipeline
 .SH EXAMPLE
 .PP
 # View the effective pipeline
+  jx pipeline effective
+
+.PP
+# View the effective pipeline in VS Code
+  jx pipeline effective \-e code
+
+.PP
+# View the effective pipeline in IDEA
+  jx pipeline effective \-e idea
+
+.PP
+# Enable open in VS Code
+  export JX\_EDITOR="code"
   jx pipeline effective
 
 
