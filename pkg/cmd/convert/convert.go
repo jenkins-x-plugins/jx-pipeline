@@ -39,6 +39,7 @@ type Options struct {
 	CatalogSHA    string
 	Catalog       bool
 	UseKptRef     bool
+	TriggerCount  int
 	Resolver      *inrepo.UsesResolver
 	Processor     *processor.UsesMigrator
 	CommandRunner cmdrunner.CommandRunner
@@ -149,9 +150,42 @@ func (o *Options) Run() error {
 		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository, o.Catalog)
 	}
 	dir := filepath.Join(rootDir, ".lighthouse")
-	err = o.ProcessDir(dir)
+	exists, err := files.DirExists(dir)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to check for dir %s", dir)
+	}
+	if exists {
+		err = o.ProcessDir(dir)
+		if err != nil {
+			return err
+		}
+		if o.TriggerCount > 0 {
+			return nil
+		}
+	}
+
+	// lets see if we have an old jenkins-x.yml file
+	path := filepath.Join(rootDir, "jenkins-x.yml")
+	exists, err = files.FileExists(path)
+	if err != nil {
+		return errors.Wrapf(err, "failed to check for file %s", path)
+	}
+	if !exists {
+		log.Logger().Infof("no .lighthouse directories found")
+		return nil
+	}
+
+	c := &cmdrunner.Command{
+		Dir:  rootDir,
+		Name: "jx",
+		Args: []string{"v2", "tekton", "converter"},
+		Out:  os.Stdout,
+		Err:  os.Stderr,
+		In:   os.Stdin,
+	}
+	_, err = o.CommandRunner(c)
+	if err != nil {
+		return errors.Wrapf(err, "failed to run %s", c.CLI())
 	}
 	return nil
 }
@@ -183,6 +217,7 @@ func (o *Options) ProcessDir(dir string) error {
 			return errors.Wrapf(err, "failed to load lighthouse triggers: %s", triggersFile)
 		}
 
+		o.TriggerCount++
 		if !o.Catalog {
 			o.Resolver, err = o.createNonCatalogResolver(triggerDir)
 			if err != nil {
