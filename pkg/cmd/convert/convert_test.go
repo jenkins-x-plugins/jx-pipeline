@@ -1,23 +1,26 @@
 package convert_test
 
 import (
-	"github.com/jenkins-x/go-scm/scm/driver/fake"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner/fakerunner"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/convert"
-	"github.com/stretchr/testify/assert"
+	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner/fakerunner"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/convert"
+	fakefb "github.com/jenkins-x/lighthouse-client/pkg/filebrowser/fake"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 )
 
 var (
 	// generateTestOutput enable to regenerate the expected output
-	generateTestOutput = false
+	generateTestOutput = true
 
 	lighthouseJenkinsXDir = filepath.Join(".lighthouse", "jenkins-x")
 	packsDir              = filepath.Join("packs", "javascript", lighthouseJenkinsXDir)
@@ -46,8 +49,7 @@ func TestConvertCatalog(t *testing.T) {
 
 	runner := &fakerunner.FakeRunner{}
 	o.CommandRunner = runner.Run
-	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-pipeline"
-	o.ScmOptions.Dir = tmpDir
+	o.Dir = tmpDir
 	o.Catalog = true
 
 	err = o.Run()
@@ -80,16 +82,16 @@ func TestConvertRepository(t *testing.T) {
 
 	t.Logf("running tests in %s\n", tmpDir)
 
-	scmClient, _ := fake.NewDefault()
-
 	_, o := convert.NewCmdPipelineConvert()
 
 	runner := &fakerunner.FakeRunner{}
 	o.CommandRunner = runner.Run
 	o.CatalogSHA = "myversionstreamref"
-	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-cli"
-	o.ScmOptions.ScmClient = scmClient
-	o.ScmOptions.Dir = tmpDir
+	fakeBrowserDir := filepath.Join("test_data", "jenkins-x", "jx3-pipeline-catalog", "refs", o.CatalogSHA)
+	require.DirExists(t, fakeBrowserDir, "should have fake dir")
+	o.FileBrowser = fakefb.NewFakeFileBrowser(fakeBrowserDir)
+	o.GitServerURL = filebrowser.GitHubURL
+	o.Dir = tmpDir
 
 	err = o.Run()
 	require.NoError(t, err, "Failed to run")

@@ -1,14 +1,15 @@
 package override_test
 
 import (
+	"io/ioutil"
+	"path/filepath"
+	"testing"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/override"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"io/ioutil"
-	"path/filepath"
-	"testing"
 )
 
 var (
@@ -25,8 +26,7 @@ func TestPipelineOverride(t *testing.T) {
 
 	_, o := override.NewCmdPipelineOverride()
 
-	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-pipeline"
-	o.ScmOptions.Dir = "test_data"
+	o.Dir = "test_data"
 	o.BatchMode = true
 	err = o.Run()
 	require.NoError(t, err, "Failed to run linter")

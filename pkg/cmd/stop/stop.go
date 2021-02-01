@@ -2,9 +2,10 @@ package stop
 
 import (
 	"fmt"
-	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
 	"sort"
 	"strings"
+
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
 
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"

@@ -1,13 +1,14 @@
 package effective_test
 
 import (
+	"io/ioutil"
+	"path/filepath"
+	"testing"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-pipeline/pkg/cmd/effective"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"io/ioutil"
-	"path/filepath"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,8 +20,7 @@ func TestPipelineEffective(t *testing.T) {
 
 	_, o := effective.NewCmdPipelineEffective()
 
-	o.ScmOptions.SourceURL = "https://github.com/jenkins-x/jx-pipeline"
-	o.ScmOptions.Dir = "test_data"
+	o.Dir = "test_data"
 	o.BatchMode = true
 	o.OutFile = expectedFile
 	err = o.Run()

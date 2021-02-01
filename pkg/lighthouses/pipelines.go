@@ -1,11 +1,12 @@
 package lighthouses
 
 import (
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"io/ioutil"
-	"path/filepath"
 )
 
 // LoadEffectivePipelineRun loads the effective pipeline run

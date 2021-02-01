@@ -2,8 +2,9 @@ package lighthouses
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/jenkins-x/go-scm/scm"
 )

@@ -2,6 +2,12 @@ package processor
 
 import (
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
@@ -11,11 +17,6 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/url"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
 )
 
 type UsesMigrator struct {

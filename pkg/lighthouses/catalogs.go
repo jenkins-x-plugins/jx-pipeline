@@ -1,10 +1,11 @@
 package lighthouses
 
 import (
+	"path/filepath"
+
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"path/filepath"
 )
 
 // FindCatalogTaskSpec finds the pipeline catalog TaskSpec
