@@ -26,17 +26,19 @@ type UsesMigrator struct {
 	Repository      string
 	TasksFolder     string
 	SHA             string
+	UseSHA          string
 	catalog         bool
 	concise         bool
 }
 
 // NewUsesMigrator creates a new uses migrator
-func NewUsesMigrator(dir, tasksFolder, owner, repository string, catalog bool) *UsesMigrator {
+func NewUsesMigrator(dir, tasksFolder, owner, repository, useSHA string, catalog bool) *UsesMigrator {
 	return &UsesMigrator{
 		Dir:         dir,
 		TasksFolder: tasksFolder,
 		Owner:       owner,
 		Repository:  repository,
+		UseSHA:      useSHA,
 		catalog:     catalog,
 		concise:     true,
 	}
@@ -129,7 +131,7 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 				continue
 			}
 		}
-		sha := p.SHA
+		sha := p.UseSHA
 		if sha == "" {
 			sha = "versionStream"
 		}
