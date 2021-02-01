@@ -83,6 +83,9 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 		},
 	}
 	o.ScmOptions.DiscoverFromGit = true
+
+	o.BaseOptions.AddBaseFlags(cmd)
+
 	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
