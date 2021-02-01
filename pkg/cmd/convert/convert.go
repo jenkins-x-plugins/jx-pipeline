@@ -36,6 +36,7 @@ type Options struct {
 	Namespace     string
 	TasksFolder   string
 	Format        string
+	UseSHA        string
 	CatalogSHA    string
 	Catalog       bool
 	UseKptRef     bool
@@ -87,8 +88,9 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "", "The default catalog SHA to use when resolving catalog pipelines to reuse")
+	cmd.Flags().StringVarP(&o.UseSHA, "use-sha", "", "", "The catalog SHA to use in the converted pipelines. If not specified defaults to @versionStream")
 	cmd.Flags().BoolVarP(&o.Catalog, "catalog", "c", false, "If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders")
-	cmd.Flags().BoolVarP(&o.UseKptRef, "use-kpt-ref", "", false, "Keep the kpt ref value in the uses git URI")
+	cmd.Flags().BoolVarP(&o.UseKptRef, "use-kpt-ref", "", true, "Keep the kpt ref value in the uses git URI")
 
 	return cmd, o
 }
@@ -131,7 +133,7 @@ func (o *Options) Run() error {
 	rootDir := o.Dir
 	if o.Catalog {
 		if o.Processor == nil {
-			o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.Catalog)
+			o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.UseSHA, o.Catalog)
 		}
 		packsDir := filepath.Join(rootDir, "packs")
 		err := filepath.Walk(packsDir, func(path string, info os.FileInfo, err error) error {
@@ -150,7 +152,7 @@ func (o *Options) Run() error {
 	}
 
 	if o.Processor == nil {
-		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.Catalog)
+		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.UseSHA, o.Catalog)
 	}
 	dir := filepath.Join(rootDir, ".lighthouse")
 	exists, err := files.DirExists(dir)
@@ -350,8 +352,8 @@ func (o *Options) createNonCatalogResolver(triggerDir string) (*inrepo.UsesResol
 
 	// optionally keep the kpt ref
 	sha := "versionStream"
-	if o.UseKptRef && git.Ref != "" {
-		sha = git.Ref
+	if o.UseKptRef && git.Commit != "" {
+		sha = git.Commit
 	}
 
 	// lets figure out the tasks folder from kpt
@@ -374,6 +376,9 @@ func (o *Options) updateCatalogTask(sourceFile string) error {
 		return nil
 	}
 	var err error
+	if o.CatalogSHA == "" {
+		o.CatalogSHA = o.Processor.SHA
+	}
 	o.Processor.CatalogTaskSpec, err = lighthouses.FindCatalogTaskSpec(o.Resolver, sourceFile, o.CatalogSHA)
 	return err
 }

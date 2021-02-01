@@ -20,7 +20,7 @@ import (
 
 var (
 	// generateTestOutput enable to regenerate the expected output
-	generateTestOutput = true
+	generateTestOutput = false
 
 	lighthouseJenkinsXDir = filepath.Join(".lighthouse", "jenkins-x")
 	packsDir              = filepath.Join("packs", "javascript", lighthouseJenkinsXDir)
