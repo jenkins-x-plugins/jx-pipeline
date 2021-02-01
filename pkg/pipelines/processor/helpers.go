@@ -2,14 +2,15 @@ package processor
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strings"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"io/ioutil"
 	"sigs.k8s.io/yaml"
-	"strings"
 )
 
 var info = termcolor.ColorInfo

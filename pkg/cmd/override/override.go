@@ -1,12 +1,6 @@
 package override
 
 import (
-	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
-	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
-	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -14,8 +8,13 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
@@ -26,7 +25,7 @@ import (
 // Options contains the command line options
 type Options struct {
 	options.BaseOptions
-	ScmOptions scmhelpers.Options
+	lighthouses.ResolverOptions
 
 	Namespace    string
 	CatalogSHA   string
@@ -74,8 +73,8 @@ func NewCmdPipelineOverride() (*cobra.Command, *Options) {
 		},
 	}
 
-	o.ScmOptions.DiscoverFromGit = true
-	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
+	o.ResolverOptions.AddFlags(cmd)
+
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
@@ -94,7 +93,7 @@ func (o *Options) Validate() error {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
 	if o.Resolver == nil {
-		o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
+		o.Resolver, err = o.ResolverOptions.CreateResolver()
 		if err != nil {
 			return errors.Wrapf(err, "failed to create a UsesResolver")
 		}
@@ -109,7 +108,7 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	rootDir := o.ScmOptions.Dir
+	rootDir := o.Dir
 
 	dir := filepath.Join(rootDir, ".lighthouse")
 	err = o.ProcessDir(dir)

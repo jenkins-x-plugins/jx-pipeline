@@ -1,26 +1,25 @@
 package convert
 
 import (
-	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
-	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
+	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
@@ -31,8 +30,9 @@ import (
 // Options contains the command line options
 type Options struct {
 	options.BaseOptions
-	ScmOptions scmhelpers.Options
+	lighthouses.ResolverOptions
 
+	Dir           string
 	Namespace     string
 	TasksFolder   string
 	Format        string
@@ -82,13 +82,11 @@ func NewCmdPipelineConvert() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
-	o.ScmOptions.DiscoverFromGit = true
-
 	o.BaseOptions.AddBaseFlags(cmd)
+	o.ResolverOptions.AddFlags(cmd)
 
-	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
-	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
+	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "", "The default catalog SHA to use when resolving catalog pipelines to reuse")
 	cmd.Flags().BoolVarP(&o.Catalog, "catalog", "c", false, "If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders")
 	cmd.Flags().BoolVarP(&o.UseKptRef, "use-kpt-ref", "", false, "Keep the kpt ref value in the uses git URI")
 
@@ -103,8 +101,7 @@ func (o *Options) Validate() error {
 	}
 	if o.Resolver == nil {
 		if o.Catalog {
-			o.ScmOptions.PreferUpstream = true
-			o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
+			o.Resolver, err = o.ResolverOptions.CreateResolver()
 			if err != nil {
 				return errors.Wrapf(err, "failed to create a UsesResolver")
 			}
@@ -128,10 +125,13 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	rootDir := o.ScmOptions.Dir
+	migratorOwner := o.CatalogOwner
+	migratorRepository := o.CatalogRepository
+
+	rootDir := o.Dir
 	if o.Catalog {
 		if o.Processor == nil {
-			o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository, o.Catalog)
+			o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.Catalog)
 		}
 		packsDir := filepath.Join(rootDir, "packs")
 		err := filepath.Walk(packsDir, func(path string, info os.FileInfo, err error) error {
@@ -150,7 +150,7 @@ func (o *Options) Run() error {
 	}
 
 	if o.Processor == nil {
-		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, o.ScmOptions.Owner, o.ScmOptions.Repository, o.Catalog)
+		o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.Catalog)
 	}
 	dir := filepath.Join(rootDir, ".lighthouse")
 	exists, err := files.DirExists(dir)
@@ -178,10 +178,17 @@ func (o *Options) Run() error {
 		return nil
 	}
 
+	args := []string{"v2", "tekton", "converter"}
+	if o.BatchMode {
+		args = append(args, "--batch-mode")
+	}
+	if rootDir != "." && rootDir != "" {
+		args = append(args, "--dir", rootDir)
+	}
 	c := &cmdrunner.Command{
 		Dir:  rootDir,
 		Name: "jx",
-		Args: []string{"v2", "tekton", "converter"},
+		Args: args,
 		Out:  os.Stdout,
 		Err:  os.Stderr,
 		In:   os.Stdin,
@@ -319,8 +326,6 @@ func (o *Options) createNonCatalogResolver(triggerDir string) (*inrepo.UsesResol
 		return nil, errors.Wrapf(err, "failed to load the kptfile %s", path)
 	}
 
-	repoOptions := o.ScmOptions
-
 	// replace owner / repo / tag etc
 	git := kf.Upstream.Git
 	repoURL := git.Repo
@@ -331,14 +336,14 @@ func (o *Options) createNonCatalogResolver(triggerDir string) (*inrepo.UsesResol
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse git URL %s from %s", repoURL, path)
 	}
-	repoOptions.Owner = gitInfo.Organisation
-	repoOptions.Repository = gitInfo.Name
-	if o.Processor.Owner == "" {
+	o.ResolverOptions.CatalogOwner = gitInfo.Organisation
+	o.ResolverOptions.CatalogRepository = gitInfo.Name
+	if gitInfo != nil {
 		o.Processor.Owner = gitInfo.Organisation
 		o.Processor.Repository = gitInfo.Name
 	}
 
-	resolver, err := lighthouses.CreateResolver(&repoOptions)
+	resolver, err := o.ResolverOptions.CreateResolver()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create the resolver")
 	}

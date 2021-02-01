@@ -1,20 +1,20 @@
 package effective
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/yaml"
-	"strconv"
-	"strings"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
@@ -31,7 +31,7 @@ import (
 // Options contains the command line options
 type Options struct {
 	options.BaseOptions
-	ScmOptions scmhelpers.Options
+	lighthouses.ResolverOptions
 
 	Namespace     string
 	OutFile       string
@@ -93,8 +93,8 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 		},
 	}
 
-	o.ScmOptions.DiscoverFromGit = true
-	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
+	o.ResolverOptions.AddFlags(cmd)
+
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The output file to write the effective pipeline to. If not specified output to the terminal")
@@ -117,7 +117,7 @@ func (o *Options) Validate() error {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
 	if o.Resolver == nil {
-		o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
+		o.Resolver, err = o.ResolverOptions.CreateResolver()
 		if err != nil {
 			return errors.Wrapf(err, "failed to create a UsesResolver")
 		}
@@ -138,7 +138,7 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	rootDir := o.ScmOptions.Dir
+	rootDir := o.Dir
 
 	if o.Recursive {
 		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
@@ -287,7 +287,7 @@ func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tekto
 	// lets create an output file if using editor
 	if o.Editor != "" && o.OutFile == "" {
 		fileName := ""
-		absRootDir, err := filepath.Abs(o.ScmOptions.Dir)
+		absRootDir, err := filepath.Abs(o.Dir)
 		if err == nil {
 			_, fileName = filepath.Split(absRootDir)
 		}

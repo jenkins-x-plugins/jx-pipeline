@@ -2,8 +2,6 @@ package lint
 
 import (
 	"context"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
-	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,6 +13,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/linter"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
@@ -25,7 +24,7 @@ import (
 // Options contains the command line options
 type Options struct {
 	linter.Options
-	ScmOptions scmhelpers.Options
+	lighthouses.ResolverOptions
 
 	Namespace string
 	OutFile   string
@@ -61,8 +60,8 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
-	o.ScmOptions.DiscoverFromGit = true
-	cmd.Flags().StringVarP(&o.ScmOptions.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
+	o.ResolverOptions.AddFlags(cmd)
+
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
 
 	o.Options.AddFlags(cmd)
@@ -78,7 +77,7 @@ func (o *Options) Validate() error {
 	}
 
 	if o.Resolver == nil {
-		o.Resolver, err = lighthouses.CreateResolver(&o.ScmOptions)
+		o.Resolver, err = o.ResolverOptions.CreateResolver()
 		if err != nil {
 			return errors.Wrapf(err, "failed to create a UsesResolver")
 		}
@@ -93,7 +92,7 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	rootDir := o.ScmOptions.Dir
+	rootDir := o.Dir
 
 	if o.Recursive {
 		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
