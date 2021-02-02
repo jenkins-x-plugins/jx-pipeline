@@ -1,7 +1,9 @@
 package lighthouses
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"path/filepath"
+	"strings"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
@@ -28,6 +30,9 @@ func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile string, defau
 	gitURI := gu.String()
 	data, err := resolver.GetData(gitURI, false)
 	if err != nil {
+		if scmhelpers.IsScmNotFound(err) || strings.Contains(err.Error(), "failed to find file ") {
+			return nil, nil
+		}
 		return nil, errors.Wrapf(err, "failed to load %s", gitURI)
 	}
 
