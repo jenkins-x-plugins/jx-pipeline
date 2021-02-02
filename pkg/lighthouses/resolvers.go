@@ -20,6 +20,7 @@ type ResolverOptions struct {
 	Dir               string
 	CatalogOwner      string
 	CatalogRepository string
+	CatalogSHA        string
 }
 
 // AddFlags adds CLI flags
@@ -87,6 +88,13 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		return nil, errors.Wrapf(err, "failed to create file browsers")
 	}
 
+	if inrepo.VersionStreamVersions["jenkins-x/jx3-pipeline-catalog"] == "" {
+		// TODO we could grab the dev cluster git repository then load the actual SHA from the extensions/pipeline-catalogs.yaml
+		if o.CatalogSHA == "" {
+			o.CatalogSHA = "HEAD"
+		}
+		inrepo.VersionStreamVersions["jenkins-x/jx3-pipeline-catalog"] = o.CatalogSHA
+	}
 	return &inrepo.UsesResolver{
 		FileBrowsers: fileBrowsers,
 		OwnerName:    o.CatalogOwner,
