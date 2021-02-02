@@ -2,6 +2,7 @@ package lighthouses
 
 import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"path/filepath"
 	"strings"
 
@@ -31,6 +32,7 @@ func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile string, defau
 	data, err := resolver.GetData(gitURI, false)
 	if err != nil {
 		if scmhelpers.IsScmNotFound(err) || strings.Contains(err.Error(), "failed to find file ") {
+			log.Logger().Infof("could not find file in catalog %s", gitURI)
 			return nil, nil
 		}
 		return nil, errors.Wrapf(err, "failed to load %s", gitURI)
