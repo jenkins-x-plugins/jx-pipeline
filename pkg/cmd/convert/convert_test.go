@@ -64,6 +64,7 @@ func TestConvertCatalog(t *testing.T) {
 		)
 	}
 }
+
 func TestConvertRepository(t *testing.T) {
 	srcDir := filepath.Join("test_data", "repo", "jx-cli")
 	expectedDir := filepath.Join("test_data", "repo", "expected")

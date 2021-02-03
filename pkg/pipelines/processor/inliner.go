@@ -15,14 +15,16 @@ type inliner struct {
 	input      input.Interface
 	resolver   *inrepo.UsesResolver
 	defaultSHA string
+	step       string
 }
 
 // NewInliner
-func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA string) *inliner {
+func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA, step string) *inliner {
 	return &inliner{
 		input:      input,
 		resolver:   resolver,
 		defaultSHA: defaultSHA,
+		step:       step,
 	}
 }
 
@@ -72,15 +74,18 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 		names = append(names, name)
 		stepOptions[name] = &stepOption{
 			step:  step,
-			uses:  image,
+			uses:  uses,
 			index: i,
 		}
 	}
 
 	var err error
-	name, err = p.input.PickNameWithDefault(names, "pick the step: ", "", "select the name of the step to override")
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to pick step")
+	name = p.step
+	if name == "" {
+		name, err = p.input.PickNameWithDefault(names, "pick the step: ", "", "select the name of the step to override")
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to pick step")
+		}
 	}
 	if name == "" {
 		return false, errors.Errorf("no step name selected")
@@ -90,12 +95,13 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 		return false, errors.Errorf("no step exists for name %s", name)
 	}
 
+	step := so.step
+
 	// lets inline the values from the step...
-	catalogTaskSpec, err := lighthouses.FindCatalogTaskSpec(p.resolver, path, p.defaultSHA)
+	catalogTaskSpec, err := lighthouses.FindCatalogTaskSpecFromURI(p.resolver, so.uses)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to find the pipeline catalog TaskSpec for %s", path)
 	}
-	step := so.step
 	catalogStep := FindStep(catalogTaskSpec, step.Name)
 	if catalogStep == nil {
 		return false, errors.Wrapf(err, "could not find step: %s in the catalog", step.Name)

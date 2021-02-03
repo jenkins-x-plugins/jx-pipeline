@@ -29,6 +29,11 @@ func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile string, defau
 		SHA:        sha,
 	}
 	gitURI := gu.String()
+	return FindCatalogTaskSpecFromURI(resolver, gitURI)
+}
+
+// FindCatalogTaskSpecFromURI finds the catalog task spec from the given URI
+func FindCatalogTaskSpecFromURI(resolver *inrepo.UsesResolver, gitURI string) (*v1beta1.TaskSpec, error) {
 	data, err := resolver.GetData(gitURI, false)
 	if err != nil {
 		if scmhelpers.IsScmNotFound(err) || strings.Contains(err.Error(), "failed to find file ") {
@@ -40,7 +45,7 @@ func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile string, defau
 
 	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal catalog YAML file %s", kptPath)
+		return nil, errors.Wrapf(err, "failed to unmarshal catalog YAML file %s", gitURI)
 	}
 	catalogTaskSpec, err := GetMandatoryTaskSpec(pr)
 	if err != nil {
