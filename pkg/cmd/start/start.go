@@ -254,7 +254,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		branch = o.Branch
 	}
 	if branch == "" {
-		branch = "master"
+		branch = "HEAD"
 	}
 	ns := o.Namespace
 
