@@ -59,6 +59,7 @@ type Options struct {
 	Namespace           string
 	GitUsername         string
 	GitToken            string
+	CatalogSHA          string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
@@ -161,6 +162,8 @@ func (o *Options) Validate() error {
 		}
 		o.customParameterMap[paths[0]] = paths[1]
 	}
+
+	lighthouses.DefaultPipelineCatalogSHA(o.CatalogSHA)
 	return nil
 }
 

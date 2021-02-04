@@ -2,6 +2,7 @@ package stop
 
 import (
 	"fmt"
+	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"sort"
 	"strings"
 
@@ -38,6 +39,7 @@ type Options struct {
 	Build        int
 	Filter       string
 	Namespace    string
+	CatalogSHA   string
 	Input        input.Interface
 	KubeClient   kubernetes.Interface
 	JXClient     versioned.Interface
@@ -111,6 +113,7 @@ func (o *Options) Validate() error {
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
+	lighthouses.DefaultPipelineCatalogSHA(o.CatalogSHA)
 	return nil
 }
 

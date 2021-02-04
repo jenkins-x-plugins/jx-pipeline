@@ -88,13 +88,7 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		return nil, errors.Wrapf(err, "failed to create file browsers")
 	}
 
-	if inrepo.VersionStreamVersions["jenkins-x/jx3-pipeline-catalog"] == "" {
-		// TODO we could grab the dev cluster git repository then load the actual SHA from the extensions/pipeline-catalogs.yaml
-		if o.CatalogSHA == "" {
-			o.CatalogSHA = "HEAD"
-		}
-		inrepo.VersionStreamVersions["jenkins-x/jx3-pipeline-catalog"] = o.CatalogSHA
-	}
+	DefaultPipelineCatalogSHA(o.CatalogSHA)
 	return &inrepo.UsesResolver{
 		FileBrowsers: fileBrowsers,
 		OwnerName:    o.CatalogOwner,
@@ -103,4 +97,15 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		Dir:              "",
 		LocalFileResolve: true,
 	}, nil
+}
+
+// DefaultPipelineCatalogSHA sets a default catalog SHA
+func DefaultPipelineCatalogSHA(catalogSHA string) {
+	if catalogSHA == "" {
+		catalogSHA = "HEAD"
+	}
+	if inrepo.VersionStreamVersions["jenkins-x/jx3-pipeline-catalog"] == "" {
+		// TODO we could grab the dev cluster git repository then load the actual SHA from the extensions/pipeline-catalogs.yaml
+		inrepo.VersionStreamVersions["jenkins-x/jx3-pipeline-catalog"] = catalogSHA
+	}
 }
