@@ -59,6 +59,7 @@ type Options struct {
 	Namespace           string
 	GitUsername         string
 	GitToken            string
+	CatalogSHA          string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
@@ -161,6 +162,8 @@ func (o *Options) Validate() error {
 		}
 		o.customParameterMap[paths[0]] = paths[1]
 	}
+
+	lighthouses.DefaultPipelineCatalogSHA(o.CatalogSHA)
 	return nil
 }
 
@@ -254,7 +257,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		branch = o.Branch
 	}
 	if branch == "" {
-		branch = "master"
+		branch = "HEAD"
 	}
 	ns := o.Namespace
 
