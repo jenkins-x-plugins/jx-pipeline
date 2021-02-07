@@ -1,6 +1,7 @@
 package effective
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -302,7 +303,7 @@ func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tekto
 		o.OutFile = tmpFile.Name()
 	}
 
-	if o.OutFile != "" {
+	if o.OutFile != "" && o.OutFile != "-" {
 		err := yamls.SaveFile(pipeline, o.OutFile)
 		if err != nil {
 			return errors.Wrapf(err, "failed to save file %s", o.OutFile)
@@ -318,6 +319,11 @@ func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tekto
 	data, err := yaml.Marshal(pipeline)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal pipeline for %s", name)
+	}
+
+	if o.OutFile == "-" {
+		fmt.Print(string(data))
+		return nil
 	}
 
 	log.Logger().Infof("trigger %s pipeline %s", info(trigger.Path), info(name))
