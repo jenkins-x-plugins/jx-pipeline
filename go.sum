@@ -834,6 +834,7 @@ github.com/jenkins-x/lighthouse-client v0.0.24 h1:i92PKoylA7Pa1clXSIRHsyZy/8ttPc
 github.com/jenkins-x/lighthouse-client v0.0.24/go.mod h1:quluenATb3XRkW/2gf/wUY1DBhKN2m0nZ0MEpiGsGnA=
 github.com/jenkins-x/lighthouse-client v0.0.27 h1:BQWpUuoRRHptfYpWJISvoKmesTgm3CvxJkQkNcCPCYo=
 github.com/jenkins-x/lighthouse-client v0.0.27/go.mod h1:quluenATb3XRkW/2gf/wUY1DBhKN2m0nZ0MEpiGsGnA=
+github.com/jenkins-x/lighthouse-client v0.0.28/go.mod h1:quluenATb3XRkW/2gf/wUY1DBhKN2m0nZ0MEpiGsGnA=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3 h1:NuRWKUPCEX1wKlXA8ZYSG28qGKd41R7BK11YDQkPwqo=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3/go.mod h1:litPp7VZWDRCl8LvXuqGngy+65kkg/+T23TgFnDmfTk=
 github.com/jenkins-x/pipeline v0.3.2-0.20210118090417-1e821d85abf6 h1:P/UwaE7LPLOZNIsaNkUGW2QU+4HZSgxkrHLa572zL+8=
