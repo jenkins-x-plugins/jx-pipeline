@@ -6,13 +6,13 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.10
 	github.com/fatih/color v1.10.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/jenkins-x/go-scm v1.5.218
-	github.com/jenkins-x/jx-api/v4 v4.0.24
-	github.com/jenkins-x/jx-gitops v0.1.4
-	github.com/jenkins-x/jx-helpers/v3 v3.0.78
+	github.com/jenkins-x/go-scm v1.5.223
+	github.com/jenkins-x/jx-api/v4 v4.0.25
+	github.com/jenkins-x/jx-gitops v0.2.6
+	github.com/jenkins-x/jx-helpers/v3 v3.0.81
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.2
 	github.com/jenkins-x/jx-logging/v3 v3.0.3
-	github.com/jenkins-x/lighthouse-client v0.0.29
+	github.com/jenkins-x/lighthouse-client v0.0.42
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
@@ -20,8 +20,8 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tektoncd/pipeline v0.20.0
 	gocloud.dev v0.21.0
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
+	k8s.io/api v0.20.4
+	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	knative.dev/pkg v0.0.0-20210107022335-51c72e24c179
 	sigs.k8s.io/yaml v1.2.0
