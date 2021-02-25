@@ -23,19 +23,51 @@ So that pipelines are smaller, simpler and easier to upgrade pipelines with the 
 
 .SH OPTIONS
 .PP
+\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
+    Runs in batch mode without prompting for user input
+
+.PP
 \fB\-c\fP, \fB\-\-catalog\fP[=false]
     If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders
+
+.PP
+\fB\-\-catalog\-owner\fP="jenkins\-x"
+    The github owner for the default catalog
+
+.PP
+\fB\-\-catalog\-repo\fP="jx3\-pipeline\-catalog"
+    The github repository name for the default catalog
 
 .PP
 \fB\-d\fP, \fB\-\-dir\fP="."
     The directory to look for the .lighthouse folder
 
 .PP
+\fB\-\-git\-kind\fP=""
+    the kind of git server to connect to
+
+.PP
+\fB\-\-git\-server\fP=""
+    the git server URL to create the scm client
+
+.PP
+\fB\-\-git\-token\fP=""
+    the git token used to operate on the git repository. If not specified it's loaded from the git credentials file
+
+.PP
+\fB\-\-git\-username\fP=""
+    the git username used to operate on the git repository. If not specified it's loaded from the git credentials file
+
+.PP
 \fB\-h\fP, \fB\-\-help\fP[=false]
     help for convert
 
 .PP
-\fB\-s\fP, \fB\-\-sha\fP="HEAD"
+\fB\-\-log\-level\fP=""
+    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
+
+.PP
+\fB\-s\fP, \fB\-\-sha\fP=""
     The default catalog SHA to use when resolving catalog pipelines to reuse
 
 .PP
@@ -43,8 +75,16 @@ So that pipelines are smaller, simpler and easier to upgrade pipelines with the 
     The directory name to store the original tasks before we convert to uses: notation
 
 .PP
-\fB\-\-use\-kpt\-ref\fP[=false]
+\fB\-\-use\-kpt\-ref\fP[=true]
     Keep the kpt ref value in the uses git URI
+
+.PP
+\fB\-\-use\-sha\fP=""
+    The catalog SHA to use in the converted pipelines. If not specified defaults to @versionStream
+
+.PP
+\fB\-\-verbose\fP[=false]
+    Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
 
 
 .SH EXAMPLE
