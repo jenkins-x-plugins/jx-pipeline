@@ -20,12 +20,36 @@ Lints the lighthouse trigger and tekton pipelines
 
 .SH OPTIONS
 .PP
+\fB\-\-catalog\-owner\fP="jenkins\-x"
+    The github owner for the default catalog
+
+.PP
+\fB\-\-catalog\-repo\fP="jx3\-pipeline\-catalog"
+    The github repository name for the default catalog
+
+.PP
 \fB\-d\fP, \fB\-\-dir\fP="."
     The directory to look for the .lighthouse folder
 
 .PP
 \fB\-\-format\fP=""
     If specify 'tap' lets use the TAP output otherwise use simple text output
+
+.PP
+\fB\-\-git\-kind\fP=""
+    the kind of git server to connect to
+
+.PP
+\fB\-\-git\-server\fP=""
+    the git server URL to create the scm client
+
+.PP
+\fB\-\-git\-token\fP=""
+    the git token used to operate on the git repository. If not specified it's loaded from the git credentials file
+
+.PP
+\fB\-\-git\-username\fP=""
+    the git username used to operate on the git repository. If not specified it's loaded from the git credentials file
 
 .PP
 \fB\-h\fP, \fB\-\-help\fP[=false]

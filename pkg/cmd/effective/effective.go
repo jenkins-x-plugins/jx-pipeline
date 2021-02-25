@@ -33,6 +33,7 @@ type Options struct {
 	options.BaseOptions
 	lighthouses.ResolverOptions
 
+	File          string
 	Namespace     string
 	OutFile       string
 	TriggerName   string
@@ -95,6 +96,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 
 	o.ResolverOptions.AddFlags(cmd)
 
+	cmd.Flags().StringVarP(&o.File, "file", "f", "", "The pipeline file to render")
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.OutFile, "out", "o", "", "The output file to write the effective pipeline to. If not specified output to the terminal")
@@ -138,6 +140,9 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
+	if o.File != "" {
+		return o.processFile()
+	}
 	rootDir := o.Dir
 
 	if o.Recursive {
@@ -240,6 +245,17 @@ func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
 	return nil
 }
 
+func (o *Options) processFile() error {
+	path := o.File
+	pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load %s", path)
+	}
+
+	name := filepath.Base(path)
+	return o.displayPipeline(path, name, pr)
+}
+
 func (o *Options) processTriggers() error {
 	var names []string
 	m := map[string]*Trigger{}
@@ -280,10 +296,10 @@ func (o *Options) processTriggers() error {
 		return options.InvalidOptionf("pipeline", o.PipelineName, "available names %s", strings.Join(trigger.Names, ", "))
 	}
 
-	return o.displayPipeline(trigger, pipelineName, pipeline)
+	return o.displayPipeline(trigger.Path, pipelineName, pipeline)
 }
 
-func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tektonv1beta1.PipelineRun) error {
+func (o *Options) displayPipeline(path string, name string, pipeline *tektonv1beta1.PipelineRun) error {
 	// lets create an output file if using editor
 	if o.Editor != "" && o.OutFile == "" {
 		fileName := ""
@@ -320,7 +336,7 @@ func (o *Options) displayPipeline(trigger *Trigger, name string, pipeline *tekto
 		return errors.Wrapf(err, "failed to marshal pipeline for %s", name)
 	}
 
-	log.Logger().Infof("trigger %s pipeline %s", info(trigger.Path), info(name))
+	log.Logger().Infof("pipeline %s is:", info(path))
 	log.Logger().Infof(string(data))
 	return nil
 }
