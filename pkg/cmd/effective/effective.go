@@ -1,6 +1,8 @@
 package effective
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,6 +34,7 @@ import (
 type Options struct {
 	options.BaseOptions
 	lighthouses.ResolverOptions
+	DiscoverScm scmhelpers.Options
 
 	File          string
 	Namespace     string
@@ -41,6 +44,7 @@ type Options struct {
 	Editor        string
 	Line          string
 	Recursive     bool
+	AddDefaults   bool
 	Resolver      *inrepo.UsesResolver
 	Triggers      []*Trigger
 	Input         input.Interface
@@ -103,6 +107,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.Editor, "editor", "e", "", "The editor to open the effective pipeline inside. e.g. use 'idea' or 'code'")
 	cmd.Flags().StringVarP(&o.Line, "line", "", "", "The line number to open the editor at")
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
+	cmd.Flags().BoolVarP(&o.AddDefaults, "add-defaults", "", false, "Adds default parameters to the effective pipeline")
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
@@ -300,6 +305,13 @@ func (o *Options) processTriggers() error {
 }
 
 func (o *Options) displayPipeline(path string, name string, pipeline *tektonv1beta1.PipelineRun) error {
+	if o.AddDefaults {
+		err := o.addPipelineParameterDefaults(path, name, pipeline)
+		if err != nil {
+			return errors.Wrapf(err, "failed to ")
+		}
+	}
+
 	// lets create an output file if using editor
 	if o.Editor != "" && o.OutFile == "" {
 		fileName := ""
@@ -374,6 +386,51 @@ func (o *Options) openInEditor(path string, editor string) error {
 	_, err := o.CommandRunner(c)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open editor via command: %s", c.CLI())
+	}
+	return nil
+}
+
+func (o *Options) addPipelineParameterDefaults(path string, name string, pipeline *tektonv1beta1.PipelineRun) error {
+	ps := pipeline.Spec.PipelineSpec
+	if ps == nil {
+		return nil
+	}
+
+	dscm := &o.DiscoverScm
+	err := dscm.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "failed to discover repository details")
+	}
+	if dscm.SourceURL == "" {
+		return options.MissingOption("git-url")
+	}
+	if dscm.GitURL == nil {
+		dscm.GitURL, err = giturl.ParseGitURL(dscm.SourceURL)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse git url %s", dscm.SourceURL)
+		}
+		if dscm.GitURL == nil {
+			return errors.Errorf("failed to parse the git URL")
+		}
+	}
+
+	for i := range ps.Params {
+		pa := &ps.Params[i]
+		if pa.Default == nil {
+			pa.Default = &tektonv1beta1.ArrayOrString{
+				Type: tektonv1beta1.ParamTypeString,
+			}
+		}
+		if pa.Default.StringVal == "" {
+			switch pa.Name {
+			case "REPO_URL":
+				pa.Default.StringVal = dscm.SourceURL
+			case "REPO_OWNER":
+				pa.Default.StringVal = dscm.GitURL.Organisation
+			case "REPO_NAME":
+				pa.Default.StringVal = dscm.GitURL.Name
+			}
+		}
 	}
 	return nil
 }
