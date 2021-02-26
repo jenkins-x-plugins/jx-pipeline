@@ -16,8 +16,6 @@ ROOT_PACKAGE := github.com/$(ORG_REPO)
 GO_VERSION := 1.13
 GO_DEPENDENCIES := $(call rwildcard,pkg/,*.go) $(call rwildcard,cmd/,*.go)
 
-GOPRIVATE := github.com/jenkins-x/jx-apps,github.com/jenkins-x/jx-helpers
-
 BRANCH     := $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null  || echo 'unknown')
 BUILD_DATE := $(shell date +%Y%m%d-%H:%M:%S)
 CGO_ENABLED = 0
@@ -84,8 +82,10 @@ print-version: ## Print version
 	@echo $(VERSION)
 
 build: $(GO_DEPENDENCIES) clean ## Build jx-labs binary for current OS
-	go env -w GOPRIVATE=github.com/jenkins-x/jx-apps,github.com/jenkins-x/jx-helpers,github.com/jenkins-x/jx-promote
 	CGO_ENABLED=$(CGO_ENABLED) $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/$(BINARY_NAME) $(MAIN_SRC_FILE)
+
+build-effective: $(GO_DEPENDENCIES) clean ## Build jx-labs binary for current OS
+	CGO_ENABLED=$(CGO_ENABLED) $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/jx-pipeline-effective ./cmd/effective/main.go
 
 build-all: $(GO_DEPENDENCIES) build make-reports-dir ## Build all files - runtime, all tests etc.
 	CGO_ENABLED=$(CGO_ENABLED) $(GOTEST) -run=nope -tags=integration -failfast -short ./... $(BUILDFLAGS)
@@ -115,7 +115,6 @@ install: $(GO_DEPENDENCIES) ## Install the binary
 	GOBIN=${GOPATH}/bin $(GO) install $(BUILDFLAGS) $(MAIN_SRC_FILE)
 
 linux: ## Build for Linux
-	go env -w GOPRIVATE=github.com/jenkins-x/jx-apps,github.com/jenkins-x/jx-helpers,github.com/jenkins-x/jx-promote
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=linux GOARCH=amd64 $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/linux/$(BINARY_NAME) $(MAIN_SRC_FILE)
 	chmod +x build/linux/$(BINARY_NAME)
 
