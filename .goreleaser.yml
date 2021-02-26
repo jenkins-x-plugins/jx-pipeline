@@ -68,9 +68,18 @@ builds:
       - arm
       - arm64
 
-
 archives:
-  - name_template: "jx-pipeline-{{ .Os }}-{{ .Arch }}"
+  - id: jx-pipeline
+    builds:
+    - jx-pipeline
+    name_template: "jx-pipeline-{{ .Os }}-{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+  - id: jx-pipeline-effective
+    builds:
+    - jx-pipeline-effective
+    name_template: "jx-pipeline-effective-{{ .Os }}-{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
