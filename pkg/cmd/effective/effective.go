@@ -2,7 +2,9 @@ package effective
 
 import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
+	"github.com/jenkins-x/lighthouse-client/pkg/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -400,10 +402,39 @@ func (o *Options) addPipelineParameterDefaults(path string, name string, pipelin
 	if dscm.Dir == "" {
 		dscm.Dir = filepath.Dir(path)
 	}
+
+	// lets look for jenkins env vars
+	if dscm.SourceURL == "" {
+		dscm.SourceURL = os.Getenv("GIT_URL")
+		log.Logger().Infof("GIT_URL = %s", dscm.SourceURL)
+	}
+	log.Logger().Infof("SourceURL = %s", dscm.SourceURL)
+
 	err := dscm.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to discover repository details")
 	}
+
+	if dscm.Branch == "" {
+		dscm.Branch = os.Getenv("PULL_BASE_REF")
+	}
+	if dscm.Branch == "" {
+		br := os.Getenv("GIT_BRANCH")
+		if br != "" {
+			names := strings.Split(br, "/")
+			dscm.Branch = names[len(names)-1]
+		}
+	}
+	buildNumber := os.Getenv("BUILD_NUMBER")
+	if buildNumber == "" {
+		buildNumber = os.Getenv("BUILD_ID")
+	}
+	sha := os.Getenv("PULL_PULL_SHA")
+	if sha == "" {
+		sha = os.Getenv("GIT_COMMIT")
+	}
+	jobName := os.Getenv("JOB_NAME")
+
 	if dscm.SourceURL == "" {
 		return options.MissingOption("git-url")
 	}
@@ -432,8 +463,61 @@ func (o *Options) addPipelineParameterDefaults(path string, name string, pipelin
 				pa.Default.StringVal = dscm.GitURL.Organisation
 			case "REPO_NAME":
 				pa.Default.StringVal = dscm.GitURL.Name
+			case "BUILD_ID":
+				pa.Default.StringVal = buildNumber
+			case "PULL_BASE_REF":
+				pa.Default.StringVal = dscm.Branch
+			case "PULL_PULL_SHA":
+				pa.Default.StringVal = sha
+			case "JOB_NAME":
+				pa.Default.StringVal = jobName
 			}
 		}
+	}
+
+	// lets add the labels/annotations
+	if pipeline.Annotations == nil {
+		pipeline.Annotations = map[string]string{}
+	}
+	if pipeline.Labels == nil {
+		pipeline.Labels = map[string]string{}
+	}
+	if dscm.GitURL != nil {
+		pipeline.Labels[util.OrgLabel] = dscm.GitURL.Organisation
+		pipeline.Labels[util.RepoLabel] = dscm.GitURL.Name
+	}
+	if dscm.Branch != "" {
+		pipeline.Labels[util.BranchLabel] = dscm.Branch
+	}
+	if sha != "" {
+		pipeline.Labels[util.LastCommitSHALabel] = sha
+	}
+	if buildNumber != "" {
+		pipeline.Labels["build"] = buildNumber
+	}
+
+	// lets specify the name using the build number
+	if jobName == "" {
+		if dscm.GitURL == nil {
+			// we can't default the job name
+			if pipeline.GenerateName == "" {
+				name := pipeline.Name
+				if name == "" {
+					name = "release"
+				}
+				pipeline.GenerateName = name + "-"
+				pipeline.Name = ""
+			}
+			return nil
+		}
+		jobName = dscm.GitURL.Organisation + "-" + dscm.Repository
+	}
+
+	if buildNumber != "" {
+		pipeline.Name = naming.ToValidName(jobName + "-" + buildNumber)
+	} else {
+		pipeline.Name = ""
+		pipeline.GenerateName = naming.ToValidName(jobName) + "-"
 	}
 	return nil
 }
