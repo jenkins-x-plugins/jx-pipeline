@@ -27,6 +27,7 @@ type Options struct {
 	options.BaseOptions
 	lighthouses.ResolverOptions
 
+	File         string
 	Namespace    string
 	CatalogSHA   string
 	TriggerName  string
@@ -76,6 +77,7 @@ func NewCmdPipelineOverride() (*cobra.Command, *Options) {
 
 	o.ResolverOptions.AddFlags(cmd)
 
+	cmd.Flags().StringVarP(&o.File, "file", "f", "", "The pipeline file to render")
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.Step, "step", "s", "", "The name of the step to override")
@@ -108,6 +110,10 @@ func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate options")
+	}
+
+	if o.File != "" {
+		return o.overridePipeline(o.File)
 	}
 
 	rootDir := o.Dir
@@ -229,10 +235,10 @@ func (o *Options) processTriggers() error {
 		return options.InvalidOptionf("pipeline", o.PipelineName, "available names %s", strings.Join(trigger.Names, ", "))
 	}
 
-	return o.overridePipeline(trigger, pipelineName, pipeline)
+	return o.overridePipeline(pipeline)
 }
 
-func (o *Options) overridePipeline(trigger *Trigger, name string, path string) error {
+func (o *Options) overridePipeline(path string) error {
 	p := processor.NewInliner(o.Input, o.Resolver, o.CatalogSHA, o.Step)
 	processor.ProcessFile(p, path)
 	return nil

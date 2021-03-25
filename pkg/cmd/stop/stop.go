@@ -2,9 +2,10 @@ package stop
 
 import (
 	"fmt"
-	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 	"sort"
 	"strings"
+
+	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
 
 	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
 

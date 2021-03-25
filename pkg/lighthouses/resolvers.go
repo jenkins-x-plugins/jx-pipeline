@@ -1,9 +1,10 @@
 package lighthouses
 
 import (
+	"net/url"
+
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
-	"net/url"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"

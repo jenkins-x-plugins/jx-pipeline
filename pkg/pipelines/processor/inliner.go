@@ -8,6 +8,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -59,9 +60,6 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	for i := range ts.Steps {
 		step := &ts.Steps[i]
 		name := step.Name
-		if name == "" {
-			continue
-		}
 		image := step.Image
 		if image == "" {
 			image = templateImage
@@ -70,12 +68,18 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 		if uses == image {
 			continue
 		}
-
+		task := false
+		if name == "" {
+			name = image
+			task = true
+		}
 		names = append(names, name)
 		stepOptions[name] = &stepOption{
 			step:  step,
 			uses:  uses,
+			image: image,
 			index: i,
+			task:  task,
 		}
 	}
 
@@ -102,19 +106,85 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to find the pipeline catalog TaskSpec for %s", path)
 	}
-	catalogStep := FindStep(catalogTaskSpec, step.Name)
-	if catalogStep == nil {
-		return false, errors.Wrapf(err, "could not find step: %s in the catalog", step.Name)
+	if catalogTaskSpec == nil {
+		return false, errors.Errorf("could not resolve TaskSpec for uses %s", so.uses)
 	}
 
-	// lets replace with the catalog step
-	// TODO longer term we could ask users to pick which things to override
-	*step = *catalogStep
+	if !so.task {
+		catalogStep := FindStep(catalogTaskSpec, step.Name)
+		if catalogStep == nil {
+			return false, errors.Wrapf(err, "could not find step: %s in the catalog", step.Name)
+		}
+
+		// lets replace with the catalog step
+		// TODO longer term we could ask users to pick which things to override
+		*step = *catalogStep
+		return true, nil
+	}
+
+	// lets inline all the steps in the uses task
+	steps := ts.Steps[0:so.index]
+	for _, s := range catalogTaskSpec.Steps {
+		newStep := v1beta1.Step{}
+		newStep.Name = s.Name
+		if ts.StepTemplate == nil {
+			ts.StepTemplate = &corev1.Container{}
+		}
+		if ts.StepTemplate.Image == "" {
+			ts.StepTemplate.Image = so.image
+		}
+		if ts.StepTemplate.Image != so.image {
+			newStep.Image = so.image
+		}
+		steps = append(steps, newStep)
+	}
+	if so.index+1 < len(ts.Steps) {
+		steps = append(steps, ts.Steps[so.index+1:]...)
+	}
+	ts.Steps = steps
+
+	// now lets pick one of the tasks to inline
+	names = nil
+	catalogSteps := map[string]*v1beta1.Step{}
+	for i := range catalogTaskSpec.Steps {
+		s := &catalogTaskSpec.Steps[i]
+		n := s.Name
+		if n == "" {
+			continue
+		}
+		names = append(names, n)
+		catalogSteps[n] = s
+	}
+	name, err = p.input.PickNameWithDefault(names, "pick the step to inline: ", "", "select the name of the step to override")
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to pick step")
+	}
+
+	if name != "" {
+		catalogStep := catalogSteps[name]
+		if catalogStep != nil {
+			found := false
+			for i := range ts.Steps {
+				s := &ts.Steps[i]
+				if s.Name != name {
+					continue
+				}
+				*s = *catalogStep
+				found = true
+				break
+			}
+			if !found {
+				return false, errors.Errorf("could not find step %s in resulting task", name)
+			}
+		}
+	}
 	return true, nil
 }
 
 type stepOption struct {
 	step  *v1beta1.Step
 	uses  string
+	image string
 	index int
+	task  bool
 }

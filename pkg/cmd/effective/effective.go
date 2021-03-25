@@ -1,15 +1,16 @@
 package effective
 
 import (
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
-	"github.com/jenkins-x/lighthouse-client/pkg/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
+	"github.com/jenkins-x/lighthouse-client/pkg/util"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
