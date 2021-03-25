@@ -234,11 +234,11 @@ func (o *Options) getTektonLogs() (bool, error) {
 	}
 
 	if o.BatchMode {
-		if len(filteredNames) > 1 {
-			return false, errors.New("more than one pipeline returned in batch mode, use better filters and try again")
-		}
-		if len(filteredNames) == 1 {
+		if len(filteredNames) > 0 {
 			defaultName = filteredNames[0]
+		}
+		if len(filteredNames) > 1 {
+			log.Logger().Warnf("more than one pipeline returned in batch mode so will pick the first one: %s", defaultName)
 		}
 	}
 
