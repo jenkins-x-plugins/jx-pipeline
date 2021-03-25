@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/effective"
 	"os"
+
+	"github.com/jenkins-x/jx-pipeline/pkg/cmd/effective"
 )
 
 // Entrypoint for the command

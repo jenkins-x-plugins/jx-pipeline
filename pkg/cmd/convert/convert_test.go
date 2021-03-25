@@ -1,11 +1,12 @@
 package convert_test
 
 import (
-	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner/fakerunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
