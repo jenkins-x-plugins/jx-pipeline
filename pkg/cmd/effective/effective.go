@@ -394,10 +394,7 @@ func (o *Options) openInEditor(path string, editor string) error {
 }
 
 func (o *Options) addPipelineParameterDefaults(path string, name string, pipeline *tektonv1beta1.PipelineRun) error {
-	ps := pipeline.Spec.PipelineSpec
-	if ps == nil {
-		return nil
-	}
+	ps := &pipeline.Spec
 
 	dscm := &o.DiscoverScm
 	if dscm.Dir == "" {
@@ -451,27 +448,25 @@ func (o *Options) addPipelineParameterDefaults(path string, name string, pipelin
 
 	for i := range ps.Params {
 		pa := &ps.Params[i]
-		if pa.Default == nil {
-			pa.Default = &tektonv1beta1.ArrayOrString{
-				Type: tektonv1beta1.ParamTypeString,
-			}
+		if string(pa.Value.Type) == "" {
+			pa.Value.Type = tektonv1beta1.ParamTypeString
 		}
-		if pa.Default.StringVal == "" {
+		if pa.Value.StringVal == "" {
 			switch pa.Name {
 			case "REPO_URL":
-				pa.Default.StringVal = dscm.SourceURL
+				pa.Value.StringVal = dscm.SourceURL
 			case "REPO_OWNER":
-				pa.Default.StringVal = dscm.GitURL.Organisation
+				pa.Value.StringVal = dscm.GitURL.Organisation
 			case "REPO_NAME":
-				pa.Default.StringVal = dscm.GitURL.Name
+				pa.Value.StringVal = dscm.GitURL.Name
 			case "BUILD_ID":
-				pa.Default.StringVal = buildNumber
+				pa.Value.StringVal = buildNumber
 			case "PULL_BASE_REF":
-				pa.Default.StringVal = dscm.Branch
+				pa.Value.StringVal = dscm.Branch
 			case "PULL_PULL_SHA":
-				pa.Default.StringVal = sha
+				pa.Value.StringVal = sha
 			case "JOB_NAME":
-				pa.Default.StringVal = jobName
+				pa.Value.StringVal = jobName
 			}
 		}
 	}
