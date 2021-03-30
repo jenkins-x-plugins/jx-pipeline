@@ -28,7 +28,7 @@ type ResolverOptions struct {
 func (o *ResolverOptions) AddFlags(cmd *cobra.Command) {
 	o.Factory.AddFlags(cmd)
 
-	cmd.Flags().StringVarP(&o.Dir, "dir", "d", ".", "The directory to look for the .lighthouse folder")
+	cmd.Flags().StringVarP(&o.Dir, "dir", "d", ".", "The directory to look for the .lighthouse and/or .git folders")
 	cmd.Flags().StringVarP(&o.CatalogOwner, "catalog-owner", "", "jenkins-x", "The github owner for the default catalog")
 	cmd.Flags().StringVarP(&o.CatalogRepository, "catalog-repo", "", "jx3-pipeline-catalog", "The github repository name for the default catalog")
 }

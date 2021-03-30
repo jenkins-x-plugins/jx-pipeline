@@ -398,13 +398,20 @@ func (o *Options) addPipelineParameterDefaults(path string, name string, pipelin
 
 	dscm := &o.DiscoverScm
 	if dscm.Dir == "" {
-		dscm.Dir = filepath.Dir(path)
+		dscm.Dir = o.Dir
+		if dscm.Dir == "" {
+			dscm.Dir = filepath.Dir(path)
+		}
 	}
 
 	// lets look for jenkins env vars
 	if dscm.SourceURL == "" {
 		dscm.SourceURL = os.Getenv("GIT_URL")
 		log.Logger().Infof("GIT_URL = %s", dscm.SourceURL)
+
+		if dscm.SourceURL == "" {
+			dscm.DiscoverFromGit = true
+		}
 	}
 	log.Logger().Infof("SourceURL = %s", dscm.SourceURL)
 
