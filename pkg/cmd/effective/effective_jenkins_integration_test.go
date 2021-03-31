@@ -132,6 +132,7 @@ func CreateTestEnvVars(t *testing.T, tmpDir string) map[string]string {
 		// lets clear all the CI/CD env vars to avoid tests breaking inside CI
 		"BUILD_ID":      "4",
 		"BUILD_NUMBER":  "4",
+		"BRANCH":        "main",
 		"GIT_BRANCH":    "main",
 		"GIT_COMMIT":    "abc1234",
 		"JOB_NAME":      "myjob",

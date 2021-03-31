@@ -24,7 +24,7 @@ var (
 	testGitURL = "https://github.com/jstrachan/nodey560.git"
 
 	// generateTestOutput enable to regenerate the expected output
-	generateTestOutput = false
+	generateTestOutput = true
 )
 
 func TestPipelineEffective(t *testing.T) {
