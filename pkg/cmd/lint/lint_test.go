@@ -3,7 +3,7 @@ package lint_test
 import (
 	"testing"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/lint"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/lint"
 	"github.com/stretchr/testify/require"
 )
 

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
@@ -16,9 +16,9 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/jenkins-x/jx-pipeline/pkg/constants"
-	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
-	"github.com/jenkins-x/jx-pipeline/pkg/triggers"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/constants"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/triggers"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"

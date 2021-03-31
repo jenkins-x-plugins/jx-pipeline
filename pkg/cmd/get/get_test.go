@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/get"
-	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/get"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"

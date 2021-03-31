@@ -3,7 +3,7 @@ package processor_test
 import (
 	"testing"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/pipelines/processor"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines/processor"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/stretchr/testify/assert"
 )

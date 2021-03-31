@@ -13,7 +13,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/effective"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/effective"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 

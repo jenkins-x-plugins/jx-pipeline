@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/cloud/buckets"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cloud/buckets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
