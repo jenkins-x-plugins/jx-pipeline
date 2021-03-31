@@ -2,22 +2,25 @@ apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
-  generateName: jstrachan-nodey560-
   labels:
+    build: "4"
+    lighthouse.jenkins-x.io/branch: main
+    lighthouse.jenkins-x.io/lastCommitSHA: abc1234
     lighthouse.jenkins-x.io/refs.org: jstrachan
     lighthouse.jenkins-x.io/refs.repo: nodey560
+  name: myjob-4
 spec:
   params:
   - name: BUILD_ID
-    value: ""
+    value: "4"
   - name: JOB_NAME
-    value: ""
+    value: myjob
   - name: JOB_SPEC
     value: ""
   - name: JOB_TYPE
     value: ""
   - name: PULL_BASE_REF
-    value: ""
+    value: main
   - name: PULL_BASE_SHA
     value: ""
   - name: PULL_NUMBER
@@ -25,7 +28,7 @@ spec:
   - name: PULL_PULL_REF
     value: ""
   - name: PULL_PULL_SHA
-    value: ""
+    value: abc1234
   - name: PULL_REFS
     value: ""
   - name: REPO_NAME
