@@ -415,6 +415,7 @@ func (o *Options) addPipelineParameterDefaults(path string, name string, pipelin
 	}
 	log.Logger().Infof("SourceURL = %s", dscm.SourceURL)
 
+	dscm.IgnoreMissingToken = true
 	err := dscm.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to discover repository details")
