@@ -6,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd"
 )
 
 // Run runs the command, if args are not nil they will be set on the command

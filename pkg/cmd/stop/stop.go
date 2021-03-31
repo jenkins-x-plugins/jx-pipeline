@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/lighthouses"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/pipelines"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -20,7 +20,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"

@@ -11,7 +11,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner/fakerunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/convert"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/convert"
 	fakefb "github.com/jenkins-x/lighthouse-client/pkg/filebrowser/fake"
 
 	"github.com/stretchr/testify/assert"

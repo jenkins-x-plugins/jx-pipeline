@@ -12,7 +12,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser/fake"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/cmd/override"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/override"
 	"github.com/stretchr/testify/require"
 )
 

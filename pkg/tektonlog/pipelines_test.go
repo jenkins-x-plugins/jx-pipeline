@@ -5,7 +5,7 @@ package tektonlog_test
 import (
 	"testing"
 
-	"github.com/jenkins-x/jx-pipeline/pkg/tektonlog"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
