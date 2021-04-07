@@ -35,6 +35,29 @@ func GetLabel(m map[string]string, labels []string) string {
 	return ""
 }
 
+// DefaultValues default missing values from the lighthouse labels
+func DefaultValues(a *v1.PipelineActivity) {
+	labels := a.Labels
+	if labels != nil {
+		if a.Spec.GitOwner == "" {
+			a.Spec.GitOwner = GetLabel(labels, OwnerLabels)
+		}
+		if a.Spec.GitRepository == "" {
+			a.Spec.GitRepository = GetLabel(labels, RepoLabels)
+		}
+		if a.Spec.GitBranch == "" {
+			a.Spec.GitBranch = GetLabel(labels, BranchLabels)
+		}
+		if a.Spec.Context == "" {
+			a.Spec.Context = GetLabel(labels, ContextLabels)
+		}
+		if a.Spec.Build == "" {
+			a.Spec.Build = GetLabel(labels, BuildLabels)
+		}
+	}
+}
+
+// ToPipelineActivityName creates an activity name from a pipeline run
 func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivity) string {
 	labels := pr.Labels
 	if labels == nil {

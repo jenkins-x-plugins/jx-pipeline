@@ -18,7 +18,7 @@ func (m model) View() string {
 
 	s := &strings.Builder{}
 	t := table.CreateTable(s)
-	t.AddRow("REPOSITORY", "BRANCH", "CONTEXT", "BUILD", "STATUS")
+	t.AddRow("REPOSITORY", "BRANCH", "BUILD", "CONTEXT", "STATUS", "LAST STEP")
 
 	for i, name := range m.activityTable.names {
 		if i >= m.activityTable.height {
@@ -35,38 +35,28 @@ func (m model) View() string {
 		if i == m.activityTable.current {
 			repo = termcolor.ColorStatus(repo)
 		}
-		t.AddRow(repo, as.GitBranch, as.Context, as.Build, ToPipelineLastStepStatus(act))
+		t.AddRow(repo, as.GitBranch, as.Build, as.Context, ToPipelineStatus(as.Status), ToLastStep(act))
 	}
 
 	t.Render()
 	return s.String()
 }
 
-func ToPipelineLastStepStatus(pa *v1.PipelineActivity) string {
-	status := ""
-	if pa != nil && pa.Spec.Status != v1.ActivityStatusTypeNone {
-		status = ToPipelineStatusMarkup(pa.Spec.Status)
-	}
-	lastStep := ToLastStepMarkdown(pa)
-	if status != "" {
-		lastStep = status + " " + lastStep
-	}
-	return lastStep
-}
-
-func ToPipelineStatusMarkup(statusType v1.ActivityStatusType) string {
+func ToPipelineStatus(statusType v1.ActivityStatusType) string {
 	text := statusType.String()
 	switch statusType {
 	case v1.ActivityStatusTypeFailed, v1.ActivityStatusTypeError:
 		return termcolor.ColorError(text)
 	case v1.ActivityStatusTypeSucceeded:
 		return termcolor.ColorInfo(text)
+	case v1.ActivityStatusTypeRunning:
+		return termcolor.ColorStatus(text)
 	default:
 		return text
 	}
 }
 
-func ToLastStepMarkdown(pa *v1.PipelineActivity) string {
+func ToLastStep(pa *v1.PipelineActivity) string {
 	s := &pa.Spec
 	steps := s.Steps
 	if len(steps) > 0 {
