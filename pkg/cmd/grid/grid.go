@@ -8,10 +8,13 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxenv"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
@@ -42,9 +45,12 @@ type Options struct {
 	JXClient       versioned.Interface
 	TektonClient   tektonclient.Interface
 	TektonLogger   *tektonlog.TektonLogger
+	Input          input.Interface
 }
 
 var (
+	info = termcolor.ColorInfo
+
 	cmdLong = templates.LongDesc(`
 		Watches pipeline activity in a table
 `)
@@ -56,8 +62,6 @@ var (
 		# Watches the current pipeline activities which have a name containing 'foo'
 		jx pipeline grid -f foo
 	`)
-
-	disable = false
 )
 
 // NewCmdPipelineGrid creates the new command
@@ -104,6 +108,9 @@ func (o *Options) Validate() error {
 			return errors.Wrap(err, "error building tekton client")
 		}
 	}
+	if o.Input == nil {
+		o.Input = inputfactory.NewInput(&o.BaseOptions)
+	}
 	return nil
 }
 
@@ -130,7 +137,7 @@ func (o *Options) Run() error {
 	defer close(stop)
 	defer runtime.HandleCrash()
 
-	m := newModel(o.Filter)
+	m := newModel(o.Filter, o.viewLogsFor)
 
 	informer := informerFactory.Jenkins().V1().PipelineActivities().Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -159,17 +166,21 @@ func (o *Options) Run() error {
 			return errors.Wrapf(err, "failed to start viewer")
 		}
 	}
-	act := m.activityTable.selected()
+	return nil
+}
+
+func (o *Options) viewLogsFor(act *v1.PipelineActivity, paList []v1.PipelineActivity) error {
 	if act == nil {
 		return nil
 	}
 	log.Logger().Infof("\n\n")
 
+	ns := o.Namespace
 	if o.TektonLogger == nil {
 		o.TektonLogger = &tektonlog.TektonLogger{
 			KubeClient:     o.KubeClient,
 			TektonClient:   o.TektonClient,
-			JXClient:       jxClient,
+			JXClient:       o.JXClient,
 			Namespace:      ns,
 			FailIfPodFails: o.FailIfPodFails,
 		}
@@ -187,7 +198,6 @@ func (o *Options) Run() error {
 		return errors.Errorf("no PipelineRun resources found for namespace %s", ns)
 	}
 
-	paList := m.activityTable.activityList()
 	var prList []*tektonapis.PipelineRun
 	for i := range resources.Items {
 		pr := &resources.Items[i]
@@ -198,5 +208,12 @@ func (o *Options) Run() error {
 			break
 		}
 	}
-	return o.TektonLogger.GetLogsForActivity(ctx, os.Stdout, act, act.Name, prList)
+	out := os.Stdout
+	err = o.TektonLogger.GetLogsForActivity(ctx, out, act, act.Name, prList)
+	if err != nil {
+		return errors.Wrapf(err, "failed to stream logs for pipeline %s", act.Name)
+	}
+
+	fmt.Fprint(out, "\n\n")
+	return nil
 }

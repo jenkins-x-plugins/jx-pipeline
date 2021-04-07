@@ -12,10 +12,12 @@ func (m model) View() string {
 	m.activityTable.lock.Lock()
 	defer m.activityTable.lock.Unlock()
 
-	s := &strings.Builder{}
+	if m.activityTable.stopped {
+		return fmt.Sprintf("\npress the %s to go back to the pipeline grid or %s to quit\n\n", info("space bar"), info("q"))
+	}
 
+	s := &strings.Builder{}
 	t := table.CreateTable(s)
-	//t.SetColumnAlign(1, table.ALIGN_RIGHT)
 	t.AddRow("REPOSITORY", "BRANCH", "CONTEXT", "BUILD", "STATUS")
 
 	for i, name := range m.activityTable.names {

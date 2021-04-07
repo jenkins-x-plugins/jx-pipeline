@@ -11,18 +11,19 @@ import (
 
 type model struct {
 	activityTable *activityTable
-	sub           chan struct{} // where we'll receive activity notifications
+	ch            chan struct{}
 	filter        string
 }
 
 type activityTable struct {
-	lock    sync.Mutex
-	current int
-	max     int
-	height  int
-	stopped bool
-	names   []string
-	index   map[string]*v1.PipelineActivity
+	lock       sync.Mutex
+	current    int
+	max        int
+	height     int
+	stopped    bool
+	names      []string
+	index      map[string]*v1.PipelineActivity
+	viewLogsFn func(act *v1.PipelineActivity, paList []v1.PipelineActivity) error
 }
 
 func (a *activityTable) selected() *v1.PipelineActivity {
@@ -62,19 +63,27 @@ func (a *activityTable) activityList() []v1.PipelineActivity {
 	return answer
 }
 
-func newModel(filter string) model {
-	return model{
-		activityTable: &activityTable{
-			index:  map[string]*v1.PipelineActivity{},
-			height: 10,
-		},
-		filter: filter,
-		sub:    make(chan struct{}),
+func (a *activityTable) viewLogs() {
+	act := a.selected()
+	a.stopped = true
+	if act != nil {
+		a.viewLogsFn(act, a.activityList())
 	}
 }
 
-// A message used to indicate that activity has occurred. In the real world (for
-// example, chat) this would contain actual data.
+func newModel(filter string, viewLogsFn func(act *v1.PipelineActivity, paList []v1.PipelineActivity) error) model {
+	return model{
+		activityTable: &activityTable{
+			index:      map[string]*v1.PipelineActivity{},
+			height:     10,
+			viewLogsFn: viewLogsFn,
+		},
+		filter: filter,
+		ch:     make(chan struct{}),
+	}
+}
+
+// responseMsg used to indicate that activity from k8s has occurred
 type responseMsg struct{}
 
 // A command that waits for the activity on a channel.
@@ -85,7 +94,7 @@ func waitForActivity(sub chan struct{}) tea.Cmd {
 }
 
 func (m model) Init() tea.Cmd {
-	return waitForActivity(m.sub)
+	return waitForActivity(m.ch)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -97,13 +106,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 
+		case "space", " ", "s":
+			log.Logger().Infof("viewing the grid again...")
+			m.activityTable.stopped = false
+			m.ch <- struct{}{}
+			return m, waitForActivity(m.ch)
+
 		case "ctrl+c", "q":
 			m.stop()
 			return m, tea.Quit
 
 		case "enter":
-			m.stop()
-			return m, tea.Quit
+			m.activityTable.viewLogs()
+			return m, waitForActivity(m.ch)
 
 		case "down", "j":
 			if m.activityTable.current+1 < m.activityTable.max {
@@ -126,7 +141,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.activityTable.stopped {
 			return m, tea.Quit
 		}
-		return m, waitForActivity(m.sub)
+		return m, waitForActivity(m.ch)
 	}
 
 	log.Logger().Infof("unknown event %#v", msg)
@@ -145,7 +160,9 @@ func (m model) onPipelineActivity(a *v1.PipelineActivity) {
 
 	m.activityTable.lock.Unlock()
 
-	m.sub <- struct{}{}
+	if !m.activityTable.stopped {
+		m.ch <- struct{}{}
+	}
 }
 
 func (m model) deletePipelineActivity(name string) {
@@ -156,18 +173,13 @@ func (m model) deletePipelineActivity(name string) {
 
 	m.activityTable.lock.Unlock()
 
-	m.sub <- struct{}{}
-}
-
-func (m model) count() int {
-	m.activityTable.lock.Lock()
-	defer m.activityTable.lock.Unlock()
-
-	return len(m.activityTable.names)
+	if !m.activityTable.stopped {
+		m.ch <- struct{}{}
+	}
 }
 
 func (m model) stop() {
 	m.activityTable.stopped = true
 	// avoid waiting forever
-	m.sub <- struct{}{}
+	m.ch <- struct{}{}
 }
