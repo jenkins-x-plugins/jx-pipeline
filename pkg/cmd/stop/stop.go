@@ -9,6 +9,7 @@ import (
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
@@ -17,10 +18,8 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -54,11 +53,14 @@ var (
 `)
 
 	cmdExample = templates.Examples(`
-		# Stop a pipeline
-		jx pipeline stop foo/bar/master -b 2
-
 		# Select the pipeline to stop
 		jx pipeline stop
+
+		# Stop a pipeline with a filter
+		jx pipeline stop -f myapp -b 2
+
+		# Stop a pipeline for a specific org/repo/branch
+		jx pipeline stop myorg/myrepo/main
 	`)
 )
 
@@ -194,44 +196,36 @@ func (o *Options) cancelPipelineRun() error {
 	}
 
 	args := o.Args
-	if len(args) == 0 {
-		var name string
-		name, err = o.Input.PickNameWithDefault(names, "Which pipeline do you want to stop: ",
-			name, "select a pipeline to cancel")
-		if err != nil {
-			return err
+	if len(args) > 0 {
+		var filteredNames []string
+		for _, a := range args {
+			for _, name := range names {
+				if strings.Contains(name, a) && stringhelpers.StringArrayIndex(filteredNames, name) < 0 {
+					filteredNames = append(filteredNames, name)
+				}
+			}
 		}
+		sort.Strings(filteredNames)
+		names = filteredNames
+	}
 
-		if len(names) == 0 {
-			log.Logger().Infof("no running pipelines available to stop")
-			return nil
-		}
-		var answer bool
-		if answer, err = o.Input.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
-			"you can always restart a cancelled pipeline with 'jx start pipeline'"); !answer {
-			return err
-		}
-		args = []string{name}
+	var name string
+	name, err = o.Input.PickNameWithDefault(names, "Which pipeline do you want to stop: ",
+		name, "select a pipeline to cancel")
+	if err != nil {
+		return err
 	}
-	for _, a := range args {
-		pr := m[a]
-		if pr == nil {
-			return fmt.Errorf("no PipelineRun found for name %s", a)
-		}
-		prName := pr.Name
-		pr, err = pipelineRuns.Get(ctx, prName, metav1.GetOptions{})
-		if err != nil {
-			return errors.Wrapf(err, "getting PipelineRun %s", prName)
-		}
-		if tektonlog.PipelineRunIsComplete(pr) {
-			log.Logger().Infof("PipelineRun %s has already completed", termcolor.ColorInfo(prName))
-			continue
-		}
-		err = tektonlog.CancelPipelineRun(ctx, tektonClient, ns, pr)
-		if err != nil {
-			return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
-		}
-		log.Logger().Infof("cancelled PipelineRun %s", termcolor.ColorInfo(prName))
+
+	if len(names) == 0 {
+		log.Logger().Infof("no running pipelines available to stop")
+		return nil
 	}
+	var answer bool
+	if answer, err = o.Input.Confirm(fmt.Sprintf("cancel pipeline %s", name), true,
+		"you can always restart a cancelled pipeline with 'jx start pipeline'"); !answer {
+		return err
+	}
+	args = []string{name}
+
 	return nil
 }
