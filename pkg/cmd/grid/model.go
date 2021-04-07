@@ -5,6 +5,7 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -42,6 +43,33 @@ func (a *activityTable) reindex() {
 	sort.Slice(names, func(i, j int) bool {
 		a1 := a.index[names[i]]
 		a2 := a.index[names[j]]
+		s1 := a1.Spec.StartedTimestamp
+		s2 := a2.Spec.StartedTimestamp
+		if s1 != nil && s2 != nil {
+			if s1.Time != s2.Time {
+				return s1.After(s2.Time)
+			}
+			diff := strings.Compare(a2.Spec.GitOwner, a1.Spec.GitOwner)
+			if diff != 0 {
+				return diff < 0
+			}
+			diff = strings.Compare(a2.Spec.GitRepository, a1.Spec.GitRepository)
+			if diff != 0 {
+				return diff < 0
+			}
+			diff = strings.Compare(a2.Spec.GitBranch, a1.Spec.GitBranch)
+			if diff != 0 {
+				return diff < 0
+			}
+			diff = strings.Compare(a2.Spec.Context, a1.Spec.Context)
+			if diff != 0 {
+				return diff < 0
+			}
+			diff = buildNumber(a2) - buildNumber(a1)
+			if diff != 0 {
+				return diff < 0
+			}
+		}
 		return a1.CreationTimestamp.After(a2.CreationTimestamp.Time)
 	})
 	a.names = names
@@ -50,6 +78,15 @@ func (a *activityTable) reindex() {
 	if a.max > a.height {
 		a.max = a.height
 	}
+}
+
+func buildNumber(a *v1.PipelineActivity) int {
+	text := a.Spec.Build
+	if text == "" {
+		return 0
+	}
+	answer, _ := strconv.Atoi(text)
+	return answer
 }
 
 func (a *activityTable) activityList() []v1.PipelineActivity {
