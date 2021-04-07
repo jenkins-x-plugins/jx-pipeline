@@ -3,6 +3,7 @@ module github.com/jenkins-x-plugins/jx-pipeline
 require (
 	github.com/GoogleContainerTools/kpt v0.37.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/charmbracelet/bubbletea v0.13.1
 	github.com/cpuguy83/go-md2man v1.0.10
 	github.com/fatih/color v1.10.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -28,6 +29,8 @@ require (
 )
 
 replace (
+	github.com/jenkins-x/jx-helpers/v3 => /Users/jstrachan/workspace/workspace/go/src/github.com/jenkins-x/jx-helpers
+
 	// override the go-scm from tekton
 	github.com/jenkins-x/go-scm => github.com/jenkins-x/go-scm v1.6.13
 	github.com/tektoncd/pipeline => github.com/jenkins-x/pipeline v0.3.2-0.20210118090417-1e821d85abf6
