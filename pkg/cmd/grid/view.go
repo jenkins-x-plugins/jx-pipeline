@@ -30,7 +30,7 @@ func (m model) View() string {
 		as := &act.Spec
 
 		repo := as.GitOwner + "/" + as.GitRepository
-		if i == m.current {
+		if i == m.activityTable.current {
 			repo = termcolor.ColorStatus(repo)
 		}
 		t.AddRow(repo, as.GitBranch, as.Context, as.Build, ToPipelineLastStepStatus(act))

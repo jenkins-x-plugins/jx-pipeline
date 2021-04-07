@@ -12,17 +12,25 @@ import (
 type model struct {
 	activityTable *activityTable
 	sub           chan struct{} // where we'll receive activity notifications
-	current       int
 	filter        string
 }
 
 type activityTable struct {
 	lock    sync.Mutex
+	current int
 	max     int
 	height  int
 	stopped bool
 	names   []string
 	index   map[string]*v1.PipelineActivity
+}
+
+func (a *activityTable) selected() *v1.PipelineActivity {
+	c := a.current
+	if c >= a.max || c >= len(a.names) {
+		return nil
+	}
+	return a.index[a.names[c]]
 }
 
 func (a *activityTable) reindex() {
@@ -41,6 +49,17 @@ func (a *activityTable) reindex() {
 	if a.max > a.height {
 		a.max = a.height
 	}
+}
+
+func (a *activityTable) activityList() []v1.PipelineActivity {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	var answer []v1.PipelineActivity
+	for _, v := range a.index {
+		answer = append(answer, *v)
+	}
+	return answer
 }
 
 func newModel(filter string) model {
@@ -73,6 +92,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.activityTable.height = msg.Height - 2
+		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -86,14 +106,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "down", "j":
-			if m.current+1 < m.activityTable.max {
-				m.current++
+			if m.activityTable.current+1 < m.activityTable.max {
+				m.activityTable.current++
 			}
 			return m, nil
 
 		case "up", "k":
-			if m.current > 0 {
-				m.current--
+			if m.activityTable.current > 0 {
+				m.activityTable.current--
 			}
 			return m, nil
 

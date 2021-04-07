@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cloud/buckets"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	typev1 "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/typed/jenkins.io/v1"
@@ -17,8 +19,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cloud/buckets"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 	"github.com/pkg/errors"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -62,6 +62,23 @@ type retrieverFunc func(ctx context.Context, pod *corev1.Pod, container *corev1.
 type LogLine struct {
 	Line       string
 	ShouldMask bool
+}
+
+func (t *TektonLogger) GetLogsForActivity(ctx context.Context, out io.Writer, pa *v1.PipelineActivity, name string, prList []*tektonapis.PipelineRun) error {
+	if pa.Spec.BuildLogsURL != "" {
+		for line := range t.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL) {
+			fmt.Fprintln(out, line.Line)
+		}
+		return t.Err()
+	}
+
+	log.Logger().Infof("Build logs for %s", termcolor.ColorInfo(name))
+	name = strings.TrimSuffix(name, " ")
+
+	for line := range t.GetRunningBuildLogs(ctx, pa, prList, name) {
+		fmt.Fprintln(out, line.Line)
+	}
+	return t.Err()
 }
 
 // GetTektonPipelinesWithActivePipelineActivity returns list of all PipelineActivities with corresponding Tekton PipelineRuns ordered by the PipelineRun creation timestamp and a map to obtain its reference once a name has been selected

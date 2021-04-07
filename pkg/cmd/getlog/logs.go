@@ -1,12 +1,12 @@
 package getlog
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
@@ -15,9 +15,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
@@ -254,18 +252,5 @@ func (o *Options) getTektonLogs() (bool, error) {
 		return true, errors.New("there are no build logs for the supplied filters")
 	}
 
-	if pa.Spec.BuildLogsURL != "" {
-		for line := range o.TektonLogger.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL) {
-			fmt.Fprintln(o.Out, line.Line)
-		}
-		return false, o.TektonLogger.Err()
-	}
-
-	log.Logger().Infof("Build logs for %s", termcolor.ColorInfo(name))
-	name = strings.TrimSuffix(name, " ")
-
-	for line := range o.TektonLogger.GetRunningBuildLogs(ctx, pa, prList, name) {
-		fmt.Fprintln(o.Out, line.Line)
-	}
-	return false, o.TektonLogger.Err()
+	return false, o.TektonLogger.GetLogsForActivity(ctx, o.Out, pa, name, prList)
 }
