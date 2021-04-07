@@ -34,12 +34,16 @@ Stops the pipeline build.
 
 .SH EXAMPLE
 .PP
-# Stop a pipeline
-  jx pipeline stop foo/bar/master \-b 2
-
-.PP
 # Select the pipeline to stop
   jx pipeline stop
+
+.PP
+# Stop a pipeline with a filter
+  jx pipeline stop \-f myapp \-b 2
+
+.PP
+# Stop a pipeline for a specific org/repo/branch
+  jx pipeline stop myorg/myrepo/main
 
 
 .SH SEE ALSO
