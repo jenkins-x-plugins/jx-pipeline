@@ -82,7 +82,7 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
-	cmd.Flags().IntVarP(&o.Build, "build", "", 0, "The build number to stop")
+	cmd.Flags().IntVarP(&o.Build, "build", "n", 0, "The build number to stop")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "",
 		"Filters all the available jobs by those that contain the given text")
 
