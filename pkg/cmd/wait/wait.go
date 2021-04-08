@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/constants"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/go-scm/scm"
 	jxc "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -13,8 +15,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/constants"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/triggers"
 	"github.com/jenkins-x/lighthouse-client/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
