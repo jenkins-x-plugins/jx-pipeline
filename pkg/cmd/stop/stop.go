@@ -59,7 +59,7 @@ var (
 		jx pipeline stop
 
 		# Stop a pipeline with a filter
-		jx pipeline stop -f myapp -b 2
+		jx pipeline stop -f myapp -n 2
 
 		# Stop a pipeline for a specific org/repo/branch
 		jx pipeline stop myorg/myrepo/main
