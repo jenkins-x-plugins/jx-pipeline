@@ -3,8 +3,8 @@ package processor
 import (
 	"strings"
 
-	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"

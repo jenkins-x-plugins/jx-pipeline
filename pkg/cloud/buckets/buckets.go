@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jenkins-x/jx-helpers/v3/pkg/httphelpers"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cloud"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/httphelpers"
 	"github.com/pkg/errors"
 	"gocloud.dev/blob"
 

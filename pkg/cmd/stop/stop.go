@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
@@ -57,7 +59,7 @@ var (
 		jx pipeline stop
 
 		# Stop a pipeline with a filter
-		jx pipeline stop -f myapp -b 2
+		jx pipeline stop -f myapp -n 2
 
 		# Stop a pipeline for a specific org/repo/branch
 		jx pipeline stop myorg/myrepo/main
@@ -80,7 +82,7 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
-	cmd.Flags().IntVarP(&o.Build, "build", "", 0, "The build number to stop")
+	cmd.Flags().IntVarP(&o.Build, "build", "n", 0, "The build number to stop")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "",
 		"Filters all the available jobs by those that contain the given text")
 
@@ -226,6 +228,17 @@ func (o *Options) cancelPipelineRun() error {
 		return err
 	}
 	args = []string{name}
+
+	pr := m[name]
+	if pr == nil {
+		return errors.Errorf("could not find PipelineRun %s", name)
+	}
+	prName := pr.Name
+	err = tektonlog.CancelPipelineRun(ctx, tektonClient, ns, pr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
+	}
+	log.Logger().Infof("cancelled PipelineRun %s", termcolor.ColorInfo(prName))
 
 	return nil
 }

@@ -3,6 +3,9 @@ package grid
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
@@ -23,8 +26,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"os"
-	"time"
 
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"

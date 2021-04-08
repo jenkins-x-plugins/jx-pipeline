@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	fakejx "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/fake"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/activities"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/testpipelines"
+	fakejx "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/require"
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"

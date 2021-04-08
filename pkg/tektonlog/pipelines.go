@@ -43,10 +43,16 @@ func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
 
 // CancelPipelineRun cancels a Pipeline
 func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
-	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
-	_, err := tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
+	prName := pr.Name
+	var err error
+	pr, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to update PipelineRun %s in namespace %s to mark it as cancelled", pr.Name, ns)
+		return errors.Wrapf(err, "failed to get PipelineRun %s in namespace %s", prName, ns)
+	}
+	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
+	_, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to update PipelineRun %s in namespace %s to mark it as cancelled", prName, ns)
 	}
 	return nil
 }
