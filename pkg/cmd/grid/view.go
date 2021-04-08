@@ -2,10 +2,11 @@ package grid
 
 import (
 	"fmt"
+	"strings"
+
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
-	"strings"
 )
 
 func (m model) View() string {
