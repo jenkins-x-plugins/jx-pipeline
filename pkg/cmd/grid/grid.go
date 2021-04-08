@@ -143,15 +143,21 @@ func (o *Options) Run() error {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			e := obj.(*v1.PipelineActivity)
-			m.onPipelineActivity(e)
+			if e != nil {
+				m.onPipelineActivity(e)
+			}
 		},
 		UpdateFunc: func(old, new interface{}) {
 			e := new.(*v1.PipelineActivity)
-			m.onPipelineActivity(e)
+			if e != nil {
+				m.onPipelineActivity(e)
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			e := obj.(*v1.PipelineActivity)
-			m.deletePipelineActivity(e.Name)
+			if e != nil {
+				m.deletePipelineActivity(e.Name)
+			}
 		},
 	})
 	informerFactory.Start(stop)
