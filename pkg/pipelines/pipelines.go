@@ -55,6 +55,39 @@ func DefaultValues(a *v1.PipelineActivity) {
 			a.Spec.Build = GetLabel(labels, BuildLabels)
 		}
 	}
+	if a.Spec.StartedTimestamp == nil {
+		for _, s := range a.Spec.Steps {
+			if s.Stage != nil {
+				a.Spec.StartedTimestamp = s.Stage.StartedTimestamp
+			} else if s.Promote != nil {
+				a.Spec.StartedTimestamp = s.Promote.StartedTimestamp
+			} else if s.Preview != nil {
+				a.Spec.StartedTimestamp = s.Preview.StartedTimestamp
+			}
+			if a.Spec.StartedTimestamp != nil {
+				break
+			}
+		}
+	}
+	if string(a.Spec.Status) == "" {
+		// lets default the status to the last step if its missing
+		for i := len(a.Spec.Steps) - 1; i > -0; i-- {
+			s := a.Spec.Steps[i]
+			status := v1.ActivityStatusTypeNone
+			if s.Stage != nil {
+				status = s.Stage.Status
+			} else if s.Promote != nil {
+				status = s.Promote.Status
+			} else if s.Preview != nil {
+				status = s.Preview.Status
+			}
+
+			if string(status) != "" {
+				a.Spec.Status = status
+				break
+			}
+		}
+	}
 }
 
 // ToPipelineActivityName creates an activity name from a pipeline run
