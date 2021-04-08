@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
@@ -226,6 +228,17 @@ func (o *Options) cancelPipelineRun() error {
 		return err
 	}
 	args = []string{name}
+
+	pr := m[name]
+	if pr == nil {
+		return errors.Errorf("could not find PipelineRun %s", name)
+	}
+	prName := pr.Name
+	err = tektonlog.CancelPipelineRun(ctx, tektonClient, ns, pr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
+	}
+	log.Logger().Infof("cancelled PipelineRun %s", termcolor.ColorInfo(prName))
 
 	return nil
 }
