@@ -53,6 +53,9 @@ var (
 
 	cmdLong = templates.LongDesc(`
 		Watches pipeline activity in a table
+
+		You can use the up/down cursor keys to select a pipeline then hit enter on the selected pipeline to view its log. 
+		When the pipeline is completed you can then go back to the pipeline grid and view other pipelines.
 `)
 
 	cmdExample = templates.Examples(`
