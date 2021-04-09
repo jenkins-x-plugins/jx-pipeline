@@ -63,11 +63,14 @@ var (
 		# Select the pipeline to stop
 		jx pipeline stop
 
-		# Stop a pipeline with a filter
+		# Stop a pipeline with a filter and a build number
 		jx pipeline stop -f myapp -n 2
 
 		# Stop a pipeline for a specific org/repo/branch
 		jx pipeline stop myorg/myrepo/main
+
+		# Stop a pipeline for a specific context and branch
+		jx pipeline stop --context pr --branch PR-456
 	`)
 )
 
