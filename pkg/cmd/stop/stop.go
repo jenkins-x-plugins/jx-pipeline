@@ -5,6 +5,9 @@ import (
 	"sort"
 	"strings"
 
+	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
@@ -38,8 +41,10 @@ type Options struct {
 	options.BaseOptions
 
 	Args         []string
-	Build        int
 	Filter       string
+	Build        string
+	Branch       string
+	Context      string
 	Namespace    string
 	CatalogSHA   string
 	Input        input.Interface
@@ -58,11 +63,14 @@ var (
 		# Select the pipeline to stop
 		jx pipeline stop
 
-		# Stop a pipeline with a filter
+		# Stop a pipeline with a filter and a build number
 		jx pipeline stop -f myapp -n 2
 
 		# Stop a pipeline for a specific org/repo/branch
 		jx pipeline stop myorg/myrepo/main
+
+		# Stop a pipeline for a specific context and branch
+		jx pipeline stop --context pr --branch PR-456
 	`)
 )
 
@@ -82,9 +90,13 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
-	cmd.Flags().IntVarP(&o.Build, "build", "n", 0, "The build number to stop")
+	o.BaseOptions.AddBaseFlags(cmd)
+
+	cmd.Flags().StringVarP(&o.Branch, "branch", "r", "", "The branch to filter by")
+	cmd.Flags().StringVarP(&o.Context, "context", "c", "", "The context to filter by")
+	cmd.Flags().StringVarP(&o.Build, "build", "n", "", "The build number to stop")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "",
-		"Filters all the available jobs by those that contain the given text")
+		"Filters all the available pipeline names")
 
 	return cmd, o
 }
@@ -134,57 +146,84 @@ func (o *Options) Run() error {
 
 func (o *Options) cancelPipelineRun() error {
 	ctx := o.GetContext()
+	jxClient := o.JXClient
 	tektonClient := o.TektonClient
 	ns := o.Namespace
 	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
 	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
 	}
+
+	paList, err := jxClient.JenkinsV1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrapf(err, "failed to list PipelineActivity resources in namespace %s", ns)
+	}
+	if paList == nil {
+		paList = &v1.PipelineActivityList{}
+	}
+	activityResolver := pipelines.NewActivityResolver(paList.Items)
 
 	if len(prList.Items) == 0 {
 		return errors.Wrapf(err, "no PipelineRuns were found in namespace %s", ns)
 	}
 	var allNames []string
 	m := map[string]*pipelineapi.PipelineRun{}
-	for k := range prList.Items {
-		pr := prList.Items[k]
-		if tektonlog.PipelineRunIsComplete(&pr) {
-			continue
-		}
-		labels := pr.Labels
-		if labels == nil {
-			continue
-		}
-		owner := pipelines.GetLabel(labels, pipelines.OwnerLabels)
-		repo := pipelines.GetLabel(labels, pipelines.RepoLabels)
-		branch := pipelines.GetLabel(labels, pipelines.BranchLabels)
-		triggerContext := pipelines.GetLabel(labels, pipelines.ContextLabels)
-		buildNumber := pipelines.GetLabel(labels, pipelines.BuildLabels)
+	if prList != nil {
+		for k := range prList.Items {
+			pr := &prList.Items[k]
+			if tektonlog.PipelineRunIsComplete(pr) {
+				continue
+			}
+			labels := pr.Labels
+			if labels == nil {
+				continue
+			}
+			owner := pipelines.GetLabel(labels, pipelines.OwnerLabels)
+			repo := pipelines.GetLabel(labels, pipelines.RepoLabels)
+			branch := pipelines.GetLabel(labels, pipelines.BranchLabels)
+			triggerContext := pipelines.GetLabel(labels, pipelines.ContextLabels)
+			if owner == "" {
+				log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner,
+					pr.Name, labels)
+				continue
+			}
+			if repo == "" {
+				log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelRepo,
+					pr.Name, labels)
+				continue
+			}
+			if branch == "" {
+				log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelBranch,
+					pr.Name, labels)
+				continue
+			}
 
-		if owner == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner,
-				pr.Name, labels)
-			continue
+			pa := activityResolver.ToPipelineActivity(pr)
+			if pa == nil {
+				continue
+			}
+			context := pa.Spec.Context
+			if context == "" {
+				context = triggerContext
+			}
+			build := pa.Spec.Build
+			if build == "" {
+				build = pipelines.GetLabel(labels, pipelines.BuildLabels)
+			}
+			if o.Build != "" && build != o.Build {
+				continue
+			}
+			if o.Branch != "" && branch != o.Branch {
+				continue
+			}
+			if o.Context != "" && context != o.Context {
+				continue
+			}
+			name := fmt.Sprintf("%s/%s/%s %s #%s", owner, repo, branch, context, build)
+			allNames = append(allNames, name)
+			m[name] = pr
 		}
-		if repo == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelRepo,
-				pr.Name, labels)
-			continue
-		}
-		if branch == "" {
-			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelBranch,
-				pr.Name, labels)
-			continue
-		}
-
-		name := fmt.Sprintf("%s/%s/%s #%s", owner, repo, branch, buildNumber)
-
-		if triggerContext != "" {
-			name = fmt.Sprintf("%s-%s", name, triggerContext)
-		}
-		allNames = append(allNames, name)
-		m[name] = &pr
 	}
 	sort.Strings(allNames)
 	names := allNames
