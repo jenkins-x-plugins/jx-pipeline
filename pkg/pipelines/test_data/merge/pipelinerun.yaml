@@ -4,6 +4,8 @@ metadata:
   annotations:
     lighthouse.jenkins-x.io/cloneURI: https://github.com/jstrachan/nodey510.git
     lighthouse.jenkins-x.io/job: release
+    lighthouse.jenkins-x.io/traceparent: 00-13e033bb183e42a6bf4c2d497b551502-e6e696ac5966ef63-01
+    lighthouse.jenkins-x.io/tracestate: ""
   creationTimestamp: "2020-09-25T07:30:26Z"
   generateName: release-
   generation: 1

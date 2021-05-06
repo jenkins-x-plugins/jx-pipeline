@@ -169,7 +169,12 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 		pa.Labels = map[string]string{}
 	}
 	for k, v := range annotations {
-		pa.Annotations[k] = v
+		switch k {
+		case "lighthouse.jenkins-x.io/traceparent", "lighthouse.jenkins-x.io/tracestate":
+			// the opentelemetry annotations holding trace context shouldn't be copied to other resources
+		default:
+			pa.Annotations[k] = v
+		}
 	}
 	for k, v := range labels {
 		pa.Labels[k] = v
