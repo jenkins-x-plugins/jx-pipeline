@@ -79,10 +79,10 @@ var (
 
 // Trigger the found trigger configs
 type Trigger struct {
-	Path      string
-	Config    *triggerconfig.Config
-	Names     []string
-	Pipelines map[string]*tektonv1beta1.PipelineRun
+	Path   string
+	Config *triggerconfig.Config
+	Names  []string
+	Paths  map[string]string
 }
 
 // NewCmdPipelineEffective creates the command
@@ -202,9 +202,9 @@ func (o *Options) ProcessDir(dir string) error {
 			return errors.Wrapf(err, "failed to load %s", triggersFile)
 		}
 		trigger := &Trigger{
-			Path:      triggersFile,
-			Config:    triggers,
-			Pipelines: map[string]*tektonv1beta1.PipelineRun{},
+			Path:   triggersFile,
+			Config: triggers,
+			Paths:  make(map[string]string),
 		}
 		o.Triggers = append(o.Triggers, trigger)
 
@@ -222,13 +222,9 @@ func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
 			path := filepath.Join(dir, r.SourcePath)
-			pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
-			if err != nil {
-				return errors.Wrapf(err, "failed to load %s", path)
-			}
 			name := "presubmit/" + r.Name
 			trigger.Names = append(trigger.Names, name)
-			trigger.Pipelines[name] = pr
+			trigger.Paths[name] = path
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
@@ -238,13 +234,9 @@ func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
 		r := &repoConfig.Spec.Postsubmits[i]
 		if r.SourcePath != "" {
 			path := filepath.Join(dir, r.SourcePath)
-			pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
-			if err != nil {
-				return errors.Wrapf(err, "failed to load %s", path)
-			}
 			name := "postsubmit/" + r.Name
 			trigger.Names = append(trigger.Names, name)
-			trigger.Pipelines[name] = pr
+			trigger.Paths[name] = path
 		}
 		if r.Agent == "" && r.PipelineRunSpec != nil {
 			r.Agent = job.TektonPipelineAgent
@@ -299,9 +291,14 @@ func (o *Options) processTriggers() error {
 			return errors.Errorf("no trigger file selected")
 		}
 	}
-	pipeline := trigger.Pipelines[pipelineName]
-	if pipeline == nil {
-		return options.InvalidOptionf("pipeline", o.PipelineName, "available names %s", strings.Join(trigger.Names, ", "))
+
+	path := trigger.Paths[pipelineName]
+	if path == "" {
+		return errors.Wrapf(err, "missing trigger path for pipeline name %s", pipelineName)
+	}
+	pipeline, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load %s", path)
 	}
 
 	return o.displayPipeline(trigger.Path, pipelineName, pipeline)
