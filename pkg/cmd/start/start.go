@@ -119,7 +119,7 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	cmd.Flags().BoolVarP(&o.Tail, "tail", "t", false, "Tails the build log to the current terminal")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "", "Filters all the available jobs by those that contain the given text")
 	cmd.Flags().StringVarP(&o.Context, "context", "c", "", "An optional context name to find the specific kind of postsubmit/presubmit if there are more than one triggers")
-	cmd.Flags().StringVarP(&o.Branch, "branch", "", "", "The branch to start. If not specified defaults to master")
+	cmd.Flags().StringVarP(&o.Branch, "branch", "", "", "The branch to start. If not specified then the default branch of the repository is used")
 	cmd.Flags().StringVarP(&o.PipelineKind, "kind", "", "", "The kind of pipeline such as presubmit or post submit. If not specified defaults to postsubmit (i.e. release)")
 	cmd.Flags().StringVar(&o.ServiceAccount, "service-account", tektonlog.DefaultPipelineSA, "The Kubernetes ServiceAccount to use to run the meta pipeline")
 	cmd.Flags().StringVarP(&o.LighthouseConfigMap, "configmap", "", constants.LighthouseConfigMapName, "The name of the Lighthouse ConfigMap to find the trigger configurations")
