@@ -81,7 +81,8 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		modified, err = processor.ProcessTaskRun(tr, path)
 
 	default:
-		return false, errors.Errorf("kind %s is not supported for %s", kind, message)
+		log.Logger().Debugf("kind %s is not supported for %s", kind, message)
+		return false, nil
 	}
 
 	if err != nil {

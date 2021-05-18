@@ -12,6 +12,7 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/lint"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/override"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/pod"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/set"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/start"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/stop"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/version"
@@ -46,6 +47,7 @@ func Main() *cobra.Command {
 	cmd.AddCommand(cobras.SplitCommand(lint.NewCmdPipelineLint()))
 	cmd.AddCommand(cobras.SplitCommand(override.NewCmdPipelineOverride()))
 	cmd.AddCommand(cobras.SplitCommand(pod.NewCmdGetBuildPods()))
+	cmd.AddCommand(cobras.SplitCommand(set.NewCmdPipelineSet()))
 	cmd.AddCommand(cobras.SplitCommand(start.NewCmdPipelineStart()))
 	cmd.AddCommand(cobras.SplitCommand(stop.NewCmdPipelineStop()))
 	cmd.AddCommand(cobras.SplitCommand(wait.NewCmdPipelineWait()))
