@@ -273,18 +273,8 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 				return errors.Wrapf(err, "failed to get logs for pod %s", podName)
 			}
 
-			// let's reload the pod to see if it's completed or not (it should, now that we've streamed its logs)
-			pod, err = t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
-			if err != nil && apierrors.IsNotFound(err) {
-				if pa.Spec.Status == v1.ActivityStatusTypeRunning {
-					pa.Spec.Status = v1.ActivityStatusTypeAborted
-				}
-				return nil
-			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
-			}
-			if pods.IsPodCompleted(pod) {
+			err = pods.WaitForPodNameToBeComplete(t.KubeClient, t.Namespace, podName, 1*time.Second)
+			if err == nil {
 				completedPods[podName] = true
 			}
 		}
