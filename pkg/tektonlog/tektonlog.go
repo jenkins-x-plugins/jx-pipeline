@@ -65,7 +65,7 @@ type LogLine struct {
 }
 
 func (t *TektonLogger) GetLogsForActivity(ctx context.Context, out io.Writer, pa *v1.PipelineActivity, name string, prList []*tektonapis.PipelineRun) error {
-	if pa.Spec.BuildLogsURL != "" {
+	if pa.Spec.BuildLogsURL != "" && pa.Spec.Status != v1.ActivityStatusTypeRunning {
 		for line := range t.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL) {
 			fmt.Fprintln(out, line.Line)
 		}
@@ -211,97 +211,136 @@ func (t *TektonLogger) GetRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 	return ch
 }
 
-type podTime struct {
+type stageTime struct {
 	name      string
 	startTime *metav1.Time
 	task      string
+	skipped   bool
+	podExists bool
 }
 
 func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, out chan<- LogLine) error {
 	loggedAllRunsForActivity := false
 	foundLogs := false
-	completedPods := map[string]bool{}
+	completedStages := map[string]bool{}
 
 	// Make sure we check again for the build pipeline if we just get the metapipeline initially, assuming the metapipeline succeeds
 	for !loggedAllRunsForActivity {
-		var podTimes []podTime
-		for _, pr := range pipelineRuns {
-			for _, taskStatus := range pr.Status.TaskRuns {
-				podTimes = append(podTimes, podTime{
-					name:      taskStatus.Status.PodName,
-					startTime: taskStatus.Status.StartTime,
-					task:      taskStatus.PipelineTaskName,
-				})
-			}
-		}
-		sort.Slice(podTimes, func(i, j int) bool {
-			t1 := podTimes[i].startTime
-			t2 := podTimes[j].startTime
-			if t1 == nil && t2 == nil {
-				return false
-			}
-			if t1 == nil {
-				return true
-			}
-			if t2 == nil {
-				return false
-			}
-			return t1.Before(t2)
-		})
-
-		for _, pt := range podTimes {
-			podName := pt.name
-			if completedPods[podName] {
+		var stages = t.collectStages(ctx, pipelineRuns)
+		for _, stage := range stages {
+			podName := stage.name
+			stageName := stage.task
+			if completedStages[stageName] {
 				continue
 			}
-			stageName := pt.task
-			log.Logger().Infof("logging pod: %s for task %s", info(podName), stageName)
+			if stage.podExists {
+				log.Logger().Infof("logging pod: %s for task %s", info(podName), stageName)
 
-			pod, err := t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
-			if err != nil && apierrors.IsNotFound(err) {
-				if pa.Spec.Status == v1.ActivityStatusTypeRunning {
-					pa.Spec.Status = v1.ActivityStatusTypeAborted
+				pod, err := t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
+				if err != nil && apierrors.IsNotFound(err) {
+					if pa.Spec.Status == v1.ActivityStatusTypeRunning {
+						pa.Spec.Status = v1.ActivityStatusTypeAborted
+					}
+					return nil
 				}
-				return nil
-			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
-			}
-
-			err = t.getContainerLogsFromPod(ctx, pod, pa, buildName, stageName, out)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get logs for pod %s", podName)
-			}
-
-			// let's reload the pod to see if it's completed or not (it should, now that we've streamed its logs)
-			pod, err = t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
-			if err != nil && apierrors.IsNotFound(err) {
-				if pa.Spec.Status == v1.ActivityStatusTypeRunning {
-					pa.Spec.Status = v1.ActivityStatusTypeAborted
+				if err != nil {
+					return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
 				}
-				return nil
-			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
-			}
-			if pods.IsPodCompleted(pod) {
-				completedPods[podName] = true
+
+				err = t.getContainerLogsFromPod(ctx, pod, pa, buildName, stageName, out)
+				if err != nil {
+					return errors.Wrapf(err, "failed to get logs for pod %s", podName)
+				}
+
+				// let's reload the pod to see if it's completed or not (it should, now that we've streamed its logs)
+				pod, err = t.KubeClient.CoreV1().Pods(t.Namespace).Get(ctx, podName, metav1.GetOptions{})
+				if err != nil && apierrors.IsNotFound(err) {
+					if pa.Spec.Status == v1.ActivityStatusTypeRunning {
+						pa.Spec.Status = v1.ActivityStatusTypeAborted
+					}
+					return nil
+				}
+				if err != nil {
+					return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
+				}
+
+				if pods.IsPodCompleted(pod) {
+					completedStages[stageName] = true
+				}
+			} else if stage.skipped {
+				completedStages[stageName] = true
+				log.Logger().Infof("pod is skipped/failed for task: %s", stageName)
+			} else {
+				// let's wait second for next pod/task start
+				time.Sleep(time.Second)
+				log.Logger().Debugf("no pod found for task: %s", stageName)
 			}
 		}
 
-		if len(completedPods) > 0 {
+		if len(completedStages) > 0 {
 			foundLogs = true
 		}
 
-		// if all pods completed lets terminate
-		if len(completedPods) == len(podTimes) {
-			break
+		// if all pods completed lets move out from the loop
+		if len(completedStages) == len(stages) {
+			loggedAllRunsForActivity = true
 		}
 	}
 	if !foundLogs {
 		return errors.New("the build pods for this build have been garbage collected and the log was not found in the long term storage bucket")
 	}
 	return nil
+}
+
+func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tektonapis.PipelineRun) []stageTime {
+	var podTimes []stageTime
+	for _, prInitial := range pipelineRuns {
+		//we need fresh pipeline to be able consume newly executed tasks/pods
+		pr, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).Get(ctx, prInitial.Name, metav1.GetOptions{})
+		for _, taskStatus := range pr.Status.PipelineSpec.Tasks {
+			podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, pr)
+			podTimes = append(podTimes, podTime)
+		}
+	}
+	sort.Slice(podTimes, func(i, j int) bool {
+		t1 := podTimes[i].startTime
+		t2 := podTimes[j].startTime
+		if t1 == nil && t2 == nil {
+			return false
+		}
+		if t1 == nil {
+			return true
+		}
+		if t2 == nil {
+			return false
+		}
+		return t1.Before(t2)
+	})
+	return podTimes
+}
+
+func findExecutedOrSkippedStagesStage(taskName string, pr *tektonapis.PipelineRun) stageTime {
+	for _, taskStatus := range pr.Status.TaskRuns {
+		if taskName == taskStatus.PipelineTaskName && taskStatus.Status.PodName != "" {
+			return stageTime{
+				name:      taskStatus.Status.PodName,
+				startTime: taskStatus.Status.StartTime,
+				task:      taskName,
+				podExists: true,
+			}
+		}
+	}
+	for _, taskStatus := range pr.Status.SkippedTasks {
+		if taskName == taskStatus.Name {
+			return stageTime{
+				skipped: true,
+				task:    taskName,
+			}
+		}
+	}
+	return stageTime{
+		task: taskName,
+	}
 }
 
 func (t *TektonLogger) getContainerLogsFromPod(ctx context.Context, pod *corev1.Pod, pa *v1.PipelineActivity, buildName, stageName string, out chan<- LogLine) error {
