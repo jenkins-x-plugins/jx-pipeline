@@ -212,7 +212,7 @@ func (t *TektonLogger) GetRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 }
 
 type stageTime struct {
-	name      string
+	podName   string
 	startTime *metav1.Time
 	task      string
 	skipped   bool
@@ -232,7 +232,7 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 		}
 
 		for _, stage := range stages {
-			podName := stage.name
+			podName := stage.podName
 			stageName := stage.task
 			if completedStages[stageName] {
 				continue
@@ -275,8 +275,8 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 		if len(completedStages) == len(stages) {
 			loggedAllRunsForActivity = true
 		} else {
-			time.Sleep(time.Second)
 			log.Logger().Debugf("let's a wait second for next pod/task to start")
+			time.Sleep(time.Second)
 		}
 	}
 	if !foundLogs {
@@ -320,7 +320,7 @@ func findExecutedOrSkippedStagesStage(taskName string, pr *tektonapis.PipelineRu
 	for _, taskStatus := range pr.Status.TaskRuns {
 		if taskName == taskStatus.PipelineTaskName && taskStatus.Status.PodName != "" {
 			return stageTime{
-				name:      taskStatus.Status.PodName,
+				podName:   taskStatus.Status.PodName,
 				startTime: taskStatus.Status.StartTime,
 				task:      taskName,
 				podExists: true,
