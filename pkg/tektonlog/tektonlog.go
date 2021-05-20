@@ -226,11 +226,7 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 
 	// Make sure we check again for the build pipeline if we just get the metapipeline initially, assuming the metapipeline succeeds
 	for !loggedAllRunsForActivity {
-		var stages, err = t.collectStages(ctx, pipelineRuns)
-		if err != nil {
-			return errors.Wrapf(err, "not able retrive information about pipeline stages: %s %s", pa.Name, t.Namespace)
-		}
-
+		var stages = t.collectStages(ctx, pipelineRuns)
 		for _, stage := range stages {
 			podName := stage.name
 			stageName := stage.task
@@ -261,12 +257,13 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 					completedStages[podName] = true
 				}
 
-				if pods.IsPodCompleted(pod) {
-					completedStages[stageName] = true
-				}
 			} else if stage.skipped {
 				completedStages[stageName] = true
 				log.Logger().Infof("pod is skipped/failed for task: %s", stageName)
+			} else {
+				// let's wait second for next pod/task start
+				time.Sleep(time.Second)
+				log.Logger().Debugf("no pod found for task: %s", stageName)
 			}
 		}
 
@@ -277,9 +274,6 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 		// if all pods completed lets move out from the loop
 		if len(completedStages) == len(stages) {
 			loggedAllRunsForActivity = true
-		} else {
-			time.Sleep(time.Second)
-			log.Logger().Debugf("let's a wait second for next pod/task to start")
 		}
 	}
 	if !foundLogs {
@@ -288,22 +282,19 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 	return nil
 }
 
-func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tektonapis.PipelineRun) ([]stageTime, error) {
-	var stageTimes []stageTime
-	for _, pr := range pipelineRuns {
+func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tektonapis.PipelineRun) []stageTime {
+	var podTimes []stageTime
+	for _, prInitial := range pipelineRuns {
 		//we need fresh pipeline to be able consume newly executed tasks/pods
-		refreshedPr, err := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		for _, taskStatus := range refreshedPr.Status.PipelineSpec.Tasks {
-			podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
-			stageTimes = append(stageTimes, podTime)
+		pr, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).Get(ctx, prInitial.Name, metav1.GetOptions{})
+		for _, taskStatus := range pr.Status.PipelineSpec.Tasks {
+			podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, pr)
+			podTimes = append(podTimes, podTime)
 		}
 	}
-	sort.Slice(stageTimes, func(i, j int) bool {
-		t1 := stageTimes[i].startTime
-		t2 := stageTimes[j].startTime
+	sort.Slice(podTimes, func(i, j int) bool {
+		t1 := podTimes[i].startTime
+		t2 := podTimes[j].startTime
 		if t1 == nil && t2 == nil {
 			return false
 		}
@@ -315,8 +306,7 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 		}
 		return t1.Before(t2)
 	})
-
-	return stageTimes, nil
+	return podTimes
 }
 
 func findExecutedOrSkippedStagesStage(taskName string, pr *tektonapis.PipelineRun) stageTime {
