@@ -2,6 +2,7 @@ package stop
 
 import (
 	"fmt"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"sort"
 	"strings"
 
@@ -179,10 +180,10 @@ func (o *Options) cancelPipelineRun() error {
 			if labels == nil {
 				continue
 			}
-			owner := pipelines.GetLabel(labels, pipelines.OwnerLabels)
-			repo := pipelines.GetLabel(labels, pipelines.RepoLabels)
-			branch := pipelines.GetLabel(labels, pipelines.BranchLabels)
-			triggerContext := pipelines.GetLabel(labels, pipelines.ContextLabels)
+			owner := activities.GetLabel(labels, activities.OwnerLabels)
+			repo := activities.GetLabel(labels, activities.RepoLabels)
+			branch := activities.GetLabel(labels, activities.BranchLabels)
+			triggerContext := activities.GetLabel(labels, activities.ContextLabels)
 			if owner == "" {
 				log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner,
 					pr.Name, labels)
@@ -209,7 +210,7 @@ func (o *Options) cancelPipelineRun() error {
 			}
 			build := pa.Spec.Build
 			if build == "" {
-				build = pipelines.GetLabel(labels, pipelines.BuildLabels)
+				build = activities.GetLabel(labels, activities.BuildLabels)
 			}
 			if o.Build != "" && build != o.Build {
 				continue

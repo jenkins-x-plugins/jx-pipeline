@@ -1,13 +1,13 @@
 package grid
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 )
@@ -192,7 +192,7 @@ func (m model) onPipelineActivity(a *v1.PipelineActivity) {
 		return
 	}
 
-	pipelines.DefaultValues(a)
+	activities.DefaultValues(a)
 
 	m.activityTable.lock.Lock()
 

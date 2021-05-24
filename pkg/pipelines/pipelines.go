@@ -13,83 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	OwnerLabels   = []string{"owner", "lighthouse.jenkins-x.io/refs.org"}
-	RepoLabels    = []string{"repository", "lighthouse.jenkins-x.io/refs.repo"}
-	BranchLabels  = []string{"branch", "lighthouse.jenkins-x.io/branch"}
-	BuildLabels   = []string{"build", "lighthouse.jenkins-x.io/buildNum"}
-	ContextLabels = []string{"context", "lighthouse.jenkins-x.io/context"}
-)
-
-// GetLabel returns the first label value for the given strings
-func GetLabel(m map[string]string, labels []string) string {
-	if m == nil {
-		return ""
-	}
-	for _, l := range labels {
-		value := m[l]
-		if value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-// DefaultValues default missing values from the lighthouse labels
-func DefaultValues(a *v1.PipelineActivity) {
-	labels := a.Labels
-	if labels != nil {
-		if a.Spec.GitOwner == "" {
-			a.Spec.GitOwner = GetLabel(labels, OwnerLabels)
-		}
-		if a.Spec.GitRepository == "" {
-			a.Spec.GitRepository = GetLabel(labels, RepoLabels)
-		}
-		if a.Spec.GitBranch == "" {
-			a.Spec.GitBranch = GetLabel(labels, BranchLabels)
-		}
-		if a.Spec.Context == "" {
-			a.Spec.Context = GetLabel(labels, ContextLabels)
-		}
-		if a.Spec.Build == "" {
-			a.Spec.Build = GetLabel(labels, BuildLabels)
-		}
-	}
-	if a.Spec.StartedTimestamp == nil {
-		for _, s := range a.Spec.Steps {
-			if s.Stage != nil {
-				a.Spec.StartedTimestamp = s.Stage.StartedTimestamp
-			} else if s.Promote != nil {
-				a.Spec.StartedTimestamp = s.Promote.StartedTimestamp
-			} else if s.Preview != nil {
-				a.Spec.StartedTimestamp = s.Preview.StartedTimestamp
-			}
-			if a.Spec.StartedTimestamp != nil {
-				break
-			}
-		}
-	}
-	if string(a.Spec.Status) == "" {
-		// lets default the status to the last step if its missing
-		for i := len(a.Spec.Steps) - 1; i > -0; i-- {
-			s := a.Spec.Steps[i]
-			status := v1.ActivityStatusTypeNone
-			if s.Stage != nil {
-				status = s.Stage.Status
-			} else if s.Promote != nil {
-				status = s.Promote.Status
-			} else if s.Preview != nil {
-				status = s.Preview.Status
-			}
-
-			if string(status) != "" {
-				a.Spec.Status = status
-				break
-			}
-		}
-	}
-}
-
 // ToPipelineActivityName creates an activity name from a pipeline run
 func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivity) string {
 	labels := pr.Labels
@@ -98,9 +21,9 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	}
 
 	build := labels["build"]
-	owner := GetLabel(labels, OwnerLabels)
-	repository := GetLabel(labels, RepoLabels)
-	branch := GetLabel(labels, BranchLabels)
+	owner := activities.GetLabel(labels, activities.OwnerLabels)
+	repository := activities.GetLabel(labels, activities.RepoLabels)
+	branch := activities.GetLabel(labels, activities.BranchLabels)
 
 	if owner == "" || repository == "" || branch == "" {
 		return ""
@@ -183,19 +106,19 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 	ps := &pa.Spec
 	if labels != nil {
 		if ps.GitOwner == "" {
-			ps.GitOwner = GetLabel(labels, OwnerLabels)
+			ps.GitOwner = activities.GetLabel(labels, activities.OwnerLabels)
 		}
 		if ps.GitRepository == "" {
-			ps.GitRepository = GetLabel(labels, RepoLabels)
+			ps.GitRepository = activities.GetLabel(labels, activities.RepoLabels)
 		}
 		if ps.GitBranch == "" {
-			ps.GitBranch = GetLabel(labels, BranchLabels)
+			ps.GitBranch = activities.GetLabel(labels, activities.BranchLabels)
 		}
 		if ps.Build == "" {
-			ps.Build = GetLabel(labels, BuildLabels)
+			ps.Build = activities.GetLabel(labels, activities.BuildLabels)
 		}
 		if ps.Context == "" {
-			ps.Context = GetLabel(labels, ContextLabels)
+			ps.Context = activities.GetLabel(labels, activities.ContextLabels)
 		}
 		if ps.BaseSHA == "" {
 			ps.BaseSHA = labels["lighthouse.jenkins-x.io/baseSHA"]
