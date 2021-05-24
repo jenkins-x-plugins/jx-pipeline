@@ -2,9 +2,15 @@ package lint
 
 import (
 	"context"
+	"fmt"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"knative.dev/pkg/apis"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/yaml"
 	"strings"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
@@ -30,10 +36,18 @@ type Options struct {
 	OutFile   string
 	Format    string
 	Recursive bool
+	All       bool
 	Resolver  *inrepo.UsesResolver
 }
 
 var (
+	pipelineKinds = map[string]bool{
+		"Pipeline":    true,
+		"PipelineRun": true,
+		"Task":        true,
+		"TaskRun":     true,
+	}
+
 	info = termcolor.ColorInfo
 
 	cmdLong = templates.LongDesc(`
@@ -63,6 +77,7 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 	o.ResolverOptions.AddFlags(cmd)
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
+	cmd.Flags().BoolVarP(&o.All, "all", "a", false, "Rather than looking for .lighthouse and triggers.yaml files it looks for all YAML files which are tekton kinds")
 
 	o.Options.AddFlags(cmd)
 
@@ -94,7 +109,20 @@ func (o *Options) Run() error {
 
 	rootDir := o.Dir
 
-	if o.Recursive {
+	if o.All {
+		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info == nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".yaml") {
+				return nil
+			}
+			return o.ProcessFile(path)
+		})
+		if err != nil {
+			return err
+		}
+	} else if o.Recursive {
 		err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -114,8 +142,85 @@ func (o *Options) Run() error {
 			return err
 		}
 	}
-
 	return o.LogResults()
+}
+
+func (o *Options) ProcessFile(path string) error {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load file %s", path)
+	}
+	if len(data) == 0 {
+		return errors.Errorf("empty file file %s", path)
+	}
+
+	u := &unstructured.Unstructured{}
+	err = yaml.Unmarshal(data, u)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal file %s", path)
+	}
+
+	kind := u.GetKind()
+	if !pipelineKinds[kind] {
+		log.Logger().Debugf("ignoring file %s for unknown kind %s", path, kind)
+		return nil
+	}
+
+	test := &linter.Test{
+		File: path,
+	}
+	o.Tests = append(o.Tests, test)
+
+	dir := filepath.Dir(path)
+	o.Resolver.Dir = dir
+	pr, err := inrepo.LoadTektonResourceAsPipelineRun(o.Resolver, data)
+	if err != nil {
+		test.Error = err
+		return nil
+	}
+	ctx := o.GetContext()
+	fieldError := ValidatePipelineRun(ctx, pr)
+	if fieldError != nil {
+		test.Error = fieldError
+	}
+	return nil
+}
+
+func ValidatePipelineRun(ctx context.Context, pr *v1beta1.PipelineRun) *apis.FieldError {
+	err := pr.Validate(ctx)
+	if err != nil {
+		return err
+	}
+
+	// lets validate each TaskSpec has the right volumes etc
+	ps := pr.Spec.PipelineSpec
+	if ps == nil {
+		return nil
+	}
+	for i := range ps.Tasks {
+		pt := &ps.Tasks[i]
+		if pt.TaskSpec == nil {
+			continue
+		}
+		err = err.Also(ValidateTaskRunVolumesExist(&pt.TaskSpec.TaskSpec).ViaFieldIndex("tasks", i)).ViaField("spec", "pipelineSpec")
+	}
+	return err
+}
+
+func ValidateTaskRunVolumesExist(ts *v1beta1.TaskSpec) (errs *apis.FieldError) {
+	volumeNames := map[string]bool{}
+	for _, v := range ts.Volumes {
+		volumeNames[v.Name] = true
+	}
+
+	for i, s := range ts.Steps {
+		for j, v := range s.VolumeMounts {
+			if !volumeNames[v.Name] {
+				errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Not found: %s", v.Name), "name").ViaFieldIndex("volumeMounts", j).ViaFieldIndex("steps", i).ViaField("taskSpec"))
+			}
+		}
+	}
+	return
 }
 
 func (o *Options) ProcessDir(dir string) error {
@@ -210,7 +315,7 @@ func loadJobBaseFromSourcePath(ctx context.Context, resolver *inrepo.UsesResolve
 		return errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
 	}
 
-	fieldError := pr.Validate(ctx)
+	fieldError := ValidatePipelineRun(ctx, pr)
 	if fieldError != nil {
 		return errors.Wrapf(fieldError, "failed to validate YAML file %s", path)
 	}
