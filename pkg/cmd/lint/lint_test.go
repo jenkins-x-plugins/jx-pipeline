@@ -1,6 +1,7 @@
 package lint_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -12,6 +13,7 @@ func TestLint(t *testing.T) {
 	_, o := lint.NewCmdPipelineLint()
 
 	o.Dir = filepath.Join("test_data", "valid")
+	o.Ctx = context.TODO()
 	err := o.Run()
 	require.NoError(t, err, "Failed to run linter")
 
@@ -28,6 +30,7 @@ func TestLintInvalid(t *testing.T) {
 
 	o.Dir = filepath.Join("test_data", "invalid")
 	o.All = true
+	o.Ctx = context.TODO()
 	err := o.Run()
 	require.NoError(t, err, "Failed to run linter")
 
