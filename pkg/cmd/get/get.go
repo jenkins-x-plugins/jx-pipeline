@@ -3,11 +3,10 @@ package get
 import (
 	"context"
 	"fmt"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"os"
 	"sort"
 	"strings"
-
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/constants"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
@@ -193,11 +192,11 @@ func (o *Options) renderPipelineRuns(ctx context.Context) error {
 			continue
 		}
 
-		owner = pipelines.GetLabel(labels, pipelines.OwnerLabels)
-		repo = pipelines.GetLabel(labels, pipelines.RepoLabels)
-		branch = pipelines.GetLabel(labels, pipelines.BranchLabels)
-		triggerContext = pipelines.GetLabel(labels, pipelines.ContextLabels)
-		buildNumber = pipelines.GetLabel(labels, pipelines.BuildLabels)
+		owner = activities.GetLabel(labels, activities.OwnerLabels)
+		repo = activities.GetLabel(labels, activities.RepoLabels)
+		branch = activities.GetLabel(labels, activities.BranchLabels)
+		triggerContext = activities.GetLabel(labels, activities.ContextLabels)
+		buildNumber = activities.GetLabel(labels, activities.BuildLabels)
 
 		if owner == "" {
 			log.Logger().Warnf("missing label %s on PipelineRun %s has labels %#v", tektonlog.LabelOwner, pr.Name, labels)
