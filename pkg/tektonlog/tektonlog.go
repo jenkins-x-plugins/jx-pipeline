@@ -275,7 +275,7 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 		if len(completedStages) == len(stages) {
 			loggedAllRunsForActivity = true
 		} else {
-			log.Logger().Debugf("let's a wait second for next pod/task to start")
+			log.Logger().Debug("let's a wait second for next pod/task to start")
 			time.Sleep(time.Second)
 		}
 	}
@@ -293,9 +293,23 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 		if err != nil {
 			return nil, err
 		}
-		for _, taskStatus := range refreshedPr.Status.PipelineSpec.Tasks {
-			podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
-			stageTimes = append(stageTimes, podTime)
+		if refreshedPr.Status.PipelineSpec != nil {
+			for _, taskStatus := range refreshedPr.Status.PipelineSpec.Tasks {
+				podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
+				stageTimes = append(stageTimes, podTime)
+			}
+		} else if refreshedPr.Spec.PipelineRef != nil && refreshedPr.Spec.PipelineRef.Name != "" {
+			// if the tasks definition is not available in the PipelineRun, let's retrieve it from the Pipeline itself
+			pipeline, err := t.TektonClient.TektonV1beta1().Pipelines(t.Namespace).Get(ctx, refreshedPr.Spec.PipelineRef.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, task := range pipeline.Spec.Tasks {
+				podTime := findExecutedOrSkippedStagesStage(task.Name, refreshedPr)
+				stageTimes = append(stageTimes, podTime)
+			}
+		} else {
+			log.Logger().Warningf("Could not retrieve tasks for PipelineRun %s", pr.Name)
 		}
 	}
 	sort.Slice(stageTimes, func(i, j int) bool {
