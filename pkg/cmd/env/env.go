@@ -18,7 +18,9 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"sort"
 	"strings"
@@ -215,7 +217,7 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 
 	ps := pr.Spec.PipelineSpec
 	if ps == nil {
-		return errors.Errorf("Pipeline: %s has no PipelineSpec for PipelineRun: %s pod: %s", name, pr.Name)
+		return errors.Errorf("Pipeline: %s has no PipelineSpec for PipelineRun: %s pod: %s", name, pr.Name, pp.PodName)
 	}
 
 	var taskNames []string
@@ -252,41 +254,202 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 		return errors.Errorf("did not choose step in TaskRun %s for PipelineRun %s and Task %s", taskName, pr.Name, taskName)
 	}
 
-	return o.viewVariables(name, pp, pr, ts, "step-"+stepName)
+	return o.viewVariables(pp, "step-"+stepName)
 }
 
-func (o *Options) viewVariables(name string, pp *PipelinePod, pr *v1beta1.PipelineRun, ts *v1beta1.TaskSpec, stepName string) error {
+func (o *Options) viewVariables(pp *PipelinePod, stepName string) error {
 	ctx := o.GetContext()
 	pod, err := o.KubeClient.CoreV1().Pods(o.Namespace).Get(ctx, pp.PodName, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to load pod %s in namespace %s", pp.PodName, o.Namespace)
 	}
-
-	for i := range pod.Spec.Containers {
-		c := &pod.Spec.Containers[i]
-		if c.Name == stepName {
-			envVars := map[string]string{}
-			o.addEnvVarValues(envVars, c.Env, c.EnvFrom)
-			return o.renderEnv(envVars)
-		}
+	if pod.Name == "" {
+		pod.Name = pp.PodName
 	}
-	return errors.Errorf("could not find container name %s in pod %s", stepName, pp.PodName)
+	envVars, err := o.PodEnvVars(pod, stepName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get environment variables")
+	}
+	return o.renderEnv(envVars)
 }
 
-func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from []corev1.EnvFromSource) {
+// PodEnvVars returns the pod environment variables for the given container name
+func (o *Options) PodEnvVars(pod *corev1.Pod, containerName string) (map[string]string, error) {
+	for i := range pod.Spec.Containers {
+		c := &pod.Spec.Containers[i]
+		if c.Name == containerName {
+			envVars := map[string]string{}
+			err := o.addEnvVarValues(envVars, c.Env, c.EnvFrom)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to add env vars")
+			}
+			return envVars, nil
+		}
+	}
+	return nil, errors.Errorf("could not find container name %s in pod %s", containerName, pod.Name)
+}
+
+func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from []corev1.EnvFromSource) error {
 	for _, e := range env {
-		if e.ValueFrom != nil {
+		from := e.ValueFrom
+		envVar := e.Name
+		if e.Value != "" {
+			m[envVar] = e.Value
 			continue
 		}
-		m[e.Name] = e.Value
-	}
-
-	for _, f := range from {
-		// TODO
-		if f.SecretRef != nil {
-			log.Logger().Debugf("TODO load secret %s", f.SecretRef.Name)
+		if from != nil {
+			if from.ConfigMapKeyRef != nil {
+				optional := asBool(from.ConfigMapKeyRef.Optional)
+				refName := from.ConfigMapKeyRef.LocalObjectReference.Name
+				data, err := o.getConfigData(refName, optional)
+				if err != nil {
+					return err
+				}
+				err = addEnvValueFrom(m, envVar, from.ConfigMapKeyRef.Key, data)
+				if err != nil {
+					return errors.Wrapf(err, "failed to add varables from ConfigMap %s", refName)
+				}
+				continue
+			}
+			if from.SecretKeyRef != nil {
+				optional := asBool(from.SecretKeyRef.Optional)
+				refName := from.SecretKeyRef.LocalObjectReference.Name
+				data, err := o.getSecretData(refName, optional)
+				if err != nil {
+					return err
+				}
+				err = addEnvValueFrom(m, envVar, from.SecretKeyRef.Key, data)
+				if err != nil {
+					return errors.Wrapf(err, "failed to add varables from Secret %s", refName)
+				}
+				continue
+			}
 		}
 	}
+	for _, f := range from {
+		if f.SecretRef != nil {
+			name := f.SecretRef.Name
+			if name == "" {
+				return errors.Errorf("missing secret ref name")
+			}
+			optional := asBool(f.SecretRef.Optional)
+			data, err := o.getSecretData(name, optional)
+			if err != nil {
+				return err
+			}
+			err = addEnvFromSource(m, f.Prefix, data)
+			if err != nil {
+				return errors.Wrapf(err, "failed to add varables from Secret %s", name)
+			}
+
+		} else if f.ConfigMapRef != nil {
+			name := f.SecretRef.Name
+			if name == "" {
+				return errors.Errorf("missing config ref name")
+			}
+			optional := asBool(f.SecretRef.Optional)
+			data, err := o.getConfigData(name, optional)
+			if err != nil {
+				return err
+			}
+			err = addEnvFromSource(m, f.Prefix, data)
+			if err != nil {
+				return errors.Wrapf(err, "failed to add varables from ConfigMap %s", name)
+			}
+		}
+	}
+	return nil
+}
+
+func asBool(optional *bool) bool {
+	if optional != nil {
+		return *optional
+	}
+	return false
+}
+
+func (o *Options) getSecretData(name string, optional bool) (map[string]string, error) {
+	ctx := o.GetContext()
+	ns := o.Namespace
+	r, err := o.KubeClient.CoreV1().Secrets(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			if optional {
+				log.Logger().Debugf("no Secret called %s in namespace %s so ignoring", name, ns)
+				return nil, nil
+			}
+			return nil, errors.Errorf("no Secret called %s in namespace %s so ignoring", name, ns)
+		}
+		return nil, errors.Wrapf(err, "failed to find Secret %s in namespace %s so ignoring", name, ns)
+	}
+	return secretToMap(r), nil
+}
+
+func (o *Options) getConfigData(name string, optional bool) (map[string]string, error) {
+	ctx := o.GetContext()
+	ns := o.Namespace
+	r, err := o.KubeClient.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			if optional {
+				log.Logger().Debugf("no ConfigMap called %s in namespace %s so ignoring", name, ns)
+				return nil, nil
+			}
+			return nil, errors.Errorf("no ConfigMap called %s in namespace %s so ignoring", name, ns)
+		}
+		return nil, errors.Wrapf(err, "failed to find ConfigMap %s in namespace %s so ignoring", name, ns)
+	}
+	if r == nil {
+		return nil, nil
+	}
+	return r.Data, nil
+}
+
+func addEnvValueFrom(m map[string]string, name, key string, data map[string]string) error {
+	if data == nil {
+		return nil
+	}
+	if name == "" {
+		return addEnvFromSource(m, "", data)
+	}
+	if key == "" {
+		return errors.Errorf("missing key for valueFrom for name %s", name)
+	}
+	m[name] = data[key]
+	return nil
+}
+
+func addEnvFromSource(m map[string]string, prefix string, envFromValues map[string]string) error {
+	if envFromValues == nil {
+		return nil
+	}
+	for k, v := range envFromValues {
+		if prefix != "" {
+			k = prefix + k
+		}
+		if len(validation.IsEnvVarName(k)) == 0 {
+			m[k] = v
+		}
+	}
+	return nil
+}
+
+func secretToMap(r *corev1.Secret) map[string]string {
+	if r == nil {
+		return nil
+	}
+	m := map[string]string{}
+	if r.Data != nil {
+		for k, v := range r.Data {
+			m[k] = string(v)
+		}
+	}
+	if r.StringData != nil {
+		for k, v := range r.StringData {
+			m[k] = v
+		}
+	}
+	return m
 }
 
 func (o *Options) renderEnv(envVars map[string]string) error {
