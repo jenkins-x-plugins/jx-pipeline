@@ -2,6 +2,9 @@ package env
 
 import (
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
@@ -22,8 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
-	"sort"
-	"strings"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/spf13/cobra"

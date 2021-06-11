@@ -2,11 +2,12 @@ package env_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/env"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 
 	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	"k8s.io/client-go/kubernetes/fake"
