@@ -3,15 +3,16 @@ package lint
 import (
 	"context"
 	"fmt"
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"knative.dev/pkg/apis"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/yaml"
 	"strings"
+
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"knative.dev/pkg/apis"
+	"sigs.k8s.io/yaml"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"

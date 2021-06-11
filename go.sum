@@ -96,6 +96,8 @@ github.com/Azure/go-autorest/autorest v0.11.9/go.mod h1:eipySxLmqSyC5s5k1CLupqet
 github.com/Azure/go-autorest/autorest v0.11.12/go.mod h1:eipySxLmqSyC5s5k1CLupqet0PSENBEDP93LQ9a8QYw=
 github.com/Azure/go-autorest/autorest v0.11.18 h1:90Y4srNYrwOtAgVo3ndrQkTYn6kf1Eg/AjTFJ8Is2aM=
 github.com/Azure/go-autorest/autorest v0.11.18/go.mod h1:dSiJPy22c3u0OtOKDNttNgqpNFY/GeWa7GH/Pz56QRA=
+github.com/Azure/go-autorest/autorest v0.11.19 h1:7/IqD2fEYVha1EPeaiytVKhzmPV223pfkRIQUGOK2IE=
+github.com/Azure/go-autorest/autorest v0.11.19/go.mod h1:dSiJPy22c3u0OtOKDNttNgqpNFY/GeWa7GH/Pz56QRA=
 github.com/Azure/go-autorest/autorest/adal v0.1.0/go.mod h1:MeS4XhScH55IST095THyTxElntu7WqB7pNbZo8Q5G3E=
 github.com/Azure/go-autorest/autorest/adal v0.5.0/go.mod h1:8Z9fGy2MpX0PvDjB1pEgQTmVqjGhiHBW7RJJEciWzS0=
 github.com/Azure/go-autorest/autorest/adal v0.6.0/go.mod h1:Z6vX6WXXuyieHAXwMj0S6HY6e6wcHn37qQMBQlvY3lc=
@@ -109,6 +111,8 @@ github.com/Azure/go-autorest/autorest/adal v0.9.5/go.mod h1:B7KF7jKIeC9Mct5spmyC
 github.com/Azure/go-autorest/autorest/adal v0.9.6/go.mod h1:B7KF7jKIeC9Mct5spmyCB/A8CG/sEz1vwIRGv/bbw7A=
 github.com/Azure/go-autorest/autorest/adal v0.9.13 h1:Mp5hbtOePIzM8pJVRa3YLrWWmZtoxRXqUEzCfJt3+/Q=
 github.com/Azure/go-autorest/autorest/adal v0.9.13/go.mod h1:W/MM4U6nLxnIskrw4UwWzlHfGjwUS50aOsc/I3yuU8M=
+github.com/Azure/go-autorest/autorest/adal v0.9.14 h1:G8hexQdV5D4khOXrWG2YuLCFKhWYmWD8bHYaXN5ophk=
+github.com/Azure/go-autorest/autorest/adal v0.9.14/go.mod h1:W/MM4U6nLxnIskrw4UwWzlHfGjwUS50aOsc/I3yuU8M=
 github.com/Azure/go-autorest/autorest/azure/auth v0.1.0/go.mod h1:Gf7/i2FUpyb/sGBLIFxTBzrNzBo7aPXXE3ZVeDRwdpM=
 github.com/Azure/go-autorest/autorest/azure/auth v0.4.0/go.mod h1:Oo5cRhLvZteXzI2itUm5ziqsoIxRkzrt3t61FeZaS18=
 github.com/Azure/go-autorest/autorest/azure/auth v0.5.3 h1:lZifaPRAk1bqg5vGqreL6F8uLC5V0fDpY8nFvc3boFc=
@@ -816,8 +820,8 @@ github.com/jcmturner/gofork v1.0.0/go.mod h1:MK8+TM0La+2rjBD4jE12Kj1pCCxK7d2LK/U
 github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869/go.mod h1:cJ6Cj7dQo+O6GJNiMx+Pa94qKj+TG8ONdKHgMNIyyag=
 github.com/jenkins-x-plugins/jx-charter v0.0.26 h1:apWO15+vaDzac8jggrZhgwqR7KrkmMi7ToeMuzha1Jc=
 github.com/jenkins-x-plugins/jx-charter v0.0.26/go.mod h1:H/NycSuFNZh5J7rD2JdHreOn3ECcBKg68LhElDTwyUM=
-github.com/jenkins-x-plugins/jx-gitops v0.2.93 h1:9o7oBBawoukgfnMVKoro2KE2q8Z9t+rK5UIv/7bzlE8=
-github.com/jenkins-x-plugins/jx-gitops v0.2.93/go.mod h1:j/u3wTZzs5SFB32Qqnl33ax9RSq2yX1z+PoYBW56QKw=
+github.com/jenkins-x-plugins/jx-gitops v0.2.96 h1:8TmevYR4SiDA4a1EZyZm50DrkM5slwZEsecjqFXYHiU=
+github.com/jenkins-x-plugins/jx-gitops v0.2.96/go.mod h1:2EWg24tTPdPwgpwZ6euRktYtxnmr+7a7hiU6qT/ob90=
 github.com/jenkins-x/go-scm v1.8.2 h1:GMEUz6ap0pAeyUkwWP3SQxJoz/qN+tJmCkr9sWvbXs4=
 github.com/jenkins-x/go-scm v1.8.2/go.mod h1:z7xTO9/VzqW3xEbEMH2z5cpOGrZ8+nOHOWfU1ngFGxs=
 github.com/jenkins-x/jx-api/v4 v4.0.33 h1:a5yikWzisk79+tNZJ68lvZmEWo1ai9GvCBVAUtqNMeQ=
@@ -830,8 +834,9 @@ github.com/jenkins-x/jx-logging/v3 v3.0.3 h1:sVACbwiKuaDFYPfJeVAU10MJI4DA6LcH1Rq
 github.com/jenkins-x/jx-logging/v3 v3.0.3/go.mod h1:Vp2ER2SYgGhAgEEHlLwfi2ZB54tz6ya1qExq0A4CKMI=
 github.com/jenkins-x/jx-logging/v3 v3.0.6 h1:rXiLYK7WuliCtujKkeU77fnSTJRDSIgbIk7PG4fnZGc=
 github.com/jenkins-x/jx-logging/v3 v3.0.6/go.mod h1:Vp2ER2SYgGhAgEEHlLwfi2ZB54tz6ya1qExq0A4CKMI=
-github.com/jenkins-x/lighthouse-client v0.0.146 h1:g0uZHu6S+/VeB4nGNqtMtL4RkZjVYLfdLuuMjCXVqQM=
-github.com/jenkins-x/lighthouse-client v0.0.146/go.mod h1:GBH6WI6eNFYZrX3Zk+Hxj0dsU698gh/GdQphRpq5YMk=
+github.com/jenkins-x/lighthouse-client v0.0.158/go.mod h1:GBH6WI6eNFYZrX3Zk+Hxj0dsU698gh/GdQphRpq5YMk=
+github.com/jenkins-x/lighthouse-client v0.0.161 h1:sTBwFAFpPRyqctbNw0Z/VYhwgKkcQYkZHMc9KzIsY00=
+github.com/jenkins-x/lighthouse-client v0.0.161/go.mod h1:4VTExT7f/rcg088xiNU+ZzW9t6VtEUidZ12eNswPTuE=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3 h1:NuRWKUPCEX1wKlXA8ZYSG28qGKd41R7BK11YDQkPwqo=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3/go.mod h1:litPp7VZWDRCl8LvXuqGngy+65kkg/+T23TgFnDmfTk=
 github.com/jenkins-x/pipeline v0.3.2-0.20210118090417-1e821d85abf6 h1:P/UwaE7LPLOZNIsaNkUGW2QU+4HZSgxkrHLa572zL+8=

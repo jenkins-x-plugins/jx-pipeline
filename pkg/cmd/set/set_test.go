@@ -1,13 +1,14 @@
 package set_test
 
 import (
+	"io/ioutil"
+	"path/filepath"
+	"testing"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/set"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"path/filepath"
-	"testing"
 )
 
 var (

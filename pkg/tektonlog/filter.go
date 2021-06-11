@@ -54,7 +54,7 @@ func (o *BuildPodInfoFilter) Matches(pa *v1.PipelineActivity) bool {
 
 // AddFlags adds the CLI flags for filtering
 func (o *BuildPodInfoFilter) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolVarP(&o.Pending, "pending", "p", false, "Only display logs which are currently pending to choose from if no build name is supplied")
+	cmd.Flags().BoolVarP(&o.Pending, "pending", "p", false, "Only include pipeline pods which are currently pending to choose from if no build name is supplied")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "", "Filters all the available jobs by those that contain the given text")
 	cmd.Flags().StringVarP(&o.Owner, "owner", "o", "", "Filters the owner (person/organisation) of the repository")
 	cmd.Flags().StringVarP(&o.Repository, "repo", "r", "", "Filters the build repository")

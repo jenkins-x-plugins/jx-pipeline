@@ -2,9 +2,10 @@ package stop
 
 import (
 	"fmt"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"sort"
 	"strings"
+
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
