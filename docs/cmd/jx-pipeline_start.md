@@ -26,7 +26,7 @@ Starts the pipeline build.
   jx pipeline start -t
   
   # Start the given local pipeline file
-  jx pipeline start -f .lighthouse/jenkins-x/mypipeline.yaml
+  jx pipeline start -F .lighthouse/jenkins-x/mypipeline.yaml
 
 ### Options
 
