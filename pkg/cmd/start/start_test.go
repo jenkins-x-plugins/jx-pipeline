@@ -2,6 +2,8 @@ package start_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/start"
@@ -37,6 +39,15 @@ func TestPipelineStart(t *testing.T) {
 		init       func(o *start.Options)
 		verify     func(o *start.Options, params map[string]string)
 	}{
+		{
+			name: "file",
+			init: func(o *start.Options) {
+				o.File = filepath.Join("test_data", "release.yaml")
+				os.Setenv("SOURCE_URL", "https://github.com/jenkins-x-plugins/jx-pipeline")
+			},
+			verify: func(o *start.Options, params map[string]string) {
+			},
+		},
 		{
 			name: "defaults",
 			init: nil,
@@ -249,7 +260,9 @@ func TestPipelineStart(t *testing.T) {
 		require.Len(t, lhResources.Items, 1, "should have created a lhjob in namespace %s for test %s", ns, name)
 
 		lhjob := lhResources.Items[0]
-		require.NotEmpty(t, lhjob.Spec.PipelineRunParams, "should have pipeline run params")
+		if name != "file" {
+			require.NotEmpty(t, lhjob.Spec.PipelineRunParams, "should have pipeline run params")
+		}
 
 		params := map[string]string{}
 		for i, p := range lhjob.Spec.PipelineRunParams {
