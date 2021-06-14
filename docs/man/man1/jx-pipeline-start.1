@@ -40,6 +40,10 @@ Starts the pipeline build.
     List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)
 
 .PP
+\fB\-F\fP, \fB\-\-file\fP=""
+    The pipeline file to start
+
+.PP
 \fB\-f\fP, \fB\-\-filter\fP=""
     Filters all the available jobs by those that contain the given text
 
@@ -96,6 +100,10 @@ Starts the pipeline build.
 .PP
 # Select the pipeline to start and tail the log
   jx pipeline start \-t
+
+.PP
+# Start the given local pipeline file
+  jx pipeline start \-f .lighthouse/jenkins\-x/mypipeline.yaml
 
 
 .SH SEE ALSO
