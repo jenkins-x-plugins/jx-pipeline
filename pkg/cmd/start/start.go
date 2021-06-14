@@ -3,6 +3,10 @@ package start
 import (
 	"context"
 	"fmt"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/gitdiscovery"
 	"sort"
 	"strings"
 	"time"
@@ -48,6 +52,7 @@ import (
 // Options contains the command line options
 type Options struct {
 	options.BaseOptions
+	lighthouses.ResolverOptions
 
 	Args                []string
 	Output              string
@@ -60,6 +65,7 @@ type Options struct {
 	GitUsername         string
 	GitToken            string
 	CatalogSHA          string
+	File                string
 	Wait                bool
 	Tail                bool
 	WaitDuration        time.Duration
@@ -78,6 +84,11 @@ type Options struct {
 	// ScmClients cache of Scm Clients mostly used for testing
 	ScmClients         map[string]*scm.Client
 	customParameterMap map[string]string
+
+	// file based starter
+	Resolver      *inrepo.UsesResolver
+	GitClient     gitclient.Interface
+	CommandRunner cmdrunner.CommandRunner
 }
 
 var (
@@ -97,6 +108,9 @@ var (
 
 		# Select the pipeline to start and tail the log
 		jx pipeline start -t
+
+		# Start the given local pipeline file
+		jx pipeline start -f .lighthouse/jenkins-x/mypipeline.yaml
 	`)
 )
 
@@ -117,6 +131,7 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 		},
 	}
 	cmd.Flags().BoolVarP(&o.Tail, "tail", "t", false, "Tails the build log to the current terminal")
+	cmd.Flags().StringVarP(&o.File, "file", "F", "", "The pipeline file to start")
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "", "Filters all the available jobs by those that contain the given text")
 	cmd.Flags().StringVarP(&o.Context, "context", "c", "", "An optional context name to find the specific kind of postsubmit/presubmit if there are more than one triggers")
 	cmd.Flags().StringVarP(&o.Branch, "branch", "", "", "The branch to start. If not specified then the default branch of the repository is used")
@@ -174,8 +189,11 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate options")
 	}
 
-	args := o.Args
+	if o.File != "" {
+		return o.processFile(o.File)
+	}
 
+	args := o.Args
 	ctx := o.GetContext()
 	names, cfg, err := o.getFilteredTriggerNames(ctx, o.KubeClient, o.Namespace)
 	if err != nil {
@@ -238,6 +256,99 @@ func (o *Options) getFilteredTriggerNames(ctx context.Context, kubeClient kubern
 		}
 		time.Sleep(o.PollPeriod)
 	}
+}
+
+func (o *Options) processFile(path string) error {
+	var err error
+	if o.Resolver == nil {
+		o.Resolver, err = o.ResolverOptions.CreateResolver()
+		if err != nil {
+			return errors.Wrapf(err, "failed to create a UsesResolver")
+		}
+	}
+
+	pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load %s", path)
+	}
+	ns := o.Namespace
+	if o.Context == "" {
+		o.Context = "trigger"
+	}
+	jobName := o.Context
+	jobType := job.PostsubmitJob
+
+	dir := o.Dir
+	if dir == "" {
+		dir = "."
+	}
+	if o.CommandRunner == nil {
+		o.CommandRunner = cmdrunner.QuietCommandRunner
+	}
+	if o.GitClient == nil {
+		o.GitClient = cli.NewCLIClient("", o.CommandRunner)
+	}
+	if o.Branch == "" {
+		o.Branch, err = gitclient.Branch(o.GitClient, dir)
+		if err != nil {
+			return errors.Wrapf(err, "failed to detect the git branch")
+		}
+	}
+	sha, err := gitclient.GetLatestCommitSha(o.GitClient, dir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get the current git commit sha")
+	}
+
+	gitInfo, err := gitdiscovery.FindGitInfoFromDir(dir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to discover git url")
+	}
+	gitURL := gitInfo.URL
+	gitCloneURL := gitInfo.CloneURL
+	if gitCloneURL == "" {
+		gitCloneURL = gitURL
+	}
+	owner := gitInfo.Organisation
+	repo := gitInfo.Name
+
+	// TODO no way to load these from a trigger if using the specific file...
+	pipelineRunParams := o.combineWithCustomParameters(nil)
+
+	lhjob := &v1alpha1.LighthouseJob{
+		Spec: v1alpha1.LighthouseJobSpec{
+			Type:  jobType,
+			Agent: job.TektonPipelineAgent,
+			//Namespace: ns,
+			Job: jobName,
+			Refs: &v1alpha1.Refs{
+				Org:      owner,
+				Repo:     repo,
+				RepoLink: gitURL,
+				BaseRef:  o.Branch,
+				BaseSHA:  sha,
+				//BaseLink: commit.Link,
+				CloneURI: gitCloneURL,
+			},
+			ExtraRefs: nil,
+			Context:   o.Context,
+			//RerunCommand:      base.RerunCommand,
+			//MaxConcurrency:    base.MaxConcurrency,
+			PipelineRunSpec:   &pr.Spec,
+			PipelineRunParams: pipelineRunParams,
+		},
+	}
+
+	lhjob.Labels, lhjob.Annotations = jobutil.LabelsAndAnnotationsForSpec(lhjob.Spec, nil, nil)
+	lhjob.GenerateName = naming.ToValidName(owner+"-"+repo) + "-"
+
+	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
+	lhjob, err = launchClient.Launch(lhjob)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create lighthousejob %s in namespace %s", lhjob.Name, ns)
+	}
+
+	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
+	return nil
 }
 
 func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error {
