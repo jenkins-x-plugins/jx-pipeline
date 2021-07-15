@@ -97,6 +97,8 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		//Dir:              f.Dir,
 		Dir:              "",
 		LocalFileResolve: true,
+		FetchCache: filebrowser.NewFetchCache(),
+
 	}, nil
 }
 

@@ -3,13 +3,17 @@ package start
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/gitdiscovery"
-	"sort"
-	"strings"
-	"time"
+	gitv2 "github.com/jenkins-x/lighthouse-client/pkg/git/v2"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 
@@ -92,7 +96,8 @@ type Options struct {
 }
 
 var (
-	info = termcolor.ColorInfo
+	logger = logrus.WithField("jx-pipeline", "start")
+	info   = termcolor.ColorInfo
 
 	cmdLong = templates.LongDesc(`
 		Starts the pipeline build.
@@ -386,8 +391,9 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	}
 
 	gitServerURL := sr.Spec.Provider
+	var gitInfo *giturl.GitRepository
 	if gitServerURL == "" {
-		var gitInfo *giturl.GitRepository
+
 		gitInfo, err = giturl.ParseGitURL(sr.Spec.HTTPCloneURL)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse git clone URL %s", sr.Spec.HTTPCloneURL)
@@ -431,16 +437,27 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 		}
 
-		scmProvider := lighthouses.NewScmProvider(ctx, scmClient)
-		fb := filebrowser.NewFileBrowserFromScmClient(scmProvider)
+		configureOpts := func(opts *gitv2.ClientFactoryOpts) {
+			opts.Token = func() []byte {
+				return []byte(o.GitToken)
+			}
+			if gitInfo != nil {
+				opts.Host = gitInfo.Host
+				opts.Scheme = gitInfo.Scheme
+			}
+		}
+		gitFactory, err := gitv2.NewClientFactory(configureOpts)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create git factory")
+		}
+		fb := filebrowser.NewFileBrowserFromGitClient(gitFactory)
 
-		fileBrowsers, err := filebrowser.NewFileBrowsers(f.GitServerURL, fb)
+		fileBrowsers, err := filebrowser.NewFileBrowsers(gitServerURL, fb)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create file browsers")
 		}
 		cache := inrepo.NewResolverCache()
-
-		cfg, _, err = inrepo.Generate(fileBrowsers, cache, cfg, pluginCfg, owner, repo, "")
+		cfg, _, err = inrepo.Generate(fileBrowsers, filebrowser.NewFetchCache(), cache, cfg, pluginCfg, owner, repo, "")
 		if err != nil {
 			return errors.Wrapf(err, "failed to calculate in repo configuration")
 		}
@@ -451,7 +468,10 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		return errors.Wrapf(err, "failed to pick trigger to start")
 	}
 	pipelineRunParams := o.combineWithCustomParameters(base.PipelineRunParams)
-
+	err = base.LoadPipeline(logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load base pipeline")
+	}
 	lhjob := &v1alpha1.LighthouseJob{
 		Spec: v1alpha1.LighthouseJobSpec{
 			Type:  jobType,
