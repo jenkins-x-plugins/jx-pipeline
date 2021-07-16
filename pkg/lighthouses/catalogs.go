@@ -48,6 +48,7 @@ func FindCatalogTaskSpecFromURI(resolver *inrepo.UsesResolver, gitURI string) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal catalog YAML file %s", gitURI)
 	}
+
 	catalogTaskSpec, err := GetMandatoryTaskSpec(pr)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find catalog task at %s", gitURI)

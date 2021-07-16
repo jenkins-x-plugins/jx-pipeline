@@ -46,37 +46,18 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 	}
 
 	if fb == nil {
-		gitCloneUser := f.GitUsername
-		token := f.GitToken
 		if f.GitServerURL == "" {
 			f.GitServerURL = "https://github.com"
 		}
-		var gitServerURL *url.URL
+
 		if f.GitServerURL != "" {
-			gitServerURL, err = url.Parse(f.GitServerURL)
+			_, err = url.Parse(f.GitServerURL)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to parse git URL %s", f.GitServerURL)
 			}
-
 		}
 
-		configureOpts := func(opts *gitv2.ClientFactoryOpts) {
-			opts.Token = func() []byte {
-				return []byte(token)
-			}
-			opts.GitUser = func() (name, email string, err error) {
-				name = gitCloneUser
-				return
-			}
-			opts.Username = func() (login string, err error) {
-				login = gitCloneUser
-				return
-			}
-			if gitServerURL != nil {
-				opts.Host = gitServerURL.Host
-				opts.Scheme = gitServerURL.Scheme
-			}
-		}
+		configureOpts := func(opts *gitv2.ClientFactoryOpts) {}
 		gitFactory, err := gitv2.NewClientFactory(configureOpts)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create git factory")
@@ -97,6 +78,7 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		//Dir:              f.Dir,
 		Dir:              "",
 		LocalFileResolve: true,
+		FetchCache:       filebrowser.NewFetchCache(),
 	}, nil
 }
 
