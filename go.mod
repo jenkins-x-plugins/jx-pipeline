@@ -37,6 +37,7 @@ replace (
 	github.com/tektoncd/pipeline => github.com/jenkins-x/pipeline v0.3.2-0.20210118090417-1e821d85abf6
 	k8s.io/client-go => k8s.io/client-go v0.20.2
 	knative.dev/pkg => github.com/jstrachan/pkg v0.0.0-20210118084935-c7bdd6c14bd0
+	github.com/jenkins-x/lighthouse-client => "../../jenkins-x/lighthouse-client"
 )
 
 go 1.15

@@ -59,12 +59,13 @@ func TestPipelineEffective(t *testing.T) {
 }
 
 func CreateFakeResolver(t *testing.T) *inrepo.UsesResolver {
-	filebrowsers, err := filebrowser.NewFileBrowsers(giturl.GitHubURL, fake.NewFakeFileBrowser(filepath.Join("test_data", "fake_file_browser")))
+	filebrowsers, err := filebrowser.NewFileBrowsers(giturl.GitHubURL, fake.NewFakeFileBrowser(filepath.Join("test_data", "fake_file_browser"), true))
 	require.NoError(t, err, "failed to create file browsers")
 
 	return &inrepo.UsesResolver{
 		FileBrowsers:     filebrowsers,
 		OwnerName:        "myorg",
 		LocalFileResolve: true,
+		Cache:            inrepo.NewResolverCache(),
 	}
 }

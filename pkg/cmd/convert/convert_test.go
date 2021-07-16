@@ -91,7 +91,7 @@ func TestConvertRepository(t *testing.T) {
 	o.CatalogSHA = "myversionstreamref"
 	fakeBrowserDir := filepath.Join("test_data", "jenkins-x", "jx3-pipeline-catalog", "refs", o.CatalogSHA)
 	require.DirExists(t, fakeBrowserDir, "should have fake dir")
-	o.FileBrowser = fakefb.NewFakeFileBrowser(fakeBrowserDir)
+	o.FileBrowser = fakefb.NewFakeFileBrowser(fakeBrowserDir, true)
 	o.GitServerURL = filebrowser.GitHubURL
 	o.Dir = tmpDir
 

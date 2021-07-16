@@ -240,6 +240,6 @@ func (o *Options) processTriggers() error {
 
 func (o *Options) overridePipeline(path string) error {
 	p := processor.NewInliner(o.Input, o.Resolver, o.CatalogSHA, o.Step)
-	processor.ProcessFile(p, path)
-	return nil
+	_, err := processor.ProcessFile(p, path)
+	return err
 }
