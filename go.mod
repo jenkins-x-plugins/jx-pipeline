@@ -13,7 +13,7 @@ require (
 	github.com/jenkins-x/jx-helpers/v3 v3.0.116
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.2
 	github.com/jenkins-x/jx-logging/v3 v3.0.6
-	github.com/jenkins-x/lighthouse-client v0.0.198
+	github.com/jenkins-x/lighthouse-client v0.0.199
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
@@ -37,7 +37,6 @@ replace (
 	github.com/tektoncd/pipeline => github.com/jenkins-x/pipeline v0.3.2-0.20210118090417-1e821d85abf6
 	k8s.io/client-go => k8s.io/client-go v0.20.2
 	knative.dev/pkg => github.com/jstrachan/pkg v0.0.0-20210118084935-c7bdd6c14bd0
-	github.com/jenkins-x/lighthouse-client => "../../jenkins-x/lighthouse-client"
 )
 
 go 1.15
