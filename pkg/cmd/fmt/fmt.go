@@ -230,10 +230,10 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec, path string) e
 				}
 			}
 			ts.Steps = steps
-		}
-		ss := ts.StepTemplate
-		if ss != nil {
-			ss.Env = RemoveDefaultEnvVars(ss.Env)
+			ss := ts.StepTemplate
+			if ss != nil {
+				ss.Env = RemoveDefaultEnvVars(ss.Env)
+			}
 		}
 	}
 	return nil
