@@ -14,6 +14,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -35,6 +36,7 @@ type Options struct {
 	options.BaseOptions
 
 	Args         []string
+	Exclude      []string
 	Format       string
 	Namespace    string
 	BuildFilter  tektonlog.BuildPodInfoFilter
@@ -91,6 +93,7 @@ func NewCmdPipelineEnv() (*cobra.Command, *Options) {
 	}
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "The namespace to look for the build pods. Defaults to the current namespace")
 	cmd.Flags().StringVarP(&o.Format, "format", "t", "shell", "The output format. Valid values are 'shell' or 'idea'")
+	cmd.Flags().StringArrayVarP(&o.Exclude, "exclude", "x", nil, "The environment variable names to exclude.")
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	o.BuildFilter.AddFlags(cmd)
@@ -466,6 +469,9 @@ func (o *Options) renderEnv(envVars map[string]string) error {
 	buf := &strings.Builder{}
 	for _, k := range keys {
 		v := envVars[k]
+		if stringhelpers.StringArrayIndex(o.Exclude, k) >= 0 {
+			continue
+		}
 		o.logEnvVar(buf, k, v)
 	}
 	log.Logger().Infof(termcolor.ColorStatus(buf.String()))

@@ -1,6 +1,8 @@
 package getlog
 
 import (
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxenv"
 	"io"
 	"os"
 	"strings"
@@ -127,6 +129,22 @@ func (o *Options) Validate() error {
 		return errors.Wrapf(err, "failed to create the jx client")
 	}
 
+	if o.BuildFilter.Repository == "" && o.BuildFilter.Environment != "" {
+		env, err := jxenv.GetEnvironment(o.JXClient, o.Namespace, o.BuildFilter.Environment)
+		if err != nil {
+			return errors.Wrapf(err, "failed to load Environment %s in namespace %s", o.BuildFilter.Environment, o.Namespace)
+		}
+		gitURL := env.Spec.Source.URL
+		if gitURL == "" {
+			return errors.Errorf("no git URL for Environment %s in namespace %s", o.BuildFilter.Environment, o.Namespace)
+		}
+		gitInfo, err := giturl.ParseGitURL(gitURL)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse git URL %s from Environment %s in namespace %s", gitURL, o.BuildFilter.Environment, o.Namespace)
+		}
+		o.BuildFilter.Repository = gitInfo.Name
+		o.BuildFilter.Owner = gitInfo.Organisation
+	}
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
