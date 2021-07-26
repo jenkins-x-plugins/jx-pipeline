@@ -13,15 +13,16 @@ import (
 
 // BuildPodInfoFilter for filtering pipelines / PipelineRuns
 type BuildPodInfoFilter struct {
-	Owner      string
-	Repository string
-	Branch     string
-	Build      string
-	Filter     string
-	Pod        string
-	Pending    bool
-	Context    string
-	GitURL     string
+	Owner       string
+	Repository  string
+	Branch      string
+	Build       string
+	Filter      string
+	Pod         string
+	Pending     bool
+	Environment string
+	Context     string
+	GitURL      string
 }
 
 // Matches returns true if the PipelineActivity matches the filter
@@ -58,6 +59,7 @@ func (o *BuildPodInfoFilter) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "", "Filters all the available jobs by those that contain the given text")
 	cmd.Flags().StringVarP(&o.Owner, "owner", "o", "", "Filters the owner (person/organisation) of the repository")
 	cmd.Flags().StringVarP(&o.Repository, "repo", "r", "", "Filters the build repository")
+	cmd.Flags().StringVarP(&o.Environment, "env", "e", "", "The name of the environment to view pipelines for the git repository")
 	cmd.Flags().StringVarP(&o.Branch, "branch", "", "", "Filters the branch")
 	cmd.Flags().StringVarP(&o.Build, "build", "", "", "The build number to view")
 	cmd.Flags().StringVarP(&o.Pod, "pod", "", "", "The pod name to view")
