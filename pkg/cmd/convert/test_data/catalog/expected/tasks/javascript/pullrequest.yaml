@@ -10,6 +10,7 @@ spec:
       resources: {}
       taskSpec:
         metadata: {}
+        spec: null
         stepTemplate:
           name: ""
           resources:

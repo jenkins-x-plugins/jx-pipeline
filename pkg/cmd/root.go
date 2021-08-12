@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/activities"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/breakpoint"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/convert"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/effective"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/env"
@@ -38,6 +39,7 @@ func Main() *cobra.Command {
 	}
 
 	cmd.AddCommand(cobras.SplitCommand(activities.NewCmdActivities()))
+	cmd.AddCommand(cobras.SplitCommand(breakpoint.NewCmdPipelineBreakpoint()))
 	cmd.AddCommand(cobras.SplitCommand(convert.NewCmdPipelineConvert()))
 	cmd.AddCommand(cobras.SplitCommand(effective.NewCmdPipelineEffective()))
 	cmd.AddCommand(cobras.SplitCommand(env.NewCmdPipelineEnv()))
