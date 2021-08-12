@@ -1,14 +1,22 @@
 package breakpoint
 
 import (
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxenv"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	"github.com/jenkins-x/lighthouse-client/pkg/apis/lighthouse"
+	"github.com/jenkins-x/lighthouse-client/pkg/apis/lighthouse/v1alpha1"
+	lhclient "github.com/jenkins-x/lighthouse-client/pkg/client/clientset/versioned"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"os"
+	"strings"
 
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -28,10 +36,13 @@ import (
 type Options struct {
 	options.BaseOptions
 
-	KubeClient kubernetes.Interface
-	JXClient   versioned.Interface
-	Namespace  string
-	Input      input.Interface
+	BreakpointNames []string
+	KubeClient      kubernetes.Interface
+	JXClient        versioned.Interface
+	LHClient        lhclient.Interface
+	Namespace       string
+	Input           input.Interface
+	Breakpoints     []*v1alpha1.LighthouseBreakpoint
 }
 
 var (
@@ -65,6 +76,7 @@ func NewCmdPipelineBreakpoint() (*cobra.Command, *Options) {
 	}
 
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "The kubernetes namespace to use. If not specified the default namespace is used")
+	cmd.Flags().StringArrayVarP(&o.BreakpointNames, "breakpoints", "p", []string{"onFailure"}, "The breakpoint names to use when creating a new breakpoint")
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
@@ -80,6 +92,10 @@ func (o *Options) Validate() error {
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the jx client")
+	}
+	o.LHClient, err = lighthouses.LazyCreateLHClient(o.LHClient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the lighthouse client")
 	}
 
 	if o.Input == nil {
@@ -105,6 +121,15 @@ func (o *Options) Run() error {
 	jxClient := o.JXClient
 
 	ctx := o.GetContext()
+	bpList, err := o.LHClient.LighthouseV1alpha1().LighthouseBreakpoints(ns).List(ctx, metav1.ListOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrapf(err, "could not list LighthouseBreakpoint resources")
+	}
+	for i := range bpList.Items {
+		b := &bpList.Items[i]
+		o.Breakpoints = append(o.Breakpoints, b)
+	}
+
 	list, err := jxClient.JenkinsV1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -117,8 +142,10 @@ func (o *Options) Run() error {
 	for i := range items {
 		a := &items[i]
 
-		label := ToLabel(a)
-		names = append(names, label)
+		label := o.ToLabel(a)
+		if stringhelpers.StringArrayIndex(names, label) < 0 {
+			names = append(names, label)
+		}
 		m[label] = a
 	}
 
@@ -135,11 +162,74 @@ func (o *Options) Run() error {
 	}
 
 	log.Logger().Infof("selected pipeline: %s", info(name))
+
+	f := ToBreakpointFilter(pa)
+
+	for _, bp := range o.Breakpoints {
+		if bp.Spec.Filter.Matches(f) {
+			// lets confirm the deletion of the breakpoint?
+			confirm, err := o.Input.Confirm("would you like to remove Breakpoint "+bp.Name, false, "confirm if you would like to delete the LighthouseBreakpoint resource")
+			if err != nil {
+				return errors.Wrapf(err, "failed to confirm deletion")
+			}
+			if !confirm {
+				return nil
+			}
+			err = o.LHClient.LighthouseV1alpha1().LighthouseBreakpoints(ns).Delete(ctx, bp.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return errors.Wrapf(err, "failed to delete the LighthouseBreakpoint %s", bp.Name)
+			}
+			log.Logger().Infof("deleted the LighthouseBreakpoint %s", info(bp.Name))
+			return nil
+		}
+	}
+
+	// lets create a new Breakpoint for this filter
+	bp := &v1alpha1.LighthouseBreakpoint{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "LighthouseBreakpoint",
+			APIVersion: lighthouse.GroupAndVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pa.Name,
+			Namespace: ns,
+		},
+		Spec: v1alpha1.LighthouseBreakpointSpec{
+			Filter: *f,
+			Debug: v1beta1.TaskRunDebug{
+				Breakpoint: o.BreakpointNames,
+			},
+		},
+	}
+	_, err = o.LHClient.LighthouseV1alpha1().LighthouseBreakpoints(ns).Create(ctx, bp, metav1.CreateOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the LighthouseBreakpoint %#v", bp)
+	}
+	log.Logger().Infof("created the LighthouseBreakpoint %s", info(bp.Name))
 	return nil
 }
 
-func ToLabel(a *v1.PipelineActivity) string {
+func (o *Options) ToLabel(a *v1.PipelineActivity) string {
 	as := &a.Spec
 	repo := as.GitOwner + "/" + as.GitRepository
-	return repo + " " + as.GitBranch + " #" + as.Build + " " + as.Context
+	label := repo + " " + as.GitBranch + " " + as.Context
+
+	f := ToBreakpointFilter(a)
+
+	debug := f.ResolveDebug(o.Breakpoints)
+	if debug != nil {
+		label += " => breakpoint: " + strings.Join(debug.Breakpoint, ", ")
+	}
+	return label
+}
+
+// ToBreakpointFilter converts the PipelineActivity to a filter for breakpoints
+func ToBreakpointFilter(a *v1.PipelineActivity) *v1alpha1.LighthousePipelineFilter {
+	as := &a.Spec
+	return &v1alpha1.LighthousePipelineFilter{
+		Owner:      as.GitOwner,
+		Repository: as.GitRepository,
+		Branch:     as.GitBranch,
+		Context:    as.Context,
+	}
 }
