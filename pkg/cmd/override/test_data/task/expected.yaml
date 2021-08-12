@@ -9,6 +9,7 @@ spec:
     - name: from-build-pack
       taskSpec:
         metadata: {}
+        spec: null
         stepTemplate:
           image: uses:jenkins-x/jx3-pipeline-catalog/tasks/javascript/release.yaml@myversionstreamref
           name: ""

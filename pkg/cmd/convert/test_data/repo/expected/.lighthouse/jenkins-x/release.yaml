@@ -10,6 +10,7 @@ spec:
       resources: {}
       taskSpec:
         metadata: {}
+        spec: null
         stepTemplate:
           image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-plugin/release.yaml@versionStream
           name: ""
