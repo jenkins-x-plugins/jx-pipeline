@@ -13,19 +13,21 @@ import (
 )
 
 type inliner struct {
-	input      input.Interface
-	resolver   *inrepo.UsesResolver
-	defaultSHA string
-	step       string
+	input            input.Interface
+	resolver         *inrepo.UsesResolver
+	defaultSHA       string
+	step             string
+	inlineProperties []string
 }
 
 // NewInliner
-func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA, step string) *inliner {
+func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA, step string, inlineProperties []string) *inliner {
 	return &inliner{
-		input:      input,
-		resolver:   resolver,
-		defaultSHA: defaultSHA,
-		step:       step,
+		input:            input,
+		resolver:         resolver,
+		defaultSHA:       defaultSHA,
+		step:             step,
+		inlineProperties: inlineProperties,
 	}
 }
 
@@ -116,9 +118,11 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 			return false, errors.Wrapf(err, "could not find step: %s in the catalog", step.Name)
 		}
 
-		// lets replace with the catalog step
-		// TODO longer term we could ask users to pick which things to override
-		*step = *catalogStep
+		// lets replace with the catalog step or inline specific properties
+		err = p.inlineStep(step, catalogStep)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to inline properties")
+		}
 		return true, nil
 	}
 
@@ -169,7 +173,11 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 				if s.Name != name {
 					continue
 				}
-				*s = *catalogStep
+				err = p.inlineStep(s, catalogStep)
+				if err != nil {
+					return false, errors.Wrapf(err, "failed to inline properties")
+				}
+
 				found = true
 				break
 			}
@@ -179,6 +187,77 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 		}
 	}
 	return true, nil
+}
+
+func (p *inliner) inlineStep(s *v1beta1.Step, catalogStep *v1beta1.Step) error {
+	if len(p.inlineProperties) == 0 {
+		*s = *catalogStep
+		return nil
+	}
+
+	for _, prop := range p.inlineProperties {
+		switch prop {
+		case "args":
+			s.Args = catalogStep.Args
+		case "onError":
+			s.OnError = catalogStep.OnError
+		case "command":
+			s.Command = catalogStep.Command
+		case "env":
+			if len(catalogStep.Env) > 0 {
+				s.Env = catalogStep.Env
+			}
+		case "envFrom":
+			if len(catalogStep.EnvFrom) > 0 {
+				s.EnvFrom = catalogStep.EnvFrom
+			}
+		case "image":
+			s.Image = catalogStep.Image
+		case "imagePullPolicy":
+			s.ImagePullPolicy = catalogStep.ImagePullPolicy
+		case "lifecycle":
+			s.Lifecycle = catalogStep.Lifecycle
+		case "livenessProbe":
+			if catalogStep.LivenessProbe != nil {
+				s.LivenessProbe = catalogStep.LivenessProbe
+			}
+		case "readinessProbe":
+			if catalogStep.ReadinessProbe != nil {
+				s.ReadinessProbe = catalogStep.ReadinessProbe
+			}
+		case "resources":
+			s.Resources = catalogStep.Resources
+		case "script":
+			s.Script = catalogStep.Script
+		case "securityContext":
+			s.SecurityContext = catalogStep.SecurityContext
+		case "startupProbe":
+			if catalogStep.StartupProbe != nil {
+				s.StartupProbe = catalogStep.StartupProbe
+			}
+		case "terminationMessagePath":
+			s.TerminationMessagePath = catalogStep.TerminationMessagePath
+		case "terminationMessagePolicy":
+			s.TerminationMessagePolicy = catalogStep.TerminationMessagePolicy
+		case "timeout":
+			if catalogStep.Timeout != nil {
+				s.Timeout = catalogStep.Timeout
+			}
+		case "volumeDevices":
+			s.VolumeDevices = catalogStep.VolumeDevices
+		case "volumeMounts":
+			s.VolumeMounts = catalogStep.VolumeMounts
+		case "workspaces":
+			if len(catalogStep.Workspaces) > 0 {
+				s.Workspaces = catalogStep.Workspaces
+			}
+		case "workingDir":
+			s.WorkingDir = catalogStep.WorkingDir
+		default:
+			return errors.Errorf("invalid step property: %s", prop)
+		}
+	}
+	return nil
 }
 
 type stepOption struct {

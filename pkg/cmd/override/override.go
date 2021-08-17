@@ -27,15 +27,16 @@ type Options struct {
 	options.BaseOptions
 	lighthouses.ResolverOptions
 
-	File         string
-	Namespace    string
-	CatalogSHA   string
-	TriggerName  string
-	PipelineName string
-	Step         string
-	Resolver     *inrepo.UsesResolver
-	Triggers     []*Trigger
-	Input        input.Interface
+	File             string
+	Namespace        string
+	CatalogSHA       string
+	TriggerName      string
+	PipelineName     string
+	Step             string
+	InlineProperties []string
+	Resolver         *inrepo.UsesResolver
+	Triggers         []*Trigger
+	Input            input.Interface
 }
 
 var (
@@ -48,6 +49,10 @@ var (
 	cmdExample = templates.Examples(`
 		# Override locally a step in a pipeline
 		jx pipeline override
+
+		# Override the 'script' property from the property in the catalog
+		# so that you can locally modfiy the script without locally maintaining all of the other properties such as image, env, resources etc
+		jx pipeline override -P script 
 	`)
 )
 
@@ -82,6 +87,7 @@ func NewCmdPipelineOverride() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.PipelineName, "pipeline", "p", "", "The pipeline kind and name. e.g. 'presubmit/pr' or 'postsubmit/release'. If not specified you will be prompted to choose one")
 	cmd.Flags().StringVarP(&o.Step, "step", "s", "", "The name of the step to override")
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "a", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
+	cmd.Flags().StringArrayVarP(&o.InlineProperties, "properties", "P", nil, "The property names to override in the step. e.g. 'script' will just override the script tag")
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
@@ -239,7 +245,7 @@ func (o *Options) processTriggers() error {
 }
 
 func (o *Options) overridePipeline(path string) error {
-	p := processor.NewInliner(o.Input, o.Resolver, o.CatalogSHA, o.Step)
+	p := processor.NewInliner(o.Input, o.Resolver, o.CatalogSHA, o.Step, o.InlineProperties)
 	_, err := processor.ProcessFile(p, path)
 	return err
 }

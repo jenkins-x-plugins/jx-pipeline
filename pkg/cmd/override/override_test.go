@@ -53,6 +53,39 @@ func TestPipelineOverrideStep(t *testing.T) {
 	testhelpers.AssertTextFileContentsEqual(t, actual, expectedFile)
 }
 
+func TestPipelineOverrideStepProperty(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "")
+	require.NoError(t, err, "could not create temp dir")
+
+	srcDir := filepath.Join("test_data", "step-property")
+	expectedFile := filepath.Join(srcDir, "expected.yaml")
+
+	err = files.CopyDirOverwrite(srcDir, tmpDir)
+	require.NoError(t, err, "failed to copy %s to %s", srcDir, tmpDir)
+
+	_, o := override.NewCmdPipelineOverride()
+	o.InlineProperties = []string{"script"}
+	o.Dir = tmpDir
+	o.BatchMode = true
+	o.CatalogSHA = "7a05c45bafc60e0571509526d91ed5963e4c2d54"
+	o.PipelineName = "postsubmit/release"
+	o.Step = "build-container-build"
+	fakeBrowserDir := filepath.Join("test_data", "jenkins-x", "jx3-pipeline-catalog", "refs", o.CatalogSHA)
+	require.DirExists(t, fakeBrowserDir, "should have fake dir")
+	o.FileBrowser = fakefb.NewFakeFileBrowser(fakeBrowserDir, true)
+	o.GitServerURL = filebrowser.GitHubURL
+	err = o.Run()
+	require.NoError(t, err, "Failed to run linter")
+
+	actual := filepath.Join(tmpDir, ".lighthouse", "jenkins-x", "release.yaml")
+	if generateTestOutput {
+		err = files.CopyFile(actual, expectedFile)
+		require.NoError(t, err, "failed to copy %s to %s", actual, expectedFile)
+		return
+	}
+	testhelpers.AssertTextFileContentsEqual(t, actual, expectedFile)
+}
+
 func TestPipelineOverrideTask(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "")
 	require.NoError(t, err, "could not create temp dir")
