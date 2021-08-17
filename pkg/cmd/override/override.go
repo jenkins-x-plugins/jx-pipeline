@@ -49,6 +49,10 @@ var (
 	cmdExample = templates.Examples(`
 		# Override locally a step in a pipeline
 		jx pipeline override
+
+		# Override the 'script' property from the property in the catalog
+		# so that you can locally modfiy the script without locally maintaining all of the other properties such as image, env, resources etc
+		jx pipeline override -P script 
 	`)
 )
 
