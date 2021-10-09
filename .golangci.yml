@@ -97,7 +97,7 @@ linters:
     - unparam
     - unused
     - varcheck
-    - golint
+    - revive
     - gocritic
     - govet
 #    - lll
