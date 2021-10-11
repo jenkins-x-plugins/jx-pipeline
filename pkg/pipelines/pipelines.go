@@ -50,23 +50,25 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 
 		// no PA has the buildNum yet so lets try find the next PA build number...
 		b := 1
-		for {
-			build = strconv.Itoa(b)
-			name := naming.ToValidName(prefix + build)
-			found := false
-			for i := range paList {
-				pa := &paList[i]
-				if pa.Name == name {
+		found := false
+		var name string
+		for i := range paList {
+			pa := &paList[i]
+			if strings.Contains(pa.Name, prefix) {
+				buildNum, _ := strconv.Atoi(strings.Split(pa.Name, prefix)[1])
+				if buildNum > b {
+					b = buildNum
 					found = true
-					break
 				}
 			}
-			if !found {
-				pr.Labels["build"] = build
-				return name
-			}
+		}
+		if found {
 			b++
 		}
+		build = strconv.Itoa(b)
+		pr.Labels["build"] = build
+		name = naming.ToValidName(prefix + build)
+		return name
 	}
 	if build == "" {
 		return ""
@@ -195,7 +197,7 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 						Kind: v1.ActivityStepKindTypeStage,
 						Stage: &v1.StageActivityStep{
 							CoreActivityStep: v1.CoreActivityStep{
-								//Name:               Humanize(stageName),
+								// Name:               Humanize(stageName),
 								Name:             stageName,
 								Description:      "",
 								Status:           status,
