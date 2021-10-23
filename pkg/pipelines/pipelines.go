@@ -21,9 +21,9 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	}
 
 	build := labels["build"]
-	owner := activities.GetLabel(labels, activities.OwnerLabels)
-	repository := activities.GetLabel(labels, activities.RepoLabels)
-	branch := activities.GetLabel(labels, activities.BranchLabels)
+	owner := naming.ToValidName(activities.GetLabel(labels, activities.OwnerLabels))
+	repository := naming.ToValidName(activities.GetLabel(labels, activities.RepoLabels))
+	branch := naming.ToValidName(activities.GetLabel(labels, activities.BranchLabels))
 
 	if owner == "" || repository == "" || branch == "" {
 		return ""
