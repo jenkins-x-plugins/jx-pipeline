@@ -54,7 +54,7 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 		var name string
 		for i := range paList {
 			pa := &paList[i]
-			if strings.Contains(pa.Name, prefix) {
+			if strings.HasPrefix(pa.Name, prefix) {
 				buildNum, _ := strconv.Atoi(strings.Split(pa.Name, prefix)[1])
 				if buildNum > b {
 					b = buildNum
