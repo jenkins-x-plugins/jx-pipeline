@@ -125,7 +125,7 @@ var paList = []v1.PipelineActivity{
 				branchLabel:   "master",
 				orgLabel:      TestOrg,
 				repoLabel:     PipelineRepo,
-				buildNumLabel: "1601383238723",
+				buildNumLabel: "1601383238790",
 			},
 		},
 	},
@@ -164,7 +164,7 @@ var BuildNumberTestCases = []struct {
 }{
 	{
 		"Create pa with build number one for first pipeline of a given prefix",
-		generatePipelineRunWithLabels("master", TestOrg, "jx-promote", "1601383238723"),
+		generatePipelineRunWithLabels("master", TestOrg, "jx-promote", "16013832387908"),
 		paList,
 		"jenkins-x-plugins-jx-promote-master-1",
 	},
@@ -176,7 +176,7 @@ var BuildNumberTestCases = []struct {
 	},
 	{
 		"Create pa by incrementing higher build number for a given prefix - case 1",
-		generatePipelineRunWithLabels("master", TestOrg, PipelineRepo, "1601383238723"),
+		generatePipelineRunWithLabels("Master", TestOrg, PipelineRepo, "1601383238723"), // Check that the logic is case insensitive
 		paList,
 		"jenkins-x-plugins-jx-pipeline-master-6",
 	},
@@ -198,7 +198,7 @@ func TestPipelineBuildNumber(t *testing.T) {
 	for _, tt := range BuildNumberTestCases {
 		actualActivityName := ToPipelineActivityName(tt.pipelineRun, tt.paList)
 		t.Log(tt.description)
-		require.Equal(t, actualActivityName, tt.expectedActivityName)
+		require.Equal(t, tt.expectedActivityName, actualActivityName)
 	}
 }
 
