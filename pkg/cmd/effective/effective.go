@@ -114,7 +114,6 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 
 	o.BaseOptions.AddBaseFlags(cmd)
 	return cmd, o
-
 }
 
 // Validate verifies settings
@@ -216,7 +215,7 @@ func (o *Options) ProcessDir(dir string) error {
 	return nil
 }
 
-func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
+func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error { //nolint:unparam
 	repoConfig := trigger.Config
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]
@@ -304,9 +303,9 @@ func (o *Options) processTriggers() error {
 	return o.displayPipeline(trigger.Path, pipelineName, pipeline)
 }
 
-func (o *Options) displayPipeline(path string, name string, pipeline *tektonv1beta1.PipelineRun) error {
+func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.PipelineRun) error {
 	if o.AddDefaults {
-		err := o.addPipelineParameterDefaults(path, name, pipeline)
+		err := o.addPipelineParameterDefaults(path, pipeline)
 		if err != nil {
 			return errors.Wrapf(err, "failed to ")
 		}
@@ -353,7 +352,7 @@ func (o *Options) displayPipeline(path string, name string, pipeline *tektonv1be
 	return nil
 }
 
-func (o *Options) openInEditor(path string, editor string) error {
+func (o *Options) openInEditor(path, editor string) error {
 	args := []string{path}
 	line := o.Line
 	if line == "" {
@@ -390,7 +389,7 @@ func (o *Options) openInEditor(path string, editor string) error {
 	return nil
 }
 
-func (o *Options) addPipelineParameterDefaults(path string, name string, pipeline *tektonv1beta1.PipelineRun) error {
+func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1beta1.PipelineRun) error {
 	ps := &pipeline.Spec
 
 	dscm := &o.DiscoverScm

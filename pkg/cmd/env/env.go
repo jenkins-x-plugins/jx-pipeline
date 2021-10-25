@@ -478,7 +478,7 @@ func (o *Options) renderEnv(envVars map[string]string) error {
 	return nil
 }
 
-func (o *Options) logEnvVar(buf *strings.Builder, k string, v string) {
+func (o *Options) logEnvVar(buf *strings.Builder, k, v string) {
 	switch o.Format {
 	case "idea":
 		if buf.Len() > 0 {

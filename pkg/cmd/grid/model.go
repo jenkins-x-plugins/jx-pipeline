@@ -107,7 +107,8 @@ func (a *activityTable) viewLogs() {
 	act := a.selected()
 	a.stopped = true
 	if act != nil {
-		a.viewLogsFn(act, a.activityList())
+		//ToDo: Check error here
+		_ = a.viewLogsFn(act, a.activityList())
 	}
 }
 

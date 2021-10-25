@@ -8,7 +8,6 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines/processor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -28,8 +27,6 @@ type Options struct {
 }
 
 var (
-	info = termcolor.ColorInfo
-
 	cmdLong = templates.LongDesc(`
 		Sets a property on the given Pipeline / PipelineRun / Task files.
 

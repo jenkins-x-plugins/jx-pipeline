@@ -176,7 +176,7 @@ func (o *Options) renderPipelineRuns(ctx context.Context) error {
 	}
 
 	if len(prList.Items) == 0 {
-		return errors.New(fmt.Sprintf("no PipelineRuns were found in namespace %s", ns))
+		return fmt.Errorf(fmt.Sprintf("no PipelineRuns were found in namespace %s", ns))
 	}
 
 	var owner, repo, branch, triggerContext, buildNumber, status string

@@ -268,7 +268,6 @@ func (o *Options) cancelPipelineRun() error {
 		"you can always restart a cancelled pipeline with 'jx start pipeline'"); !answer {
 		return err
 	}
-	args = []string{name}
 
 	pr := m[name]
 	if pr == nil {

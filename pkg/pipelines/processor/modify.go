@@ -3,7 +3,6 @@ package processor
 import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type modifier struct {
@@ -11,18 +10,18 @@ type modifier struct {
 }
 
 // NewModifier
-func NewModifier(templateEnvs map[string]string) *modifier {
+func NewModifier(templateEnvs map[string]string) *modifier { //nolint:revive
 	return &modifier{
 		templateEnvs: templateEnvs,
 	}
 }
 
 func (p *modifier) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
-	return p.processPipelineSpec(&pipeline.Spec, &pipeline.ObjectMeta, path, pipeline)
+	return p.processPipelineSpec(&pipeline.Spec, path)
 }
 
 func (p *modifier) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
-	return p.processPipelineSpec(prs.Spec.PipelineSpec, &prs.ObjectMeta, path, prs)
+	return p.processPipelineSpec(prs.Spec.PipelineSpec, path)
 }
 
 func (p *modifier) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
@@ -33,7 +32,7 @@ func (p *modifier) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error
 	return false, nil
 }
 
-func (p *modifier) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
+func (p *modifier) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (bool, error) {
 	return ProcessPipelineSpec(ps, path, p.processTaskSpec)
 }
 

@@ -19,7 +19,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/linter"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
@@ -48,8 +47,6 @@ var (
 		"Task":        true,
 		"TaskRun":     true,
 	}
-
-	info = termcolor.ColorInfo
 
 	cmdLong = templates.LongDesc(`
 		Lints the lighthouse trigger and tekton pipelines
@@ -210,12 +207,12 @@ func ValidatePipelineRun(ctx context.Context, pr *v1beta1.PipelineRun) *apis.Fie
 
 func ValidateTaskRunVolumesExist(ts *v1beta1.TaskSpec) (errs *apis.FieldError) {
 	volumeNames := map[string]bool{}
-	for _, v := range ts.Volumes {
-		volumeNames[v.Name] = true
+	for k := range ts.Volumes {
+		volumeNames[ts.Volumes[k].Name] = true
 	}
 
-	for i, s := range ts.Steps {
-		for j, v := range s.VolumeMounts {
+	for i := range ts.Steps {
+		for j, v := range ts.Steps[i].VolumeMounts {
 			if !volumeNames[v.Name] {
 				errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("Not found: %s", v.Name), "name").ViaFieldIndex("volumeMounts", j).ViaFieldIndex("steps", i).ViaField("taskSpec"))
 			}

@@ -323,7 +323,7 @@ func (o *Options) processFile(path string) error {
 		Spec: v1alpha1.LighthouseJobSpec{
 			Type:  jobType,
 			Agent: job.TektonPipelineAgent,
-			//Namespace: ns,
+			// Namespace: ns,
 			Job: jobName,
 			Refs: &v1alpha1.Refs{
 				Org:      owner,
@@ -331,13 +331,13 @@ func (o *Options) processFile(path string) error {
 				RepoLink: gitURL,
 				BaseRef:  o.Branch,
 				BaseSHA:  sha,
-				//BaseLink: commit.Link,
+				// BaseLink: commit.Link,
 				CloneURI: gitCloneURL,
 			},
 			ExtraRefs: nil,
 			Context:   o.Context,
-			//RerunCommand:      base.RerunCommand,
-			//MaxConcurrency:    base.MaxConcurrency,
+			// RerunCommand:      base.RerunCommand,
+			// MaxConcurrency:    base.MaxConcurrency,
 			PipelineRunSpec:   &pr.Spec,
 			PipelineRunParams: pipelineRunParams,
 		},
@@ -430,6 +430,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	if commit == nil {
 		return errors.Errorf("no commit on repo %s for branch %s", fullName, branch)
 	}
+	//nolint:govet
 	if cfg.InRepoConfigEnabled(fullName) {
 		pluginCfg := &plugins.Configuration{
 			Plugins: map[string][]string{
@@ -468,7 +469,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		Spec: v1alpha1.LighthouseJobSpec{
 			Type:  jobType,
 			Agent: job.TektonPipelineAgent,
-			//Namespace: ns,
+			// Namespace: ns,
 			Job: base.Name,
 			Refs: &v1alpha1.Refs{
 				Org:      owner,
@@ -481,7 +482,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 			ExtraRefs: nil,
 			Context:   contextName,
-			//RerunCommand:      base.RerunCommand,
+			// RerunCommand:      base.RerunCommand,
 			MaxConcurrency:    base.MaxConcurrency,
 			PipelineRunSpec:   base.PipelineRunSpec,
 			PipelineRunParams: pipelineRunParams,
@@ -554,10 +555,12 @@ func (o *Options) pickTrigger(cfg *config.Config, fullName string) (string, job.
 			trigger := triggers[0]
 			return trigger.Context, trigger.Base, nil
 		}
-		for _, trigger := range triggers {
-			name := trigger.Context
+		for k := range triggers {
+			// naming this trigger fails sonarcloud checks!
+			t := triggers[k]
+			name := t.Context
 			if name == o.Context {
-				return name, trigger.Base, nil
+				return name, t.Base, nil
 			}
 			names = append(names, name)
 		}
@@ -571,7 +574,8 @@ func (o *Options) pickTrigger(cfg *config.Config, fullName string) (string, job.
 		trigger := triggers[0]
 		return trigger.Context, trigger.Base, nil
 	}
-	for _, trigger := range triggers {
+	for k := range triggers {
+		trigger := triggers[k]
 		name := trigger.Context
 		if name == o.Context {
 			return name, trigger.Base, nil

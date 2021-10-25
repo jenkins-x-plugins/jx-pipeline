@@ -13,7 +13,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
@@ -40,8 +39,6 @@ type Options struct {
 }
 
 var (
-	info = termcolor.ColorInfo
-
 	cmdLong = templates.LongDesc(`
 		Lets you pick a step to override locally in a pipeline
 `)
@@ -172,7 +169,7 @@ func (o *Options) ProcessDir(dir string) error {
 	return nil
 }
 
-func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error {
+func (o *Options) loadTriggerPipelines(trigger *Trigger, dir string) error { //nolint:unparam
 	repoConfig := trigger.Config
 	for i := range repoConfig.Spec.Presubmits {
 		r := &repoConfig.Spec.Presubmits[i]

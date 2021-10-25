@@ -21,6 +21,7 @@ const (
 	repoLabel     = "lighthouse.jenkins-x.io/refs.repo"
 	buildNumLabel = "lighthouse.jenkins-x.io/buildNum"
 	TestOrg       = "jenkins-x-plugins"
+	TestOrgSecond = "jenkins-x"
 	PipelineRepo  = "jx-pipeline"
 	SecretRepo    = "jx-secret"
 )
@@ -181,9 +182,9 @@ var BuildNumberTestCases = []struct {
 	},
 	{
 		"Create pa with build number one for first pipeline of a given prefix",
-		generatePipelineRunWithLabels("master", TestOrg, "jx-promote", "16013832387908"),
+		generatePipelineRunWithLabels("master", TestOrgSecond, "jx-promote", "16013832387908"),
 		paList,
-		"jenkins-x-plugins-jx-promote-master-1",
+		"jenkins-x-jx-promote-master-1",
 	},
 	{
 		"Do not Create pa if it already exists for a given prefix",

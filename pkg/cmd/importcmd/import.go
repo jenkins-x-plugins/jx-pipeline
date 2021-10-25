@@ -130,7 +130,9 @@ func (o *Options) Validate() error {
 
 // Run implements this command
 func (o *Options) Run() error {
-	err := o.Validate()
+	var err error
+	var fs []os.FileInfo
+	err = o.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate options")
 	}
@@ -168,7 +170,7 @@ func (o *Options) Run() error {
 
 	if o.TaskFolder == "" {
 		var names []string
-		fs, err := ioutil.ReadDir(taskDir)
+		fs, err = ioutil.ReadDir(taskDir)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read task dir %s", taskDir)
 		}
@@ -204,7 +206,7 @@ func (o *Options) Run() error {
 
 	if o.TaskVersion == "" {
 		var versions []string
-		fs, err := ioutil.ReadDir(versionFolder)
+		fs, err = ioutil.ReadDir(versionFolder)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read task dir %s", versionFolder)
 		}
@@ -237,7 +239,7 @@ func (o *Options) Run() error {
 	}
 
 	var fileNames []string
-	fs, err := ioutil.ReadDir(folder)
+	fs, err = ioutil.ReadDir(folder)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read task dir %s", folder)
 	}
@@ -281,7 +283,7 @@ func (o *Options) Run() error {
 	log.Logger().Infof("tekton files imported to %s", info(path))
 
 	if !o.NoTrigger {
-		err = o.addLighthouseTriggers(folder, fileNames, path)
+		err = o.addLighthouseTriggers(fileNames, path)
 		if err != nil {
 			return errors.Wrapf(err, "failed to add lighthouse triggers")
 		}
@@ -309,7 +311,7 @@ func (o *Options) Run() error {
 }
 
 // addLighthouseTriggers if enabled lets add the lighthouse triggers
-func (o *Options) addLighthouseTriggers(sourceDir string, fileNames []string, toDir string) error {
+func (o *Options) addLighthouseTriggers(fileNames []string, toDir string) error {
 	lhTriggers := &triggerconfig.Config{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "config.lighthouse.jenkins-x.io/v1alpha1",

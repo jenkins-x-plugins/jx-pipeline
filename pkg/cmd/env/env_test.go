@@ -151,7 +151,7 @@ func TestPodEnvVars(t *testing.T) {
 
 }
 
-func assertEnvValue(t *testing.T, ev map[string]string, name string, expected string) {
+func assertEnvValue(t *testing.T, ev map[string]string, name, expected string) {
 	actual := ev[name]
 	assert.Equal(t, expected, actual, "for environment variable %s", name)
 	t.Logf("%s=%s\n", name, actual)
