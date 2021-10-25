@@ -112,7 +112,7 @@ func (o *Options) Run() error {
 	fullName := scm.Join(o.Owner, o.Repository)
 
 	ctx := o.GetContext()
-	exists, err := o.waitForRepositoryToBeSetup(ctx, o.KubeClient, o.Namespace, fullName)
+	exists, err := o.waitForRepositoryToBeSetup(ctx, o.KubeClient, o.Namespace, o.Owner, o.Repository)
 	if err != nil {
 		return errors.Wrapf(err, "failed to wait for repository to be setup in lighthouse")
 	}
@@ -129,17 +129,18 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) waitForRepositoryToBeSetup(ctx context.Context, kubeClient kubernetes.Interface, ns, fullName string) (bool, error) {
+func (o *Options) waitForRepositoryToBeSetup(ctx context.Context, kubeClient kubernetes.Interface, ns, owner, repo string) (bool, error) {
 	end := time.Now().Add(o.WaitDuration)
 	name := o.LighthouseConfigMap
 	logWaiting := false
+	fullName := scm.Join(o.Owner, o.Repository)
 
 	for {
 		cfg, err := triggers.LoadLighthouseConfig(ctx, kubeClient, ns, name, true)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to load lighthouse config")
 		}
-		flag := o.containsRepositoryTrigger(cfg, fullName)
+		flag := o.containsRepositoryTrigger(cfg, owner, repo)
 		if flag {
 			return flag, nil
 		}
@@ -214,7 +215,7 @@ func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Inte
 			log.Logger().Infof("You can view the log via: %s", info("jx admin log"))
 			log.Logger().Info("")
 
-			return errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
+			return errors.Errorf("failed to find sourceRepository %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
 		}
 
 		if !logWaiting {
@@ -226,13 +227,20 @@ func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Inte
 }
 
 // containsRepositoryTrigger returns true if the trigger is setup for the repository
-func (o *Options) containsRepositoryTrigger(cfg *config.Config, fullName string) bool {
+func (o *Options) containsRepositoryTrigger(cfg *config.Config, owner, repo string) bool {
+	fullName := scm.Join(owner, repo)
 	if cfg.Postsubmits[fullName] != nil {
 		return true
 	}
+
 	if cfg.InRepoConfig.Enabled != nil {
 		f := cfg.InRepoConfig.Enabled[fullName]
 		if f != nil {
+			return *f
+		}
+		f = cfg.InRepoConfig.Enabled[scm.Join(owner, strings.Replace(repo, "-", "_", -1))]
+		if f != nil {
+			log.Logger().Info("found trigger after converting dash to underscore in formatted repository name")
 			return *f
 		}
 	}

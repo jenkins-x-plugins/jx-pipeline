@@ -1,0 +1,68 @@
+apiVersion: jenkins.io/v1
+kind: SourceRepository
+metadata:
+  annotations:
+    webhook.jenkins-x.io: "true"
+  creationTimestamp: "2021-06-12T01:04:31Z"
+  generation: 1
+  labels:
+    gitops.jenkins-x.io/pipeline: namespaces
+    owner: jenkins-x-plugins
+    provider: github
+    repository: jx-pipeline
+  managedFields:
+    - apiVersion: jenkins.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        "f:metadata":
+          "f:annotations":
+            .: {}
+            "f:kubectl.kubernetes.io/last-applied-configuration": {}
+          "f:labels":
+            .: {}
+            "f:gitops.jenkins-x.io/pipeline": {}
+            "f:owner": {}
+            "f:provider": {}
+            "f:repository": {}
+        "f:spec":
+          .: {}
+          "f:httpCloneURL": {}
+          "f:org": {}
+          "f:provider": {}
+          "f:providerKind": {}
+          "f:providerName": {}
+          "f:repo": {}
+          "f:scheduler":
+            .: {}
+            "f:kind": {}
+            "f:name": {}
+          "f:url": {}
+      manager: kubectl
+      operation: Update
+      time: "2021-06-12T01:04:31Z"
+    - apiVersion: jenkins.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        "f:metadata":
+          "f:annotations":
+            "f:webhook.jenkins-x.io": {}
+      manager: jx-gitops-0.3.14
+      operation: Update
+      time: "2021-10-03T13:18:05Z"
+  name: jenkins-x-plugins-jx-pipeline
+  namespace: jx
+  resourceVersion: "242988863"
+  uid: 4d7b0724-fb24-47c2-994c-e528a7488e75
+  selfLink: >-
+    /apis/jenkins.io/v1/namespaces/jx/sourcerepositories/jenkins-x-plugins-jx-pipeline
+spec:
+  httpCloneURL: "https://github.com/jenkins-x-plugins/jx-pipeline.git"
+  org: jenkins-x-plugins
+  provider: "https://github.com"
+  providerKind: github
+  providerName: github
+  repo: jx-pipeline
+  scheduler:
+    kind: ""
+    name: in-repo
+  url: "https://github.com/jenkins-x-plugins/jx-pipeline"
