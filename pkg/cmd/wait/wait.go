@@ -156,7 +156,7 @@ func (o *Options) waitForRepositoryToBeSetup(ctx context.Context, kubeClient kub
 			log.Logger().Info("")
 			log.Logger().Infof("waiting up to %s for a trigger to be added to the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s", info(o.WaitDuration.String()), info(name), info(ns), info(fullName))
 			log.Logger().Infof("you can watch the boot job to update the configuration via: %s", info("jx admin log"))
-			log.Logger().Info("for more information on how this works see: https://jenkins-x.io/docs/v3/about/how-it-works/#importing--creating-quickstarts")
+			log.Logger().Info("for more information on how this works see: https://jenkins-x.io/v3/about/how-it-works/#importing--creating-quickstarts")
 			log.Logger().Info("")
 		}
 		time.Sleep(o.PollPeriod)
