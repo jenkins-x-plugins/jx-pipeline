@@ -35,7 +35,6 @@ func LoadLighthouseConfig(ctx context.Context, kubeClient kubernetes.Interface, 
 		}
 		return nil, errors.Errorf("lighthouse ConfigMap %s in namespace %s does not contain key %s", name, ns, key)
 	}
-
 	cfg, err := LoadLighthouseConfigYAML(configYaml)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load lighthouse config")
