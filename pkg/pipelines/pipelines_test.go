@@ -109,6 +109,17 @@ func generatePipelineRunWithLabels(branch, org, repo, buildNum string) *v1beta1.
 var paList = []v1.PipelineActivity{
 	{
 		ObjectMeta: metav1.ObjectMeta{
+			Name: "jenkins-x-plugins-jx-pipeline-pr-404-1",
+			Labels: map[string]string{
+				branchLabel:   "PR-404",
+				orgLabel:      TestOrg,
+				repoLabel:     PipelineRepo,
+				buildNumLabel: "1601383238723",
+			},
+		},
+	},
+	{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "jenkins-x-plugins-jx-pipeline-master-2",
 			Labels: map[string]string{
 				branchLabel:   "master",
@@ -162,6 +173,12 @@ var BuildNumberTestCases = []struct {
 	paList               []v1.PipelineActivity
 	expectedActivityName string
 }{
+	{
+		"Create pa with build number 2 for second pipeline of a given prefix",
+		generatePipelineRunWithLabels("pr-404", TestOrg, "jx-pipeline", "16013832387908"),
+		paList,
+		"jenkins-x-plugins-jx-pipeline-pr-404-2",
+	},
 	{
 		"Create pa with build number one for first pipeline of a given prefix",
 		generatePipelineRunWithLabels("master", TestOrg, "jx-promote", "16013832387908"),
