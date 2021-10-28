@@ -13,7 +13,7 @@ import (
 )
 
 // FindCatalogTaskSpec finds the pipeline catalog TaskSpec
-func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile string, defaultSHA string) (*v1beta1.TaskSpec, error) {
+func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile, defaultSHA string) (*v1beta1.TaskSpec, error) {
 	owner := resolver.OwnerName
 	repo := resolver.RepoName
 	sha, err := getCatalogSHA(owner, repo, defaultSHA)
@@ -57,7 +57,7 @@ func FindCatalogTaskSpecFromURI(resolver *inrepo.UsesResolver, gitURI string) (*
 }
 
 // getCatalogSHA gets the default SHA
-func getCatalogSHA(owner string, repo string, defaultSHA string) (string, error) {
+func getCatalogSHA(owner, repo, defaultSHA string) (string, error) {
 	// we could some day find the sha from the version stream
 	// though using head is a good default really
 	return defaultSHA, nil

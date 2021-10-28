@@ -1,6 +1,9 @@
 package breakpoint
 
 import (
+	"os"
+	"strings"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
@@ -15,8 +18,6 @@ import (
 	lhclient "github.com/jenkins-x/lighthouse-client/pkg/client/clientset/versioned"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"os"
-	"strings"
 
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -166,11 +167,11 @@ func (o *Options) Run() error {
 	f := ToBreakpointFilter(pa)
 
 	for _, bp := range o.Breakpoints {
-		if bp.Spec.Filter.Matches(f) {
+		if bp.Spec.Filter.Matches(f) { //nolint:gocritic
 			// lets confirm the deletion of the breakpoint?
-			confirm, err := o.Input.Confirm("would you like to remove Breakpoint "+bp.Name, false, "confirm if you would like to delete the LighthouseBreakpoint resource")
-			if err != nil {
-				return errors.Wrapf(err, "failed to confirm deletion")
+			confirm, inputErr := o.Input.Confirm("would you like to remove Breakpoint "+bp.Name, false, "confirm if you would like to delete the LighthouseBreakpoint resource")
+			if inputErr != nil {
+				return errors.Wrapf(inputErr, "failed to confirm deletion")
 			}
 			if !confirm {
 				return nil

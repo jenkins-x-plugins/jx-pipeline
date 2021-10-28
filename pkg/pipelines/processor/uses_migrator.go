@@ -53,7 +53,7 @@ func (p *UsesMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string)
 }
 
 func (p *UsesMigrator) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
-	return p.processTaskSpec(&task.Spec, &task.ObjectMeta, path, task.Name)
+	return p.processTaskSpec(&task.Spec, &task.ObjectMeta, path)
 }
 
 func (p *UsesMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
@@ -91,12 +91,12 @@ func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 		metadata = &originalMetadata
 	}
 	fn := func(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
-		return p.processTaskSpec(ts, metadata, path, name)
+		return p.processTaskSpec(ts, metadata, path)
 	}
 	return ProcessPipelineSpec(ps, path, fn)
 }
 
-func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.ObjectMeta, path, name string) (bool, error) {
+func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.ObjectMeta, path string) (bool, error) {
 	usesPath, err := p.usesPath(path)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get uses: path")
@@ -157,6 +157,9 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 
 		if !p.catalog {
 			err = p.addLocalOverrides(replaceStep, step, catalogStep)
+			if err != nil {
+				return false, errors.Wrapf(err, "failed to perform local overrides")
+			}
 		}
 		ts.Steps[i] = replaceStep
 		modified = true
@@ -299,9 +302,10 @@ func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) e
 	return nil
 }
 
+// ToDo: changing resultStep to pointer breaks the tests, fix logic to use pointer
 // addLocalOverrides lets compare the step in the current pipeline catalog to the local step and any differences lets
 // keep in the result step
-func (p *UsesMigrator) addLocalOverrides(resultStep v1beta1.Step, localStep *v1beta1.Step, catalogStep *v1beta1.Step) error {
+func (p *UsesMigrator) addLocalOverrides(resultStep v1beta1.Step, localStep, catalogStep *v1beta1.Step) error { //nolint
 	if localStep.Script != catalogStep.Script {
 		resultStep.Script = localStep.Script
 	}
@@ -318,7 +322,7 @@ func (p *UsesMigrator) addLocalOverrides(resultStep v1beta1.Step, localStep *v1b
 }
 
 // overrideEnv returns any locally defined env vars that differ or don't exist in the catalog
-func overrideEnv(overrides []corev1.EnvVar, from []corev1.EnvVar) []corev1.EnvVar {
+func overrideEnv(overrides, from []corev1.EnvVar) []corev1.EnvVar {
 	var answer []corev1.EnvVar
 	for _, override := range overrides {
 		found := false
@@ -339,7 +343,7 @@ func overrideEnv(overrides []corev1.EnvVar, from []corev1.EnvVar) []corev1.EnvVa
 }
 
 // overrideEnvFrom returns any locally defined env froms that differ or don't exist in the catalog
-func overrideEnvFrom(overrides []corev1.EnvFromSource, from []corev1.EnvFromSource) []corev1.EnvFromSource {
+func overrideEnvFrom(overrides, from []corev1.EnvFromSource) []corev1.EnvFromSource {
 	var answer []corev1.EnvFromSource
 	for _, override := range overrides {
 		found := false
@@ -358,7 +362,7 @@ func overrideEnvFrom(overrides []corev1.EnvFromSource, from []corev1.EnvFromSour
 }
 
 // overrideVolumeMounts returns any locally defined volume mounts that differ or don't exist in the catalog
-func overrideVolumeMounts(overrides []corev1.VolumeMount, from []corev1.VolumeMount) []corev1.VolumeMount {
+func overrideVolumeMounts(overrides, from []corev1.VolumeMount) []corev1.VolumeMount {
 	var answer []corev1.VolumeMount
 	for _, override := range overrides {
 		found := false

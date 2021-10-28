@@ -17,6 +17,7 @@ var info = termcolor.ColorInfo
 
 // ProcessFile processes the given file with the processor
 func ProcessFile(processor Interface, path string) (bool, error) {
+	var err error
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to load file %s", path)
@@ -47,7 +48,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	case "Pipeline":
 		pipeline := &tektonv1beta1.Pipeline{}
 		resource = pipeline
-		err := yaml.Unmarshal(data, pipeline)
+		err = yaml.Unmarshal(data, pipeline)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to unmarshal Pipeline YAML %s", message)
 		}
@@ -56,7 +57,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	case "PipelineRun":
 		prs := &tektonv1beta1.PipelineRun{}
 		resource = prs
-		err := yaml.Unmarshal(data, prs)
+		err = yaml.Unmarshal(data, prs)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to unmarshal PipelineRun YAML %s", message)
 		}
@@ -65,7 +66,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	case "Task":
 		task := &tektonv1beta1.Task{}
 		resource = task
-		err := yaml.Unmarshal(data, task)
+		err = yaml.Unmarshal(data, task)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to unmarshal Task YAML %s", message)
 		}
@@ -74,7 +75,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	case "TaskRun":
 		tr := &tektonv1beta1.TaskRun{}
 		resource = tr
-		err := yaml.Unmarshal(data, tr)
+		err = yaml.Unmarshal(data, tr)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to unmarshal TaskRun YAML %s", message)
 		}

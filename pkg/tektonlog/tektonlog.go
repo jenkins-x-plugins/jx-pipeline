@@ -28,9 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var (
-	info = termcolor.ColorInfo
-)
+var info = termcolor.ColorInfo
 
 // TektonLogger contains the necessary clients and the namespace to get data from the cluster, an implementation of
 // LogWriter to write logs to and a logs retriever function to override the default way to obtain logs
@@ -226,9 +224,9 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 
 	// Make sure we check again for the build pipeline if we just get the metapipeline initially, assuming the metapipeline succeeds
 	for !loggedAllRunsForActivity {
-		var stages, err = t.collectStages(ctx, pipelineRuns)
+		stages, err := t.collectStages(ctx, pipelineRuns)
 		if err != nil {
-			return errors.Wrapf(err, "not able retrive information about pipeline stages: %s %s", pa.Name, t.Namespace)
+			return errors.Wrapf(err, "not able retrieve information about pipeline stages: %s %s", pa.Name, t.Namespace)
 		}
 
 		for _, stage := range stages {
@@ -288,13 +286,14 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tektonapis.PipelineRun) ([]stageTime, error) {
 	var stageTimes []stageTime
 	for _, pr := range pipelineRuns {
-		//we need fresh pipeline to be able consume newly executed tasks/pods
+		// we need fresh pipeline to be able consume newly executed tasks/pods
 		refreshedPr, err := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
 		if refreshedPr.Status.PipelineSpec != nil {
-			for _, taskStatus := range refreshedPr.Status.PipelineSpec.Tasks {
+			for k := range refreshedPr.Status.PipelineSpec.Tasks {
+				taskStatus := refreshedPr.Status.PipelineSpec.Tasks[k]
 				podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
 				stageTimes = append(stageTimes, podTime)
 			}
@@ -304,7 +303,8 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 			if err != nil {
 				return nil, err
 			}
-			for _, task := range pipeline.Spec.Tasks {
+			for k := range pipeline.Spec.Tasks {
+				task := pipeline.Spec.Tasks[k]
 				podTime := findExecutedOrSkippedStagesStage(task.Name, refreshedPr)
 				stageTimes = append(stageTimes, podTime)
 			}

@@ -46,7 +46,7 @@ func CreateTestPipelineActivityWithTime(ctx context.Context, jxClient versioned.
 	return a, err
 }
 
-func AssertHasPullRequestForEnv(t *testing.T, ctx context.Context, activities typev1.PipelineActivityInterface, name, envName string) {
+func AssertHasPullRequestForEnv(t *testing.T, ctx context.Context, activities typev1.PipelineActivityInterface, name, envName string) { //nolint:revive
 	activity, err := activities.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		assert.NoError(t, err, "Could not find PipelineActivity %s", name)

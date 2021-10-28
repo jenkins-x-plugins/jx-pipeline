@@ -201,7 +201,7 @@ func (o *Options) processPipelineRun(prs *v1beta1.PipelineRun, path string) erro
 	prs.Annotations["lighthouse.jenkins-x.io/prependStepsURL"] = gitCloneURL
 
 	if ps.PipelineSpec != nil {
-		err := o.processPipelineSpec(ps.PipelineSpec, path)
+		err := o.processPipelineSpec(ps.PipelineSpec)
 		if err != nil {
 			return errors.Wrapf(err, "failed to ")
 		}
@@ -213,7 +213,7 @@ func (o *Options) processPipelineRun(prs *v1beta1.PipelineRun, path string) erro
 	return nil
 }
 
-func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec, path string) error {
+func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec) error { //nolint:unparam
 	spec.Params = RemoveDefaultParamSpecs(spec.Params)
 	for i := range spec.Tasks {
 		task := &spec.Tasks[i]
@@ -225,7 +225,7 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec, path string) e
 			for j := range ts.Steps {
 				s := ts.Steps[j]
 				if !removeStepNames[s.Name] {
-					s = o.convertToScriptStep(s)
+					s = o.convertToScriptStep(&s)
 					steps = append(steps, s)
 				}
 			}
@@ -240,7 +240,7 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec, path string) e
 }
 
 func (o *Options) processPipeline(pipeline *v1beta1.Pipeline, path string) error {
-	err := o.processPipelineSpec(&pipeline.Spec, path)
+	err := o.processPipelineSpec(&pipeline.Spec)
 	if err != nil {
 		return errors.Wrapf(err, "failed to ")
 	}
@@ -255,9 +255,9 @@ func (o *Options) processTask(task *v1beta1.Task, path string) error {
 	return nil
 }
 
-func (o *Options) convertToScriptStep(s v1beta1.Step) v1beta1.Step {
+func (o *Options) convertToScriptStep(s *v1beta1.Step) v1beta1.Step {
 	if len(s.Command) == 0 || len(s.Args) == 0 {
-		return s
+		return *s
 	}
 	bin := s.Command[0]
 	arg := ""
@@ -266,7 +266,7 @@ func (o *Options) convertToScriptStep(s v1beta1.Step) v1beta1.Step {
 		bin = "/usr/bin/env bash"
 	} else {
 		if !shellBinaries[bin] {
-			return s
+			return *s
 		}
 		if len(s.Command) == 2 && s.Command[1] == "-c" && len(s.Args) == 1 {
 			arg = s.Args[0]
@@ -275,7 +275,7 @@ func (o *Options) convertToScriptStep(s v1beta1.Step) v1beta1.Step {
 		}
 	}
 	if arg == "" {
-		return s
+		return *s
 	}
 	if strings.HasPrefix(arg, "jx ") {
 		bin = "/usr/bin/env bash"
@@ -283,7 +283,7 @@ func (o *Options) convertToScriptStep(s v1beta1.Step) v1beta1.Step {
 	s.Command = nil
 	s.Args = nil
 	s.Script = "#!" + bin + "\n" + strings.ReplaceAll(arg, " && ", "\n") + "\n"
-	return s
+	return *s
 }
 
 // RemoveDefaultParamSpecs removes default parameters

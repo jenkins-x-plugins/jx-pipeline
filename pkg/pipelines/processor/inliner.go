@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type inliner struct {
@@ -21,7 +20,7 @@ type inliner struct {
 }
 
 // NewInliner
-func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA, step string, inlineProperties []string) *inliner {
+func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA, step string, inlineProperties []string) *inliner { //nolint:revive
 	return &inliner{
 		input:            input,
 		resolver:         resolver,
@@ -32,11 +31,11 @@ func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA
 }
 
 func (p *inliner) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
-	return p.processPipelineSpec(&pipeline.Spec, &pipeline.ObjectMeta, path, pipeline)
+	return p.processPipelineSpec(&pipeline.Spec, path)
 }
 
 func (p *inliner) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
-	return p.processPipelineSpec(prs.Spec.PipelineSpec, &prs.ObjectMeta, path, prs)
+	return p.processPipelineSpec(prs.Spec.PipelineSpec, path)
 }
 
 func (p *inliner) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
@@ -48,10 +47,11 @@ func (p *inliner) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error)
 	return false, nil
 }
 
-func (p *inliner) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
+func (p *inliner) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (bool, error) {
 	return ProcessPipelineSpec(ps, path, p.processTaskSpec)
 }
 
+//nolint
 func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
 	templateImage := ""
 	if ts.StepTemplate != nil {
@@ -128,7 +128,8 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 
 	// lets inline all the steps in the uses task
 	steps := ts.Steps[0:so.index]
-	for _, s := range catalogTaskSpec.Steps {
+	for k := range catalogTaskSpec.Steps {
+		s := catalogTaskSpec.Steps[k]
 		newStep := v1beta1.Step{}
 		newStep.Name = s.Name
 		if ts.StepTemplate == nil {
@@ -189,7 +190,7 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	return true, nil
 }
 
-func (p *inliner) inlineStep(s *v1beta1.Step, catalogStep *v1beta1.Step) error {
+func (p *inliner) inlineStep(s, catalogStep *v1beta1.Step) error {
 	if len(p.inlineProperties) == 0 {
 		*s = *catalogStep
 		return nil

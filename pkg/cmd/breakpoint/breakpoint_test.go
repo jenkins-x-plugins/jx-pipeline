@@ -4,6 +4,9 @@ package breakpoint_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/breakpoint"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/testpipelines"
 	fakejx "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned/fake"
@@ -12,8 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
-	"testing"
-	"time"
 
 	"k8s.io/client-go/kubernetes/fake"
 )

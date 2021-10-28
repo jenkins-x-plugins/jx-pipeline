@@ -37,5 +37,5 @@ spec:
         - name: promote-release
   podTemplate: {}
   serviceAccountName: tekton-bot
-  timeout: 240h0m0s
+  timeout: 1h30m0s
 status: {}

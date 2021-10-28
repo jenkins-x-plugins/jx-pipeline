@@ -18,7 +18,7 @@ func TestSplitBucketURL(t *testing.T) {
 		"jenkins-x/logs/org/repo/foo.log")
 }
 
-func assertSplitBucketURL(t *testing.T, inputURL string, expectedBucketURL string, expectedKey string) {
+func assertSplitBucketURL(t *testing.T, inputURL, expectedBucketURL, expectedKey string) {
 	u, err := url.Parse(inputURL)
 	require.NoError(t, err, "failed to parse URL %s", inputURL)
 

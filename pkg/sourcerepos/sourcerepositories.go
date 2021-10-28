@@ -48,20 +48,6 @@ func FindSourceRepositoryWithoutProvider(ctx context.Context, jxClient versioned
 	return FindSourceRepository(ctx, jxClient, ns, owner, name, "")
 }
 
-// findSourceRepositoryByLabels returns a SourceRepository matching the given label selector, if it exists.
-func findSourceRepositoryByLabels(ctx context.Context, jxClient versioned.Interface, ns, labelSelector string) (*v1.SourceRepository, error) {
-	repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "listing SourceRepositorys matching label selector %s in namespace %s", labelSelector, ns)
-	}
-	if repos != nil && len(repos.Items) == 1 {
-		return &repos.Items[0], nil
-	}
-	return nil, nil
-}
-
 // FindSourceRepository returns a SourceRepository for the given namespace, owner, repo name, and (optional) provider name.
 // If no SourceRepository is found, return nil.
 func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns, owner, name, providerName string) (*v1.SourceRepository, error) {
@@ -72,15 +58,15 @@ func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns,
 		if apierrors.IsNotFound(err) {
 			log.Logger().Debugf("could not find SourceRepository %s in namespace %s", name, ns)
 
-			repos, err := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{})
-			if err != nil {
-				return nil, errors.Wrapf(err, "listing SourceRepository resources in namespace %s", ns)
+			repos, reposErr := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{})
+			if reposErr != nil {
+				return nil, errors.Wrapf(reposErr, "listing SourceRepository resources in namespace %s", ns)
 			}
 
 			for i := range repos.Items {
-				repo := &repos.Items[i]
-				if repo.Spec.Org == owner && repo.Spec.Repo == name {
-					return repo, nil
+				r := &repos.Items[i]
+				if r.Spec.Org == owner && r.Spec.Repo == name {
+					return r, nil
 				}
 			}
 			return nil, nil

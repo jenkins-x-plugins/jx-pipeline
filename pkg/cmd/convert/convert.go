@@ -107,8 +107,6 @@ func (o *Options) Validate() error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to create a UsesResolver")
 			}
-		} else {
-			// lets discover the resolver for each lighthouse folder using the Kptfile
 		}
 	}
 	if o.CommandRunner == nil {
@@ -122,7 +120,8 @@ func (o *Options) Validate() error {
 
 // Run implements this command
 func (o *Options) Run() error {
-	err := o.Validate()
+	var err error
+	err = o.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate options")
 	}
@@ -136,7 +135,7 @@ func (o *Options) Run() error {
 			o.Processor = processor.NewUsesMigrator(rootDir, o.TasksFolder, migratorOwner, migratorRepository, o.UseSHA, o.Catalog)
 		}
 		packsDir := filepath.Join(rootDir, "packs")
-		err := filepath.Walk(packsDir, func(path string, info os.FileInfo, err error) error {
+		err = filepath.Walk(packsDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -250,7 +249,7 @@ func (o *Options) ProcessDir(dir string) error {
 
 func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir string) error {
 	modified := false
-	for i := range repoConfig.Spec.Presubmits {
+	for i := range repoConfig.Spec.Presubmits { //nolint:dupl
 		r := &repoConfig.Spec.Presubmits[i]
 		if r.SourcePath != "" {
 			err := o.updateCatalogTask(r.SourcePath)
@@ -270,7 +269,7 @@ func (o *Options) processTriggerFile(repoConfig *triggerconfig.Config, dir strin
 			r.Agent = job.TektonPipelineAgent
 		}
 	}
-	for i := range repoConfig.Spec.Postsubmits {
+	for i := range repoConfig.Spec.Postsubmits { //nolint:dupl
 		r := &repoConfig.Spec.Postsubmits[i]
 		if r.SourcePath != "" {
 			err := o.updateCatalogTask(r.SourcePath)
@@ -338,9 +337,10 @@ func (o *Options) createNonCatalogResolver(triggerDir string) (*inrepo.UsesResol
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse git URL %s from %s", repoURL, path)
 	}
-	o.ResolverOptions.CatalogOwner = gitInfo.Organisation
-	o.ResolverOptions.CatalogRepository = gitInfo.Name
+
 	if gitInfo != nil {
+		o.ResolverOptions.CatalogOwner = gitInfo.Organisation
+		o.ResolverOptions.CatalogRepository = gitInfo.Name
 		o.Processor.Owner = gitInfo.Organisation
 		o.Processor.Repository = gitInfo.Name
 	}
