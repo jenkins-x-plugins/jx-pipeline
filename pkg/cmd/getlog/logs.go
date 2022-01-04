@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxenv"
-
+	"github.com/gerow/pager"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxenv"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
@@ -113,9 +113,6 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 
 // Validate verifies things are setup correctly
 func (o *Options) Validate() error {
-	if o.Out == nil {
-		o.Out = os.Stdout
-	}
 	err := o.BuildFilter.Validate()
 	if err != nil {
 		return err
@@ -271,5 +268,16 @@ func (o *Options) getTektonLogs() (bool, error) {
 		return true, errors.New("there are no build logs for the supplied filters")
 	}
 
+	if o.Out == nil {
+		if !o.BatchMode {
+			err = pager.Open()
+			if err != nil {
+				log.Logger().Debugf("Failed to use pager: %s", err)
+			} else {
+				defer pager.Close()
+			}
+		}
+		o.Out = os.Stdout
+	}
 	return false, o.TektonLogger.GetLogsForActivity(ctx, o.Out, pa, name, prList)
 }

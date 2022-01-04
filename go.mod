@@ -6,6 +6,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.13.1
 	github.com/cpuguy83/go-md2man v1.0.10
 	github.com/fatih/color v1.10.0
+	github.com/gerow/pager v0.0.0-20190420205801-6d4a2327822f
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/jenkins-x-plugins/jx-gitops v0.4.2
 	github.com/jenkins-x/go-scm v1.10.11
