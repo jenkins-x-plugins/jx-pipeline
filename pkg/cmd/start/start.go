@@ -489,7 +489,11 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		},
 	}
 
-	lhjob.Labels, lhjob.Annotations = jobutil.LabelsAndAnnotationsForSpec(lhjob.Spec, nil, nil)
+	extraLabels := map[string]string{
+		"manual-trigger": "true",
+	}
+
+	lhjob.Labels, lhjob.Annotations = jobutil.LabelsAndAnnotationsForSpec(lhjob.Spec, extraLabels, nil)
 	lhjob.GenerateName = naming.ToValidName(owner+"-"+repo) + "-"
 
 	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)

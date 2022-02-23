@@ -24,8 +24,11 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	owner := naming.ToValidName(activities.GetLabel(labels, activities.OwnerLabels))
 	repository := naming.ToValidName(activities.GetLabel(labels, activities.RepoLabels))
 	branch := naming.ToValidName(activities.GetLabel(labels, activities.BranchLabels))
+	// Sometimes lighthouse creates duplicate jobs randomly that do not have a GUID associated with them.
+	// See: https://github.com/jenkins-x/lighthouse/issues/1420
+	guid := labels["event-GUID"]
 
-	if owner == "" || repository == "" || branch == "" {
+	if owner == "" || repository == "" || branch == "" || guid == "" {
 		return ""
 	}
 
