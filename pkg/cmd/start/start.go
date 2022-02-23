@@ -472,10 +472,10 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			// Namespace: ns,
 			Job: base.Name,
 			Refs: &v1alpha1.Refs{
-				Org:      owner,
-				Repo:     repo,
+				Org:      naming.ToValidName(owner),
+				Repo:     naming.ToValidName(repo),
 				RepoLink: sr.Spec.URL,
-				BaseRef:  branch,
+				BaseRef:  naming.ToValidName(branch),
 				BaseSHA:  commit.Sha,
 				BaseLink: commit.Link,
 				CloneURI: sr.Spec.HTTPCloneURL,
@@ -489,7 +489,12 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		},
 	}
 
-	lhjob.Labels, lhjob.Annotations = jobutil.LabelsAndAnnotationsForSpec(lhjob.Spec, nil, nil)
+	// These jobs were not created by event trigger from git, but started using jx pipeline start
+	extraLabels := map[string]string{
+		"external-trigger": "true",
+	}
+
+	lhjob.Labels, lhjob.Annotations = jobutil.LabelsAndAnnotationsForSpec(lhjob.Spec, extraLabels, nil)
 	lhjob.GenerateName = naming.ToValidName(owner+"-"+repo) + "-"
 
 	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
