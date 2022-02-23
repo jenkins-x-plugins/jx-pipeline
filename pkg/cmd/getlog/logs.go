@@ -2,11 +2,9 @@ package getlog
 
 import (
 	"io"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/gerow/pager"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -53,8 +51,7 @@ type Options struct {
 }
 
 // CLILogWriter is an implementation of logs.LogWriter that will show logs in the standard output
-type CLILogWriter struct {
-}
+type CLILogWriter struct{}
 
 var (
 	cmdLong = templates.LongDesc(`
@@ -219,7 +216,6 @@ func Retry(maxElapsedTime time.Duration, f func() error) error {
 	bo.MaxElapsedTime = maxElapsedTime
 	bo.Reset()
 	return backoff.Retry(f, bo)
-
 }
 
 func (o *Options) getTektonLogs() (bool, error) {
@@ -268,16 +264,6 @@ func (o *Options) getTektonLogs() (bool, error) {
 		return true, errors.New("there are no build logs for the supplied filters")
 	}
 
-	if o.Out == nil {
-		if !o.BatchMode {
-			err = pager.Open()
-			if err != nil {
-				log.Logger().Debugf("Failed to use pager: %s", err)
-			} else {
-				defer pager.Close()
-			}
-		}
-		o.Out = os.Stdout
-	}
+	o.setOutput()
 	return false, o.TektonLogger.GetLogsForActivity(ctx, o.Out, pa, name, prList)
 }
