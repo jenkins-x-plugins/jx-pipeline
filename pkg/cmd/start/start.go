@@ -472,10 +472,10 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			// Namespace: ns,
 			Job: base.Name,
 			Refs: &v1alpha1.Refs{
-				Org:      naming.ToValidName(owner),
-				Repo:     naming.ToValidName(repo),
+				Org:      owner,
+				Repo:     repo,
 				RepoLink: sr.Spec.URL,
-				BaseRef:  naming.ToValidName(branch),
+				BaseRef:  branch,
 				BaseSHA:  commit.Sha,
 				BaseLink: commit.Link,
 				CloneURI: sr.Spec.HTTPCloneURL,
