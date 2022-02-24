@@ -10,12 +10,3 @@ spec:
               \s+PipelineVersion = "(.*)"
             files:
               - "pkg/plugins/versions.go"
-    - urls:
-        - https://github.com/jenkinsci/tekton-client-plugin
-      fork: true
-      changes:
-        - regex:
-            pattern: |
-              \s+<jx-pipeline\.version>(.*)<\/jx-pipeline\.version>
-            files:
-              - "pom.xml"
