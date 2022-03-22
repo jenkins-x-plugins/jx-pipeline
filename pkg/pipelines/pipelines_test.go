@@ -1,10 +1,11 @@
-package pipelines
+package pipelines_test
 
 import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/testpipelines"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
@@ -49,7 +50,7 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 	require.NoError(t, err, "failed to unmarshal %s", prFile)
 
 	pa := &v1.PipelineActivity{}
-	ToPipelineActivity(pr, pa, false)
+	pipelines.ToPipelineActivity(pr, pa, false)
 
 	testpipelines.ClearTimestamps(pa)
 
@@ -80,7 +81,7 @@ func TestMergePipelineActivity(t *testing.T) {
 	err = yamls.LoadFile(paFile, pa)
 	require.NoError(t, err, "failed to load %s", paFile)
 
-	ToPipelineActivity(pr, pa, false)
+	pipelines.ToPipelineActivity(pr, pa, false)
 
 	testpipelines.ClearTimestamps(pa)
 
@@ -214,7 +215,7 @@ var BuildNumberTestCases = []struct {
 
 func TestPipelineBuildNumber(t *testing.T) {
 	for _, tt := range BuildNumberTestCases {
-		actualActivityName := ToPipelineActivityName(tt.pipelineRun, tt.paList)
+		actualActivityName := pipelines.ToPipelineActivityName(tt.pipelineRun, tt.paList)
 		t.Log(tt.description)
 		require.Equal(t, tt.expectedActivityName, actualActivityName)
 	}
@@ -222,6 +223,21 @@ func TestPipelineBuildNumber(t *testing.T) {
 
 func BenchmarkPipelineBuildNumber(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		ToPipelineActivityName(generatePipelineRunWithLabels("master", TestOrg, "jx-test", "1601383238723"), paList)
+		pipelines.ToPipelineActivityName(generatePipelineRunWithLabels("master", TestOrg, "jx-test", "1601383238723"), paList)
 	}
+}
+
+func TestTimedOutPipelineActivity(t *testing.T) {
+	// ToDo: Eventually we want to add more test cases for other tekton pr status types
+	prFile := filepath.Join("test_data", "timeout", "pr.yaml")
+	require.FileExists(t, prFile)
+
+	pr := &v1beta1.PipelineRun{}
+	err := yamls.LoadFile(prFile, pr)
+	require.NoError(t, err, "failed to load %s", prFile)
+
+	pa := &v1.PipelineActivity{}
+
+	pipelines.ToPipelineActivity(pr, pa, false)
+	require.Equal(t, v1.ActivityStatusTypeTimedOut, pa.Spec.Status)
 }

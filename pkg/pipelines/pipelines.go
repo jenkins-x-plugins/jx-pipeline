@@ -208,6 +208,25 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 				}
 				stage.Stage.Steps = append(stage.Stage.Steps, step)
 			}
+			// ToDo: Use case statement for different cases, for now, it's ok as we are dealing with timeouts
+			if len(v.Status.Steps) == 0 {
+				for _, m := range v.Status.Conditions {
+					if m.Reason == v1beta1.TaskRunReasonTimedOut.String() {
+						stage = &v1.PipelineActivityStep{
+							Kind: v1.ActivityStepKindTypeStage,
+							Stage: &v1.StageActivityStep{
+								CoreActivityStep: v1.CoreActivityStep{
+									Name:             stageName,
+									Description:      "",
+									Status:           v1.ActivityStatusTypeTimedOut,
+									StartedTimestamp: v.Status.StartTime,
+								},
+							},
+						}
+					}
+				}
+			}
+
 			if stage != nil {
 				// lets check we have a started time if we have at least 1 step
 				if stage.Stage != nil && len(stage.Stage.Steps) > 0 {
