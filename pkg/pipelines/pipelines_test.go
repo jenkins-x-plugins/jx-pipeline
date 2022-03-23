@@ -227,17 +227,36 @@ func BenchmarkPipelineBuildNumber(b *testing.B) {
 	}
 }
 
-func TestTimedOutPipelineActivity(t *testing.T) {
-	// ToDo: Eventually we want to add more test cases for other tekton pr status types
-	prFile := filepath.Join("test_data", "timeout", "pr.yaml")
-	require.FileExists(t, prFile)
+var activityStatusTestCases = []struct {
+	description    string
+	folder         string
+	expectedStatus string
+}{
+	{
+		description:    "Tekton pipeline run has timed out and has no steps",
+		folder:         "timeout",
+		expectedStatus: v1.ActivityStatusTypeTimedOut.String(),
+	},
+	{
+		description:    "Tekton pipeline run has failed and has no steps",
+		folder:         "failed",
+		expectedStatus: v1.ActivityStatusTypeFailed.String(),
+	},
+}
 
-	pr := &v1beta1.PipelineRun{}
-	err := yamls.LoadFile(prFile, pr)
-	require.NoError(t, err, "failed to load %s", prFile)
+func TestPipelineActivityStatus(t *testing.T) {
+	for k, v := range activityStatusTestCases {
+		t.Logf("Running test case %d: %s", k, v.description)
+		prFile := filepath.Join("test_data", v.folder, "pr.yaml")
+		require.FileExists(t, prFile)
 
-	pa := &v1.PipelineActivity{}
+		pr := &v1beta1.PipelineRun{}
+		err := yamls.LoadFile(prFile, pr)
+		require.NoError(t, err, "failed to load %s", prFile)
 
-	pipelines.ToPipelineActivity(pr, pa, false)
-	require.Equal(t, v1.ActivityStatusTypeTimedOut, pa.Spec.Status)
+		pa := &v1.PipelineActivity{}
+
+		pipelines.ToPipelineActivity(pr, pa, false)
+		require.Equal(t, v.expectedStatus, pa.Spec.Status.String())
+	}
 }
