@@ -11,6 +11,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 )
 
 // ToPipelineActivityName creates an activity name from a pipeline run
@@ -211,22 +212,37 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 			// ToDo: Use case statement for different cases, for now, it's ok as we are dealing with timeouts
 			if len(v.Status.Steps) == 0 {
 				for _, m := range v.Status.Conditions {
-					if m.Reason == v1beta1.TaskRunReasonTimedOut.String() {
-						stage = &v1.PipelineActivityStep{
-							Kind: v1.ActivityStepKindTypeStage,
-							Stage: &v1.StageActivityStep{
-								CoreActivityStep: v1.CoreActivityStep{
-									Name:             stageName,
-									Description:      "",
-									Status:           v1.ActivityStatusTypeTimedOut,
-									StartedTimestamp: v.Status.StartTime,
+					// Only set the stage if the tekton pipeline run has succeeded
+					if m.Type == apis.ConditionSucceeded {
+						switch m.Reason {
+						case v1beta1.TaskRunReasonTimedOut.String():
+							stage = &v1.PipelineActivityStep{
+								Kind: v1.ActivityStepKindTypeStage,
+								Stage: &v1.StageActivityStep{
+									CoreActivityStep: v1.CoreActivityStep{
+										Name:             stageName,
+										Description:      "",
+										Status:           v1.ActivityStatusTypeTimedOut,
+										StartedTimestamp: v.Status.StartTime,
+									},
 								},
-							},
+							}
+						case v1beta1.TaskRunReasonFailed.String():
+							stage = &v1.PipelineActivityStep{
+								Kind: v1.ActivityStepKindTypeStage,
+								Stage: &v1.StageActivityStep{
+									CoreActivityStep: v1.CoreActivityStep{
+										Name:             stageName,
+										Description:      "",
+										Status:           v1.ActivityStatusTypeFailed,
+										StartedTimestamp: v.Status.StartTime,
+									},
+								},
+							}
 						}
 					}
 				}
 			}
-
 			if stage != nil {
 				// lets check we have a started time if we have at least 1 step
 				if stage.Stage != nil && len(stage.Stage.Steps) > 0 {
