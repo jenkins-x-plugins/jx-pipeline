@@ -19,12 +19,11 @@ var (
 func TestPipelineSet(t *testing.T) {
 	_, o := set.NewCmdPipelineSet()
 
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "failed to create tmp dir")
+	tmpDir := t.TempDir()
 
 	srcDir := "test_data"
 
-	err = files.CopyDirOverwrite(srcDir, tmpDir)
+	err := files.CopyDirOverwrite(srcDir, tmpDir)
 	require.NoError(t, err, "failed to copy test files at %s to %s", srcDir, tmpDir)
 
 	o.Dir = tmpDir

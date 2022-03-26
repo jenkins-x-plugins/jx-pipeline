@@ -1,7 +1,6 @@
 package effective_test
 
 import (
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -28,8 +27,7 @@ var (
 )
 
 func TestPipelineEffective(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	tmpDir := t.TempDir()
 	actual := filepath.Join(tmpDir, "pipeline.yaml")
 	expectedFile := filepath.Join("test_data", ".lighthouse", "jenkins-x", "expected.yaml")
 
@@ -39,7 +37,7 @@ func TestPipelineEffective(t *testing.T) {
 	o.BatchMode = true
 	o.OutFile = actual
 	o.Resolver = CreateFakeResolver(t)
-	err = o.Run()
+	err := o.Run()
 	require.NoError(t, err, "Failed to run linter")
 
 	assert.FileExists(t, actual, "should have generated file")

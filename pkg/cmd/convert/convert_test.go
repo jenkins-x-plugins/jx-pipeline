@@ -1,7 +1,6 @@
 package convert_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -37,8 +36,7 @@ func TestConvertCatalog(t *testing.T) {
 	if generateTestOutput {
 		os.RemoveAll(expectedDir)
 	} else {
-		tmpDir, err = ioutil.TempDir("", "")
-		require.NoError(t, err, "could not create temp dir")
+		tmpDir = t.TempDir()
 	}
 
 	err = files.CopyDir(srcDir, tmpDir, true)
@@ -75,8 +73,7 @@ func TestConvertRepository(t *testing.T) {
 	if generateTestOutput {
 		os.RemoveAll(expectedDir)
 	} else {
-		tmpDir, err = ioutil.TempDir("", "")
-		require.NoError(t, err, "could not create temp dir")
+		tmpDir = t.TempDir()
 	}
 
 	err = files.CopyDir(srcDir, tmpDir, true)

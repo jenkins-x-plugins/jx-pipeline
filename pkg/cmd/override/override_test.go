@@ -1,7 +1,6 @@
 package override_test
 
 import (
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -22,13 +21,12 @@ var (
 )
 
 func TestPipelineOverrideStep(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	tmpDir := t.TempDir()
 
 	srcDir := filepath.Join("test_data", "step")
 	expectedFile := filepath.Join(srcDir, "expected.yaml")
 
-	err = files.CopyDirOverwrite(srcDir, tmpDir)
+	err := files.CopyDirOverwrite(srcDir, tmpDir)
 	require.NoError(t, err, "failed to copy %s to %s", srcDir, tmpDir)
 
 	_, o := override.NewCmdPipelineOverride()
@@ -54,13 +52,12 @@ func TestPipelineOverrideStep(t *testing.T) {
 }
 
 func TestPipelineOverrideStepProperty(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	tmpDir := t.TempDir()
 
 	srcDir := filepath.Join("test_data", "step-property")
 	expectedFile := filepath.Join(srcDir, "expected.yaml")
 
-	err = files.CopyDirOverwrite(srcDir, tmpDir)
+	err := files.CopyDirOverwrite(srcDir, tmpDir)
 	require.NoError(t, err, "failed to copy %s to %s", srcDir, tmpDir)
 
 	_, o := override.NewCmdPipelineOverride()
@@ -87,8 +84,7 @@ func TestPipelineOverrideStepProperty(t *testing.T) {
 }
 
 func TestPipelineOverrideTask(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	tmpDir := t.TempDir()
 
 	srcDir := filepath.Join("test_data", "task")
 	expectedFile := filepath.Join(srcDir, "expected.yaml")

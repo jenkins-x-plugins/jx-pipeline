@@ -33,8 +33,7 @@ var (
 )
 
 func TestPipelineEffectiveJenkinsClientWithEnvVar(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	tmpDir := t.TempDir()
 	actual := filepath.Join(tmpDir, "pipeline.yaml")
 	expectedFile := filepath.Join("test_data", ".lighthouse", "jenkins-x", "expected-int.yaml")
 
@@ -51,7 +50,7 @@ func TestPipelineEffectiveJenkinsClientWithEnvVar(t *testing.T) {
 	o.AddDefaults = true
 	o.OutFile = actual
 	o.Resolver = CreateFakeResolver(t)
-	err = o.Run()
+	err := o.Run()
 	require.NoError(t, err, "Failed to run linter")
 
 	assert.FileExists(t, actual, "should have generated file")
@@ -71,12 +70,11 @@ func TestPipelineEffectiveJenkinsClientWithEnvVar(t *testing.T) {
 }
 
 func TestPipelineEffectiveJenkinsClientDiscoverGit(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	tmpDir := t.TempDir()
 	actual := filepath.Join(tmpDir, "pipeline.yaml")
 	expectedFile := filepath.Join("test_data", ".lighthouse", "jenkins-x", "expected-int.yaml")
 
-	err = files.CopyDirOverwrite("test_data", tmpDir)
+	err := files.CopyDirOverwrite("test_data", tmpDir)
 	require.NoError(t, err, "failed to copy test_data to %s", tmpDir)
 
 	gitDir := filepath.Join(tmpDir, ".git")
