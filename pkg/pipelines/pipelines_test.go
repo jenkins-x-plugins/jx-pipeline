@@ -36,7 +36,7 @@ func TestCreatePipelineActivity(t *testing.T) {
 }
 
 func AssertPipelineActivityMapping(t *testing.T, folder string) {
-	prFile := filepath.Join("test_data", folder, "pipelinerun.yaml")
+	prFile := filepath.Join("testdata", folder, "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
 	tmpDir := t.TempDir()
@@ -59,14 +59,14 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 
 	t.Logf("created PipelineActivity %s\n", paFile)
 
-	testhelpers.AssertTextFilesEqual(t, filepath.Join("test_data", folder, "expected.yaml"), paFile, "generated git credentials file")
+	testhelpers.AssertTextFilesEqual(t, filepath.Join("testdata", folder, "expected.yaml"), paFile, "generated git credentials file")
 }
 
 func TestMergePipelineActivity(t *testing.T) {
-	prFile := filepath.Join("test_data", "merge", "pipelinerun.yaml")
+	prFile := filepath.Join("testdata", "merge", "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
-	paFile := filepath.Join("test_data", "merge", "pa.yaml")
+	paFile := filepath.Join("testdata", "merge", "pa.yaml")
 	require.FileExists(t, prFile)
 
 	tmpDir := t.TempDir()
@@ -89,7 +89,7 @@ func TestMergePipelineActivity(t *testing.T) {
 
 	t.Logf("created PipelineActivity %s\n", paFile)
 
-	testhelpers.AssertTextFilesEqual(t, filepath.Join("test_data", "merge", "expected.yaml"), paFile, "generated git credentials file")
+	testhelpers.AssertTextFilesEqual(t, filepath.Join("testdata", "merge", "expected.yaml"), paFile, "generated git credentials file")
 }
 
 func generatePipelineRunWithLabels(branch, org, repo, buildNum string) *v1beta1.PipelineRun {
@@ -232,7 +232,12 @@ var activityStatusTestCases = []struct {
 }{
 	{
 		description:    "Tekton pipeline run has timed out and has no steps",
-		folder:         "timeout",
+		folder:         "timeout-with-no-steps",
+		expectedStatus: v1.ActivityStatusTypeTimedOut.String(),
+	},
+	{
+		description:    "Tekton pipeline run has timed out and has steps",
+		folder:         "timeout-with-steps",
 		expectedStatus: v1.ActivityStatusTypeTimedOut.String(),
 	},
 	{
@@ -245,7 +250,7 @@ var activityStatusTestCases = []struct {
 func TestPipelineActivityStatus(t *testing.T) {
 	for k, v := range activityStatusTestCases {
 		t.Logf("Running test case %d: %s", k, v.description)
-		prFile := filepath.Join("test_data", v.folder, "pr.yaml")
+		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
 		require.FileExists(t, prFile)
 
 		pr := &v1beta1.PipelineRun{}
