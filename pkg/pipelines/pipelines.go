@@ -214,37 +214,20 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 				}
 				stage.Stage.Steps = append(stage.Stage.Steps, step)
 			}
-			// ToDo: Use case statement for different cases, for now, it's ok as we are dealing with timeouts
 			if len(v.Status.Steps) == 0 {
 				for _, m := range v.Status.Conditions {
 					// Only set the stage if the tekton pipeline run has succeeded
 					if m.Type == apis.ConditionSucceeded {
+						status := v1.ActivityStatusTypeFailed
 						switch m.Reason {
 						case v1beta1.TaskRunReasonTimedOut.String():
-							stage = &v1.PipelineActivityStep{
-								Kind: v1.ActivityStepKindTypeStage,
-								Stage: &v1.StageActivityStep{
-									CoreActivityStep: v1.CoreActivityStep{
-										Name:             stageName,
-										Description:      "",
-										Status:           v1.ActivityStatusTypeTimedOut,
-										StartedTimestamp: v.Status.StartTime,
-									},
-								},
-							}
+							status = v1.ActivityStatusTypeTimedOut
 						case v1beta1.TaskRunReasonFailed.String():
-							stage = &v1.PipelineActivityStep{
-								Kind: v1.ActivityStepKindTypeStage,
-								Stage: &v1.StageActivityStep{
-									CoreActivityStep: v1.CoreActivityStep{
-										Name:             stageName,
-										Description:      "",
-										Status:           v1.ActivityStatusTypeFailed,
-										StartedTimestamp: v.Status.StartTime,
-									},
-								},
-							}
+							status = v1.ActivityStatusTypeFailed
+						case v1beta1.TaskRunReasonCancelled.String():
+							status = v1.ActivityStatusTypeCancelled
 						}
+						stage = createStep(stageName, v.Status.StartTime, status)
 					}
 				}
 			}
@@ -364,4 +347,18 @@ func Humanize(text string) string {
 		words[i] = strings.Title(words[i])
 	}
 	return strings.Join(words, " ")
+}
+
+func createStep(stageName string, startTime *metav1.Time, status v1.ActivityStatusType) *v1.PipelineActivityStep {
+	return &v1.PipelineActivityStep{
+		Kind: v1.ActivityStepKindTypeStage,
+		Stage: &v1.StageActivityStep{
+			CoreActivityStep: v1.CoreActivityStep{
+				Name:             stageName,
+				Description:      "",
+				Status:           status,
+				StartedTimestamp: startTime,
+			},
+		},
+	}
 }
