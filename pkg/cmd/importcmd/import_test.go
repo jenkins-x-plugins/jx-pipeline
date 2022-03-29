@@ -1,7 +1,6 @@
 package importcmd_test
 
 import (
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -13,11 +12,10 @@ import (
 )
 
 func TestPipelineImport(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "could not create temp dir")
+	dir := t.TempDir()
 
 	srcDir := "test_data"
-	err = files.CopyDir(srcDir, dir, true)
+	err := files.CopyDir(srcDir, dir, true)
 	require.NoError(t, err, "failed to copy from %s to %s", srcDir, dir)
 
 	t.Logf("running tests in dir %s\n", dir)

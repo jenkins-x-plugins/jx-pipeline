@@ -39,8 +39,7 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 	prFile := filepath.Join("test_data", folder, "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "failed to create temp dir")
+	tmpDir := t.TempDir()
 
 	data, err := ioutil.ReadFile(prFile)
 	require.NoError(t, err, "failed to load %s", prFile)
@@ -70,11 +69,10 @@ func TestMergePipelineActivity(t *testing.T) {
 	paFile := filepath.Join("test_data", "merge", "pa.yaml")
 	require.FileExists(t, prFile)
 
-	tmpDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err, "failed to create temp dir")
+	tmpDir := t.TempDir()
 
 	pr := &v1beta1.PipelineRun{}
-	err = yamls.LoadFile(prFile, pr)
+	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to load %s", prFile)
 
 	pa := &v1.PipelineActivity{}
