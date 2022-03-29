@@ -166,7 +166,12 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 					if terminated.ExitCode == 0 {
 						status = v1.ActivityStatusTypeSucceeded
 					} else if !terminated.FinishedAt.IsZero() {
-						status = v1.ActivityStatusTypeFailed
+						switch terminated.Reason {
+						case v1beta1.TaskRunReasonTimedOut.String():
+							status = v1.ActivityStatusTypeTimedOut
+						default:
+							status = v1.ActivityStatusTypeFailed
+						}
 					}
 					started = &terminated.StartedAt
 					completed = &terminated.FinishedAt
