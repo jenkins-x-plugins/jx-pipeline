@@ -500,7 +500,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
 	lhjob, err = launchClient.Launch(lhjob)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create lighthousejob %s in namespace %s", lhjob.Name, ns)
+		return errors.Wrapf(err, "failed to create lighthousejob in namespace %s", ns)
 	}
 
 	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
