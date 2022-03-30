@@ -10,6 +10,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
@@ -216,8 +217,10 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 			}
 			if len(v.Status.Steps) == 0 {
 				for _, m := range v.Status.Conditions {
-					// Only set the stage if the tekton pipeline run has succeeded
-					if m.Type == apis.ConditionSucceeded {
+					// Only set the stage if the tekton pipeline run has succeeded and status is not unknown
+					if m.Type == apis.ConditionSucceeded && m.Status != corev1.ConditionUnknown {
+						// By default lets set the status to failed
+						// This is ok as a pipeline that has succeeded will have steps and status set to true
 						status := v1.ActivityStatusTypeFailed
 						switch m.Reason {
 						case v1beta1.TaskRunReasonTimedOut.String():
