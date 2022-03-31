@@ -170,6 +170,8 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 						switch terminated.Reason {
 						case v1beta1.TaskRunReasonTimedOut.String():
 							status = v1.ActivityStatusTypeTimedOut
+						case v1beta1.TaskRunReasonCancelled.String():
+							status = v1.ActivityStatusTypeCancelled
 						default:
 							status = v1.ActivityStatusTypeFailed
 						}

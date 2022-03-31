@@ -250,6 +250,11 @@ var activityStatusTestCases = []struct {
 		folder:         "cancel-with-no-steps",
 		expectedStatus: v1.ActivityStatusTypeCancelled.String(),
 	},
+	{
+		description:    "Tekton pipeline run has been cancelled and has steps",
+		folder:         "cancel-with-steps",
+		expectedStatus: v1.ActivityStatusTypeCancelled.String(),
+	},
 }
 
 func TestPipelineActivityStatus(t *testing.T) {
