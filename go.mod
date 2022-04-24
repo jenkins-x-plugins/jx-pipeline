@@ -8,7 +8,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/gerow/pager v0.0.0-20190420205801-6d4a2327822f
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/jenkins-x-plugins/jx-gitops v0.4.3
+	github.com/jenkins-x-plugins/jx-gitops v0.7.5
 	github.com/jenkins-x/go-scm v1.11.5
 	github.com/jenkins-x/jx-api/v4 v4.3.5
 	github.com/jenkins-x/jx-helpers/v3 v3.2.6
