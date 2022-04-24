@@ -793,8 +793,8 @@ github.com/jenkins-x/jx-api/v4 v4.1.5/go.mod h1:l11kHlFy40UGu9pdhCRxDiJcEgRubSVz
 github.com/jenkins-x/jx-api/v4 v4.3.0/go.mod h1:l11kHlFy40UGu9pdhCRxDiJcEgRubSVzybWB2jXjLcs=
 github.com/jenkins-x/jx-api/v4 v4.3.3 h1:odPTq8o8Wyf7duDOVWeJZ5nYmG8AXaNH45W/aPelgI4=
 github.com/jenkins-x/jx-api/v4 v4.3.3/go.mod h1:l11kHlFy40UGu9pdhCRxDiJcEgRubSVzybWB2jXjLcs=
-github.com/jenkins-x/jx-api/v4 v4.3.4 h1:aximwXBVce5DwCTF6DQziRTzI/tgyGBKu7SJMIvEkwQ=
-github.com/jenkins-x/jx-api/v4 v4.3.4/go.mod h1:hORWEL0AqeqtkCmgfs1yEwv6CGZXljDE/7+/P3sfs/k=
+github.com/jenkins-x/jx-api/v4 v4.3.5 h1:B+K9DKCtCYyYteDaHGmZrBUKkuUULHPFwKQc3j16ECA=
+github.com/jenkins-x/jx-api/v4 v4.3.5/go.mod h1:iHK40sCT1ct/C5cIa+Uo+MDFFAjXfnA88MImhPfiTmY=
 github.com/jenkins-x/jx-helpers/v3 v3.0.127/go.mod h1:0U5fcXnqSv5ugx+XMZ2rYT+VU3o+pyJeXJEiNMAVeSU=
 github.com/jenkins-x/jx-helpers/v3 v3.1.1/go.mod h1:O1nLQJKgoTao86yXM7cqKpgVk/LdqjV+nsMqNnVBl9k=
 github.com/jenkins-x/jx-helpers/v3 v3.2.5 h1:Nxy83rMtTAoLrduPStldEuwS1E9tpGEON/VpMlACFtE=
@@ -804,8 +804,8 @@ github.com/jenkins-x/jx-kube-client/v3 v3.0.2/go.mod h1:C/mKnCT5wvolX61eLKJVBNev
 github.com/jenkins-x/jx-logging/v3 v3.0.6 h1:rXiLYK7WuliCtujKkeU77fnSTJRDSIgbIk7PG4fnZGc=
 github.com/jenkins-x/jx-logging/v3 v3.0.6/go.mod h1:Vp2ER2SYgGhAgEEHlLwfi2ZB54tz6ya1qExq0A4CKMI=
 github.com/jenkins-x/lighthouse-client v0.0.295/go.mod h1:pEv7yiqqxbQLapfK4ubbxEoMzbJ/Yw1jmqFR4RcN01Y=
-github.com/jenkins-x/lighthouse-client v0.0.432 h1:0eoETScp5GamD0Mdgb34nSTh3pFLbQf85dhOrr2yhik=
-github.com/jenkins-x/lighthouse-client v0.0.432/go.mod h1:vqnDCis5KBBic6HIaIzb+jM4d9IoPD0og2p2E+vczFw=
+github.com/jenkins-x/lighthouse-client v0.0.438 h1:bgdwLGzgrpdDolI3lQ0DIkekvmXFvdc3N+DQVWo5d5o=
+github.com/jenkins-x/lighthouse-client v0.0.438/go.mod h1:N7QjV8q6Pc72XiEWdEJAfx/HxO4XyiDj7H9l6ah6mcE=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3 h1:NuRWKUPCEX1wKlXA8ZYSG28qGKd41R7BK11YDQkPwqo=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3/go.mod h1:litPp7VZWDRCl8LvXuqGngy+65kkg/+T23TgFnDmfTk=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
@@ -931,6 +931,7 @@ github.com/mattn/go-runewidth v0.0.10/go.mod h1:RAqKPSqVFrSLVXbA8x7dzmKdmGzieGRC
 github.com/mattn/go-shellwords v1.0.11/go.mod h1:EZzvwXDESEeg03EKmM+RmDnNOPKG4lLtQsUlTZDWQ8Y=
 github.com/mattn/go-sqlite3 v1.12.0/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
 github.com/mattn/go-sqlite3 v1.14.6/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
+github.com/mattn/go-zglob v0.0.1/go.mod h1:9fxibJccNxU2cnpIKLRRFA7zX7qhkJIQWBb449FYHOo=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 h1:I0XW9+e1XWDxdcEniV4rQAIOPUGDq67JSCiRCgGCZLI=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
