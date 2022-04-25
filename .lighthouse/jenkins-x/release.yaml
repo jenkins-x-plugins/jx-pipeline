@@ -30,6 +30,7 @@ spec:
         - name: chart-docs
           resources: {}
         - name: release-chart
+          resources: {}
         - name: changelog
           resources: {}
         - name: upload-binaries

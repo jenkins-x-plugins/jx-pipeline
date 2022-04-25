@@ -8,10 +8,10 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/gerow/pager v0.0.0-20190420205801-6d4a2327822f
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/jenkins-x-plugins/jx-gitops v0.7.5
+	github.com/jenkins-x-plugins/jx-gitops v0.7.6
 	github.com/jenkins-x/go-scm v1.11.5
 	github.com/jenkins-x/jx-api/v4 v4.3.5
-	github.com/jenkins-x/jx-helpers/v3 v3.2.6
+	github.com/jenkins-x/jx-helpers/v3 v3.2.7
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.2
 	github.com/jenkins-x/jx-logging/v3 v3.0.6
 	github.com/jenkins-x/lighthouse-client v0.0.438
@@ -33,7 +33,7 @@ require (
 	cloud.google.com/go v0.81.0 // indirect
 	cloud.google.com/go/storage v1.12.0 // indirect
 	code.gitea.io/sdk/gitea v0.14.0 // indirect
-	github.com/AlecAivazis/survey/v2 v2.3.2 // indirect
+	github.com/AlecAivazis/survey/v2 v2.3.4 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-storage-blob-go v0.11.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -127,7 +127,6 @@ require (
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
 	google.golang.org/grpc v1.38.0 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
-	gopkg.in/AlecAivazis/survey.v1 v1.8.8 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
