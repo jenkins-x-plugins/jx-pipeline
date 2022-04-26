@@ -34,9 +34,8 @@ spec:
           resources: {}
           script: |
             #!/usr/bin/env sh
-            ls -altr /tekton/creds-secrets/
-            ls -altr /tekton/creds/
-            cp /tekton/creds-secrets/.git-credentials /tekton/home/.git-credentials
+            # Not sure why we need this in jx-pipeline release pipelines
+            cp /tekton/creds/.git-credentials /tekton/home/.git-credentials
             source .jx/variables.sh
             jx gitops helm release
         - name: changelog
