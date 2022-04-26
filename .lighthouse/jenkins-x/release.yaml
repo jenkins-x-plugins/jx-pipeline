@@ -29,12 +29,22 @@ spec:
           resources: {}
         - name: chart-docs
           resources: {}
-        - name: release-chart
+        - image: ghcr.io/jenkins-x/jx-boot:3.2.304
+          name: release-chart
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            ls -altr /tekton/
+            ls -altr /tekton/cred-secrets/
+            cp /tekton/cred-secrets/.git-credentials /tekton/home/.git-credentials
+            source .jx/variables.sh
+            jx gitops helm release
         - name: changelog
           resources: {}
         - name: upload-binaries
           resources: {}
         - name: promote-release
+          resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h30m0s
