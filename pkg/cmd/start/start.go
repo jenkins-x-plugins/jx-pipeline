@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -438,7 +439,32 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 		}
 
-		configureOpts := func(opts *gitv2.ClientFactoryOpts) {}
+		// use the same git server information for lighthouse as the scmClient uses
+		var gitServerURLParsed *url.URL
+		gitServerURLParsed, err = url.Parse(gitServerURL)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse git URL %s", gitServerURLParsed)
+		}
+
+		// o.FindGitToken uses o.GitServerURL so set it
+		o.GitServerURL = sr.Spec.Provider
+		o.FindGitToken()
+
+		configureOpts := func(opts *gitv2.ClientFactoryOpts) {
+			opts.Token = func() []byte {
+				return []byte(o.ResolverOptions.Factory.GitToken)
+			}
+			opts.GitUser = func() (name, email string, err error) {
+				name = o.ResolverOptions.Factory.GitUsername
+				return
+			}
+			opts.Username = func() (login string, err error) {
+				login = o.ResolverOptions.Factory.GitUsername
+				return
+			}
+			opts.Host = gitServerURLParsed.Host
+			opts.Scheme = gitServerURLParsed.Scheme
+		}
 		gitFactory, err := gitv2.NewClientFactory(configureOpts)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create git factory")
