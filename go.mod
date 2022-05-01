@@ -13,8 +13,8 @@ require (
 	github.com/jenkins-x/jx-api/v4 v4.3.6
 	github.com/jenkins-x/jx-helpers/v3 v3.2.8
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.2
-	github.com/jenkins-x/jx-logging/v3 v3.0.6
-	github.com/jenkins-x/lighthouse-client v0.0.440
+	github.com/jenkins-x/jx-logging/v3 v3.0.8
+	github.com/jenkins-x/lighthouse-client v0.0.445
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
@@ -86,7 +86,6 @@ require (
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/spec v0.20.2 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
@@ -108,7 +107,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
