@@ -124,7 +124,7 @@ require (
 	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/reflow v0.2.1-0.20210115123740-9e1d0d53df68 // indirect
 	github.com/muesli/termenv v0.7.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -183,6 +183,7 @@ replace (
 
 	// lets override the go-scm version from tektoncd
 	github.com/jenkins-x/go-scm => github.com/jenkins-x/go-scm v1.11.5
+	github.com/json-iterator/go => github.com/json-iterator/go v1.1.12
 	// See: https://github.com/google/go-cloud/issues/3114
 	github.com/mattn/go-ieproxy => github.com/mattn/go-ieproxy v0.0.1
 
