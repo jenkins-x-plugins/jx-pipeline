@@ -309,13 +309,7 @@ func (o *Options) processFile(path string) error {
 		return errors.Wrapf(err, "failed to discover git url")
 	}
 	gitURL := gitInfo.URL
-	gitCloneURL := gitInfo.CloneURL
-	if gitCloneURL == "" {
-		gitCloneURL = gitURL
-	}
-	if gitInfo.Scheme == "git" {
-		gitCloneURL = gitInfo.HttpsURL()
-	}
+	gitCloneURL := gitInfo.HttpsURL()
 	owner := gitInfo.Organisation
 	repo := gitInfo.Name
 
