@@ -313,6 +313,9 @@ func (o *Options) processFile(path string) error {
 	if gitCloneURL == "" {
 		gitCloneURL = gitURL
 	}
+	if gitInfo.Scheme == "git" {
+		gitCloneURL = gitInfo.HttpsURL()
+	}
 	owner := gitInfo.Organisation
 	repo := gitInfo.Name
 
