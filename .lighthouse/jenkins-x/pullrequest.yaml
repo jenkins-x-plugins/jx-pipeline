@@ -44,7 +44,7 @@ spec:
           - name: CODECOV_TOKEN
             valueFrom:
               secretKeyRef:
-                name: codecov-jx-plugins
+                name: codecov
                 key: token
                 optional: true
         - name: build-container-build
