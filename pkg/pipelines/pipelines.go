@@ -342,6 +342,8 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 	}
 
 	activities.UpdateStatus(pa, false, nil)
+
+	pa.Spec.Message = v1.ActivityMessageType(pr.Status.Conditions[0].Message)
 }
 
 // Humanize splits into words and capitalises

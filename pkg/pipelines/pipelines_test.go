@@ -259,7 +259,7 @@ var activityStatusTestCases = []struct {
 
 func TestPipelineActivityStatus(t *testing.T) {
 	for k, v := range activityStatusTestCases {
-		t.Logf("Running test case %d: %s", k, v.description)
+		t.Logf("Running test case %d: %s", k+1, v.description)
 		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
 		require.FileExists(t, prFile)
 
@@ -271,5 +271,46 @@ func TestPipelineActivityStatus(t *testing.T) {
 
 		pipelines.ToPipelineActivity(pr, pa, false)
 		require.Equal(t, v.expectedStatus, pa.Spec.Status.String())
+	}
+}
+
+var activityMessageTestCases = []struct {
+	description     string
+	folder          string
+	expectedMessage string
+}{
+	{
+		description:     "Tekton pipeline run has been timedout and message exists",
+		folder:          "message/timeout",
+		expectedMessage: `PipelineRun "jenkins-x-jx-pr-8222-pr-64cr8" failed to finish within "1h0m0s"`,
+	},
+	{
+		description:     "Tekton pipeline run has been cancelled and message exists",
+		folder:          "message/cancelled",
+		expectedMessage: `PipelineRun "s-x-plugins-jx-project-pr-464-pr-m2z8c" was cancelled`,
+	},
+	{
+		description:     "Tekton pipeline run has been successful run and message exists",
+		folder:          "message/success",
+		expectedMessage: `Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0`,
+	},
+}
+
+func TestPipelineActivityMessage(t *testing.T) {
+	for k, v := range activityMessageTestCases {
+		t.Logf("Running test case %d: %s", k+1, v.description)
+		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
+		require.FileExists(t, prFile)
+
+		pr := &v1beta1.PipelineRun{}
+		err := yamls.LoadFile(prFile, pr)
+		require.NoError(t, err, "failed to load %s", prFile)
+
+		pa := &v1.PipelineActivity{}
+
+		pipelines.ToPipelineActivity(pr, pa, false)
+
+		require.NotEqual(t, "", pa.Spec.Message.String())
+		require.Equal(t, v.expectedMessage, pa.Spec.Message.String())
 	}
 }
