@@ -1061,8 +1061,8 @@ github.com/jenkins-x/jx-api/v4 v4.3.7 h1:SHDH+Z7kN8YBS/LzQTa69u5qWaYxraXIYjPSTmN
 github.com/jenkins-x/jx-api/v4 v4.3.7/go.mod h1:1ZPMGLTfWeDz4CoB+QBScVQM+AjS780osJ4W6mHJWlk=
 github.com/jenkins-x/jx-helpers/v3 v3.0.127/go.mod h1:0U5fcXnqSv5ugx+XMZ2rYT+VU3o+pyJeXJEiNMAVeSU=
 github.com/jenkins-x/jx-helpers/v3 v3.2.5/go.mod h1:w0isjFV0n85jYJogjTW9cdm8vM/8k1mLhTfLXrb4lCs=
-github.com/jenkins-x/jx-helpers/v3 v3.2.13 h1:H4EVTplgxvfqVY5LHVtHqDgqhV8qa+FCppZnawlp1Sg=
-github.com/jenkins-x/jx-helpers/v3 v3.2.13/go.mod h1:qC+koAUZJwftXaovby2FU2nawpGGXQaDVb5Q/FIuwzs=
+github.com/jenkins-x/jx-helpers/v3 v3.2.14 h1:ApvLvMop06pfK2qZXmQANdaLiDzmP4RHalBPVBcA4tM=
+github.com/jenkins-x/jx-helpers/v3 v3.2.14/go.mod h1:qC+koAUZJwftXaovby2FU2nawpGGXQaDVb5Q/FIuwzs=
 github.com/jenkins-x/jx-kube-client/v3 v3.0.2/go.mod h1:C/mKnCT5wvolX61eLKJVBNev9sqnkGNpi4skTQ1Gr3Q=
 github.com/jenkins-x/jx-kube-client/v3 v3.0.3 h1:yEHZKfVe9THcDSchwWuGKvIDydVzLUdJDxVss9vWmnk=
 github.com/jenkins-x/jx-kube-client/v3 v3.0.3/go.mod h1:qiVO4ufdpbSXBFx3EDhjk4VUpHVoE0ItvnPYQe5hpPc=
@@ -1071,8 +1071,8 @@ github.com/jenkins-x/jx-logging/v3 v3.0.7/go.mod h1:jcsQ9d8L6ugVH8WefsJqFgXB8+rt
 github.com/jenkins-x/jx-logging/v3 v3.0.9 h1:/5XOnxFKPb9ABciZHUzTDYrubXkd+KxPUPhgn2+xbt4=
 github.com/jenkins-x/jx-logging/v3 v3.0.9/go.mod h1:jcsQ9d8L6ugVH8WefsJqFgXB8+rtXzyz0nYRLFBPUzw=
 github.com/jenkins-x/lighthouse-client v0.0.438/go.mod h1:N7QjV8q6Pc72XiEWdEJAfx/HxO4XyiDj7H9l6ah6mcE=
-github.com/jenkins-x/lighthouse-client v0.0.491 h1:otKsGOR2tgN6kXG81GgXxW82fGtjRFQcJJn2ouXPEjk=
-github.com/jenkins-x/lighthouse-client v0.0.491/go.mod h1:LuI50dfuUo9KcmbeEuNGCmgSGvr2e31vybf3ZwXhXGk=
+github.com/jenkins-x/lighthouse-client v0.0.495 h1:N1ZYM3FIkdmL4foYy2YFh+NMy4smK8pb6XhAKgnL2iQ=
+github.com/jenkins-x/lighthouse-client v0.0.495/go.mod h1:FMQP2fnOWgH4M/TcryrevedtS2lI21l2MntUVL7aEfI=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3/go.mod h1:litPp7VZWDRCl8LvXuqGngy+65kkg/+T23TgFnDmfTk=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.4 h1:K/MNPWnRGvQU3MEJFjwtHcoJi5KkRXjZumOI/eXlhg4=
 github.com/jenkins-x/logrus-stackdriver-formatter v0.2.4/go.mod h1:qstXS0wrjYchh67ofWufoyAqLQIf9kW++MkIdxgH1dE=
@@ -1838,8 +1838,8 @@ golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd/go.mod h1:CfG3xpIq0wQ8r1q4Su
 golang.org/x/net v0.0.0-20220225172249-27dd8689420f/go.mod h1:CfG3xpIq0wQ8r1q4Su4UZFWDARRcnwPjda9FqA0JpMk=
 golang.org/x/net v0.0.0-20220325170049-de3da57026de/go.mod h1:CfG3xpIq0wQ8r1q4Su4UZFWDARRcnwPjda9FqA0JpMk=
 golang.org/x/net v0.0.0-20220401154927-543a649e0bdd/go.mod h1:CfG3xpIq0wQ8r1q4Su4UZFWDARRcnwPjda9FqA0JpMk=
-golang.org/x/net v0.0.0-20220615171555-694bf12d69de h1:ogOG2+P6LjO2j55AkRScrkB2BFpd+Z8TY2wcM0Z3MGo=
-golang.org/x/net v0.0.0-20220615171555-694bf12d69de/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
+golang.org/x/net v0.0.0-20220617184016-355a448f1bc9 h1:Yqz/iviulwKwAREEeUd3nbBFn0XuyJqkoft2IlrvOhc=
+golang.org/x/net v0.0.0-20220617184016-355a448f1bc9/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
 golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
