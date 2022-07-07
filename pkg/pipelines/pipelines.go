@@ -344,6 +344,46 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 	}
 
 	activities.UpdateStatus(pa, false, nil)
+
+	addConditionsMessage(pr, pa)
+	addTaskRunsMessage(pr, pa)
+}
+
+// addConditionsMessage reads the pr and gets the message for each condition then add it to the pa as Spec.Message
+// It also edit the message so that it says PipelineActivity instead of PipelineRun
+// It also replaces the pr.name with pa.name
+func addConditionsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+	for k := range pr.Status.Conditions {
+		msg := pr.Status.Conditions[k].GetMessage()
+
+		if strings.Contains(msg, "PipelineRun") {
+			msg = strings.ReplaceAll(msg, "PipelineRun", "PipelineActivity")
+		}
+
+		if strings.Contains(msg, pa.Labels["tekton.dev/pipeline"]) {
+			msg = strings.ReplaceAll(msg, pa.Labels["tekton.dev/pipeline"], pa.Name)
+		}
+
+		pa.Spec.Message = v1.ActivityMessageType(msg)
+	}
+}
+
+// addConditionsMessage reads the pr and gets the message for each taskrun then add it to the pa as Spec.Steps[k].Stage.Message
+// It replace TaskRun with Stage
+func addTaskRunsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+	k1 := 0
+	for k := range pr.Status.TaskRuns {
+		msg := ""
+
+		for k2 := range pr.Status.TaskRuns[k].Status.Conditions {
+			msg = pr.Status.TaskRuns[k].Status.Conditions[k2].Message
+		}
+
+		msg = strings.ReplaceAll(msg, "TaskRun", "Stage")
+		pa.Spec.Steps[k1].Stage.Message = v1.ActivityMessageType(msg)
+
+		k1++
+	}
 }
 
 // Humanize splits into words and capitalises

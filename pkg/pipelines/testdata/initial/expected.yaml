@@ -1,4 +1,4 @@
-  apiVersion: jenkins.io/v1
+apiVersion: jenkins.io/v1
 kind: PipelineActivity
 metadata:
   annotations:
@@ -31,11 +31,17 @@ spec:
   gitRepository: nodey510
   gitUrl: https://github.com/jstrachan/nodey510.git
   lastCommitSHA: f25284383035dd4b1ed23bd65aa8e1af8da25488
+  message: 'Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0'
   pipeline: jstrachan/nodey510/master
   status: Pending
   steps:
   - kind: Stage
     stage:
+      message: 'pod status "Ready":"False"; message: "containers with unready status:
+        [step-git-clone step-git-setup step-git-merge step-next-version step-tag-version
+        step-setup-builder-home step-jx-variables step-build-npmrc step-build-npm-install
+        step-build-npm-test step-build-container-build step-promote-changelog step-promote-helm-release
+        step-promote-jx-promote]"'
       name: from build pack
       status: Pending
       steps:

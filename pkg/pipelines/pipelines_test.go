@@ -1,19 +1,16 @@
 package pipelines_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/testpipelines"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/stretchr/testify/require"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -36,60 +33,61 @@ func TestCreatePipelineActivity(t *testing.T) {
 }
 
 func AssertPipelineActivityMapping(t *testing.T, folder string) {
+	// getting path of prfile
 	prFile := filepath.Join("testdata", folder, "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
-	tmpDir := t.TempDir()
-
-	data, err := os.ReadFile(prFile)
-	require.NoError(t, err, "failed to load %s", prFile)
-
+	// loading a prfile
 	pr := &v1beta1.PipelineRun{}
-	err = yaml.Unmarshal(data, pr)
+	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to unmarshal %s", prFile)
 
+	// generating pa from pr
 	pa := &v1.PipelineActivity{}
 	pipelines.ToPipelineActivity(pr, pa, false)
 
+	// removing timestamps
 	testpipelines.ClearTimestamps(pa)
 
-	paFile := filepath.Join(tmpDir, "pa.yaml")
-	err = yamls.SaveFile(pa, paFile)
-	require.NoError(t, err, "failed to save %s", paFile)
+	// expected pa
+	expectedFile := filepath.Join("testdata", folder, "expected.yaml")
+	require.FileExists(t, expectedFile)
 
-	t.Logf("created PipelineActivity %s\n", paFile)
+	expectedPa := &v1.PipelineActivity{}
+	err = yamls.LoadFile(expectedFile, expectedPa)
+	require.NoError(t, err, "failed to load %s", expectedPa)
 
-	testhelpers.AssertTextFilesEqual(t, filepath.Join("testdata", folder, "expected.yaml"), paFile, "generated git credentials file")
+	require.Equal(t, expectedPa, pa)
 }
 
 func TestMergePipelineActivity(t *testing.T) {
+	// copying pr path
 	prFile := filepath.Join("testdata", "merge", "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
-	paFile := filepath.Join("testdata", "merge", "pa.yaml")
-	require.FileExists(t, prFile)
+	// copying expected pa path
+	expectedFile := filepath.Join("testdata", "merge", "expected.yaml")
+	require.FileExists(t, expectedFile)
 
-	tmpDir := t.TempDir()
-
+	// loading the pr
 	pr := &v1beta1.PipelineRun{}
 	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to load %s", prFile)
 
-	pa := &v1.PipelineActivity{}
-	err = yamls.LoadFile(paFile, pa)
-	require.NoError(t, err, "failed to load %s", paFile)
+	// loading expectedPa
+	expectedPa := &v1.PipelineActivity{}
+	err = yamls.LoadFile(expectedFile, expectedPa)
+	require.NoError(t, err, "failed to load %s", expectedPa)
 
+	// creating pa from pr
+	pa := &v1.PipelineActivity{}
 	pipelines.ToPipelineActivity(pr, pa, false)
 
+	// removing the timestamp from pa
 	testpipelines.ClearTimestamps(pa)
 
-	paFile = filepath.Join(tmpDir, "pa.yaml")
-	err = yamls.SaveFile(pa, paFile)
-	require.NoError(t, err, "failed to save %s", paFile)
-
-	t.Logf("created PipelineActivity %s\n", paFile)
-
-	testhelpers.AssertTextFilesEqual(t, filepath.Join("testdata", "merge", "expected.yaml"), paFile, "generated git credentials file")
+	// compare the pa with expected.yaml (expectedPa)
+	require.Equal(t, expectedPa, pa)
 }
 
 func generatePipelineRunWithLabels(branch, org, repo, buildNum string) *v1beta1.PipelineRun {
@@ -271,5 +269,61 @@ func TestPipelineActivityStatus(t *testing.T) {
 
 		pipelines.ToPipelineActivity(pr, pa, false)
 		require.Equal(t, v.expectedStatus, pa.Spec.Status.String())
+	}
+}
+
+var activityMessageTestCases = []struct {
+	description     string
+	folder          string
+	name            string
+	expectedMessage string
+}{
+	{
+		description:     "Jenkins X PipelineActivity has been successful run and message exists",
+		folder:          "message/success",
+		name:            "jx-test-project-repo-pr-1-7",
+		expectedMessage: `Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0`,
+	},
+	{
+		description:     "Jenkins X PipelineActivity has been timedout and message exists",
+		folder:          "message/timeout",
+		name:            "jx-test-project-repo-pr-1-7",
+		expectedMessage: `PipelineActivity "jx-test-project-repo-pr-1-7" failed to finish within "1h0m0s"`,
+	},
+	{
+		description:     "Jenkins X PipelineActivity has been cancelled and message exists",
+		folder:          "message/cancelled",
+		name:            "jx-test-project-repo-pr-2-7",
+		expectedMessage: `PipelineActivity "jx-test-project-repo-pr-2-7" was cancelled`,
+	},
+	{
+		description:     "Jenkins X PipelineActivity has two steps, one step that been timedout and other Succeeded",
+		folder:          "message/timedout-succeeded",
+		name:            "jx-test-project-repo-pr-2-7",
+		expectedMessage: `PipelineActivity "jx-test-project-repo-pr-2-7" failed to finish within "1m0s"`,
+	},
+}
+
+func TestPipelineActivityMessage(t *testing.T) {
+	for k, v := range activityMessageTestCases {
+		t.Logf("Running test case %d: %s", k+1, v.description)
+		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
+		require.FileExists(t, prFile)
+
+		pr := &v1beta1.PipelineRun{}
+		err := yamls.LoadFile(prFile, pr)
+		require.NoError(t, err, "failed to load %s", prFile)
+
+		pa := &v1.PipelineActivity{}
+
+		pa.Name = v.name
+		pipelines.ToPipelineActivity(pr, pa, false)
+
+		for k2 := range pa.Spec.Steps {
+			require.NotEqual(t, "", pa.Spec.Steps[k2].Stage.Message.String())
+		}
+
+		require.NotEqual(t, "", pa.Spec.Message.String())
+		require.Equal(t, v.expectedMessage, pa.Spec.Message.String())
 	}
 }

@@ -1,0 +1,960 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  annotations:
+    lighthouse.jenkins-x.io/cloneURI: https://github.com/jenkins-x-plugins/jx-registry.git
+    lighthouse.jenkins-x.io/job: lint
+  creationTimestamp: "2022-06-15T11:06:34Z"
+  generateName: x-plugins-jx-registry-pr-8-lint-
+  generation: 2
+  labels:
+    created-by-lighthouse: "true"
+    event-GUID: 3424b670-ec9b-11ec-8ede-3a1d48c58fa2
+    lighthouse.jenkins-x.io/baseSHA: 7c5c5a87158696c164d556aff77372d701e95197
+    lighthouse.jenkins-x.io/branch: PR-8
+    lighthouse.jenkins-x.io/buildNum: "1655291194107"
+    lighthouse.jenkins-x.io/context: lint
+    lighthouse.jenkins-x.io/id: x-plugins-jx-registry-pr-8-lint-fhcp2
+    lighthouse.jenkins-x.io/job: lint
+    lighthouse.jenkins-x.io/lastCommitSHA: d37fda61b4d258b656faad85eea3564b2e5049a2
+    lighthouse.jenkins-x.io/refs.org: jenkins-x-plugins
+    lighthouse.jenkins-x.io/refs.pull: "8"
+    lighthouse.jenkins-x.io/refs.repo: jx-registry
+    lighthouse.jenkins-x.io/type: presubmit
+    tekton.dev/pipeline: x-plugins-jx-registry-pr-8-lint-dbqqf
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:lighthouse.jenkins-x.io/cloneURI: {}
+            f:lighthouse.jenkins-x.io/job: {}
+          f:generateName: {}
+          f:labels:
+            .: {}
+            f:created-by-lighthouse: {}
+            f:event-GUID: {}
+            f:lighthouse.jenkins-x.io/baseSHA: {}
+            f:lighthouse.jenkins-x.io/branch: {}
+            f:lighthouse.jenkins-x.io/buildNum: {}
+            f:lighthouse.jenkins-x.io/context: {}
+            f:lighthouse.jenkins-x.io/id: {}
+            f:lighthouse.jenkins-x.io/job: {}
+            f:lighthouse.jenkins-x.io/lastCommitSHA: {}
+            f:lighthouse.jenkins-x.io/refs.org: {}
+            f:lighthouse.jenkins-x.io/refs.pull: {}
+            f:lighthouse.jenkins-x.io/refs.repo: {}
+            f:lighthouse.jenkins-x.io/type: {}
+          f:ownerReferences:
+            .: {}
+            k:{"uid":"0016a1a8-91c0-4981-b929-a34835760370"}:
+              .: {}
+              f:apiVersion: {}
+              f:controller: {}
+              f:kind: {}
+              f:name: {}
+              f:uid: {}
+        f:spec:
+          .: {}
+          f:params: {}
+          f:pipelineSpec:
+            .: {}
+            f:params: {}
+            f:tasks: {}
+            f:workspaces: {}
+          f:podTemplate: {}
+          f:serviceAccountName: {}
+          f:timeout: {}
+          f:workspaces: {}
+      manager: lighthouse-tekton-controller
+      operation: Update
+      time: "2022-06-15T11:06:34Z"
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:labels:
+            f:tekton.dev/pipeline: {}
+        f:status:
+          .: {}
+          f:completionTime: {}
+          f:conditions: {}
+          f:pipelineSpec:
+            .: {}
+            f:params: {}
+            f:tasks: {}
+            f:workspaces: {}
+          f:startTime: {}
+          f:taskRuns:
+            .: {}
+            f:x-plugins-jx-registry-pr-8-lint-dbqqf-jx-secret-lint-fv64p:
+              .: {}
+              f:pipelineTaskName: {}
+              f:status:
+                .: {}
+                f:completionTime: {}
+                f:conditions: {}
+                f:podName: {}
+                f:startTime: {}
+                f:steps: {}
+                f:taskSpec:
+                  .: {}
+                  f:params: {}
+                  f:stepTemplate:
+                    .: {}
+                    f:env: {}
+                    f:envFrom: {}
+                    f:name: {}
+                    f:resources: {}
+                    f:workingDir: {}
+                  f:steps: {}
+                  f:workspaces: {}
+      manager: controller
+      operation: Update
+      time: "2022-06-15T11:09:56Z"
+  name: x-plugins-jx-registry-pr-8-lint-dbqqf
+  namespace: jx
+  ownerReferences:
+    - apiVersion: lighthouse.jenkins.io/v1alpha1
+      controller: true
+      kind: LighthouseJob
+      name: x-plugins-jx-registry-pr-8-lint-fhcp2
+      uid: 0016a1a8-91c0-4981-b929-a34835760370
+  resourceVersion: "270419726"
+  uid: cbca9205-e653-43db-98a3-6e1584c4b796
+spec:
+  params:
+    - name: BUILD_ID
+      value: ""
+    - name: JOB_NAME
+      value: ""
+    - name: JOB_SPEC
+      value: ""
+    - name: JOB_TYPE
+      value: ""
+    - name: PULL_BASE_REF
+      value: ""
+    - name: PULL_BASE_SHA
+      value: ""
+    - name: PULL_NUMBER
+      value: ""
+    - name: PULL_PULL_REF
+      value: ""
+    - name: PULL_PULL_SHA
+      value: ""
+    - name: PULL_REFS
+      value: ""
+    - name: REPO_NAME
+      value: ""
+    - name: REPO_OWNER
+      value: ""
+    - name: REPO_URL
+      value: ""
+    - name: BUILD_ID
+      value: "1655291194107"
+    - name: JOB_NAME
+      value: lint
+    - name: JOB_SPEC
+      value: type:presubmit
+    - name: JOB_TYPE
+      value: presubmit
+    - name: PULL_BASE_REF
+      value: main
+    - name: PULL_BASE_SHA
+      value: 7c5c5a87158696c164d556aff77372d701e95197
+    - name: PULL_NUMBER
+      value: "8"
+    - name: PULL_PULL_REF
+      value: refs/pull/8/head
+    - name: PULL_PULL_SHA
+      value: d37fda61b4d258b656faad85eea3564b2e5049a2
+    - name: PULL_REFS
+      value: main:7c5c5a87158696c164d556aff77372d701e95197,8:d37fda61b4d258b656faad85eea3564b2e5049a2:refs/pull/8/head
+    - name: REPO_NAME
+      value: jx-registry
+    - name: REPO_OWNER
+      value: jenkins-x-plugins
+    - name: REPO_URL
+      value: https://github.com/jenkins-x-plugins/jx-registry.git
+  pipelineSpec:
+    params:
+      - description: git repository owner (user or organisation)
+        name: REPO_OWNER
+        type: string
+      - description: the unique build number
+        name: BUILD_ID
+        type: string
+      - description: the git sha of the base of the pull request
+        name: PULL_BASE_SHA
+        type: string
+      - description: git repository name
+        name: REPO_NAME
+        type: string
+      - default: ""
+        description: git pull request ref in the form 'refs/pull/$PULL_NUMBER/head'
+        name: PULL_PULL_REF
+        type: string
+      - default: ""
+        description: git pull request number
+        name: PULL_NUMBER
+        type: string
+      - description: the name of the job which is the trigger context name
+        name: JOB_NAME
+        type: string
+      - description: the specification of the job
+        name: JOB_SPEC
+        type: string
+      - description: git pull reference strings of base and latest in the form 'master:$PULL_BASE_SHA,$PULL_NUMBER:$PULL_PULL_SHA:refs/pull/$PULL_NUMBER/head'
+        name: PULL_REFS
+        type: string
+      - description: git url to clone
+        name: REPO_URL
+        type: string
+      - description: "'the kind of job: postsubmit or presubmit'"
+        name: JOB_TYPE
+        type: string
+      - description: the base git reference of the pull request
+        name: PULL_BASE_REF
+        type: string
+      - default: ""
+        description: git revision to checkout (branch, tag, sha, ref…)
+        name: PULL_PULL_SHA
+        type: string
+    tasks:
+      - name: jx-secret-lint
+        params:
+          - name: BUILD_ID
+            value: $(params.BUILD_ID)
+          - name: JOB_NAME
+            value: $(params.JOB_NAME)
+          - name: JOB_SPEC
+            value: $(params.JOB_SPEC)
+          - name: JOB_TYPE
+            value: $(params.JOB_TYPE)
+          - name: PULL_BASE_REF
+            value: $(params.PULL_BASE_REF)
+          - name: PULL_BASE_SHA
+            value: $(params.PULL_BASE_SHA)
+          - name: PULL_NUMBER
+            value: $(params.PULL_NUMBER)
+          - name: PULL_PULL_REF
+            value: $(params.PULL_PULL_REF)
+          - name: PULL_PULL_SHA
+            value: $(params.PULL_PULL_SHA)
+          - name: PULL_REFS
+            value: $(params.PULL_REFS)
+          - name: REPO_NAME
+            value: $(params.REPO_NAME)
+          - name: REPO_OWNER
+            value: $(params.REPO_OWNER)
+          - name: REPO_URL
+            value: $(params.REPO_URL)
+        resources: {}
+        taskSpec:
+          metadata: {}
+          params:
+            - description: the git sha of the base of the pull request
+              name: PULL_BASE_SHA
+              type: string
+            - default: ""
+              description: git pull request ref in the form 'refs/pull/$PULL_NUMBER/head'
+              name: PULL_PULL_REF
+              type: string
+            - default: ""
+              description: git pull request number
+              name: PULL_NUMBER
+              type: string
+            - description: git repository name
+              name: REPO_NAME
+              type: string
+            - description: the name of the job which is the trigger context name
+              name: JOB_NAME
+              type: string
+            - description: "'the kind of job: postsubmit or presubmit'"
+              name: JOB_TYPE
+              type: string
+            - description: git repository owner (user or organisation)
+              name: REPO_OWNER
+              type: string
+            - description: the unique build number
+              name: BUILD_ID
+              type: string
+            - description: the specification of the job
+              name: JOB_SPEC
+              type: string
+            - description: the base git reference of the pull request
+              name: PULL_BASE_REF
+              type: string
+            - default: ""
+              description: git revision to checkout (branch, tag, sha, ref…)
+              name: PULL_PULL_SHA
+              type: string
+            - description: git pull reference strings of base and latest in the form 'master:$PULL_BASE_SHA,$PULL_NUMBER:$PULL_PULL_SHA:refs/pull/$PULL_NUMBER/head'
+              name: PULL_REFS
+              type: string
+            - description: git url to clone
+              name: REPO_URL
+              type: string
+          spec: null
+          stepTemplate:
+            env:
+              - name: HOME
+                value: /tekton/home
+              - name: BUILD_ID
+                value: $(params.BUILD_ID)
+              - name: JOB_NAME
+                value: $(params.JOB_NAME)
+              - name: JOB_SPEC
+                value: $(params.JOB_SPEC)
+              - name: JOB_TYPE
+                value: $(params.JOB_TYPE)
+              - name: PULL_BASE_REF
+                value: $(params.PULL_BASE_REF)
+              - name: PULL_BASE_SHA
+                value: $(params.PULL_BASE_SHA)
+              - name: PULL_NUMBER
+                value: $(params.PULL_NUMBER)
+              - name: PULL_PULL_REF
+                value: $(params.PULL_PULL_REF)
+              - name: PULL_PULL_SHA
+                value: $(params.PULL_PULL_SHA)
+              - name: PULL_REFS
+                value: $(params.PULL_REFS)
+              - name: REPO_NAME
+                value: $(params.REPO_NAME)
+              - name: REPO_OWNER
+                value: $(params.REPO_OWNER)
+              - name: REPO_URL
+                value: $(params.REPO_URL)
+            envFrom:
+              - secretRef:
+                  name: jx-boot-job-env-vars
+                  optional: true
+            name: ""
+            resources: {}
+            workingDir: /workspace/source
+          steps:
+            - envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.27.0
+              name: git-clone
+              resources: {}
+              script: |
+                #!/bin/sh
+                export SUBDIR="source"
+                echo "git cloning url: $REPO_URL version $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER@$PULL_PULL_SHA to dir: $SUBDIR"
+                git config --global --add user.name ${GIT_AUTHOR_NAME:-jenkins-x-bot}
+                git config --global --add user.email ${GIT_AUTHOR_EMAIL:-jenkins-x@googlegroups.com}
+                git config --global credential.helper store
+                git clone $REPO_URL $SUBDIR
+                cd $SUBDIR
+                git fetch origin $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER
+                git checkout $(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER
+                git reset --hard $PULL_PULL_SHA
+                echo "checked out revision: $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER@$PULL_PULL_SHA to dir: $SUBDIR"
+              workingDir: /workspace
+            - envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: ghcr.io/jenkins-x/jx-boot:3.2.352
+              name: git-merge
+              resources: {}
+              script: |
+                #!/usr/bin/env sh
+                jx gitops git merge
+              workingDir: /workspace/source
+            - image: golangci/golangci-lint:v1.42.1-alpine
+              name: make-lint
+              resources: {}
+              script: |
+                #!/bin/sh
+                golangci-lint run --verbose --deadline 15m0s
+          workspaces:
+            - description: The git repo will be cloned onto the volume backing this workspace
+              mountPath: /workspace
+              name: output
+        workspaces:
+          - name: output
+            workspace: output
+    workspaces:
+      - description: The git repo will be cloned onto the volume backing this workspace
+        name: output
+  podTemplate: {}
+  serviceAccountName: tekton-bot
+  timeout: 30m0s
+  workspaces:
+    - emptyDir: {}
+      name: output
+status:
+  completionTime: "2022-06-15T11:09:56Z"
+  conditions:
+    - lastTransitionTime: "2022-06-15T11:09:56Z"
+      message: "Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0"
+      reason: Succeeded
+      status: "True"
+      type: Succeeded
+  pipelineSpec:
+    params:
+      - description: git pull reference strings of base and latest in the form 'master:$PULL_BASE_SHA,$PULL_NUMBER:$PULL_PULL_SHA:refs/pull/$PULL_NUMBER/head'
+        name: PULL_REFS
+        type: string
+      - description: the name of the job which is the trigger context name
+        name: JOB_NAME
+        type: string
+      - description: the specification of the job
+        name: JOB_SPEC
+        type: string
+      - default: ""
+        description: git pull request ref in the form 'refs/pull/$PULL_NUMBER/head'
+        name: PULL_PULL_REF
+        type: string
+      - description: git repository owner (user or organisation)
+        name: REPO_OWNER
+        type: string
+      - description: git url to clone
+        name: REPO_URL
+        type: string
+      - default: ""
+        description: git pull request number
+        name: PULL_NUMBER
+        type: string
+      - default: ""
+        description: git revision to checkout (branch, tag, sha, ref…)
+        name: PULL_PULL_SHA
+        type: string
+      - description: git repository name
+        name: REPO_NAME
+        type: string
+      - description: the unique build number
+        name: BUILD_ID
+        type: string
+      - description: the base git reference of the pull request
+        name: PULL_BASE_REF
+        type: string
+      - description: the git sha of the base of the pull request
+        name: PULL_BASE_SHA
+        type: string
+      - description: "'the kind of job: postsubmit or presubmit'"
+        name: JOB_TYPE
+        type: string
+    tasks:
+      - name: jx-secret-lint
+        params:
+          - name: BUILD_ID
+            value: $(params.BUILD_ID)
+          - name: JOB_NAME
+            value: $(params.JOB_NAME)
+          - name: JOB_SPEC
+            value: $(params.JOB_SPEC)
+          - name: JOB_TYPE
+            value: $(params.JOB_TYPE)
+          - name: PULL_BASE_REF
+            value: $(params.PULL_BASE_REF)
+          - name: PULL_BASE_SHA
+            value: $(params.PULL_BASE_SHA)
+          - name: PULL_NUMBER
+            value: $(params.PULL_NUMBER)
+          - name: PULL_PULL_REF
+            value: $(params.PULL_PULL_REF)
+          - name: PULL_PULL_SHA
+            value: $(params.PULL_PULL_SHA)
+          - name: PULL_REFS
+            value: $(params.PULL_REFS)
+          - name: REPO_NAME
+            value: $(params.REPO_NAME)
+          - name: REPO_OWNER
+            value: $(params.REPO_OWNER)
+          - name: REPO_URL
+            value: $(params.REPO_URL)
+        resources: {}
+        taskSpec:
+          metadata: {}
+          params:
+            - default: ""
+              description: git pull request ref in the form 'refs/pull/$PULL_NUMBER/head'
+              name: PULL_PULL_REF
+              type: string
+            - description: git url to clone
+              name: REPO_URL
+              type: string
+            - default: ""
+              description: git pull request number
+              name: PULL_NUMBER
+              type: string
+            - default: ""
+              description: git revision to checkout (branch, tag, sha, ref…)
+              name: PULL_PULL_SHA
+              type: string
+            - description: the base git reference of the pull request
+              name: PULL_BASE_REF
+              type: string
+            - description: the name of the job which is the trigger context name
+              name: JOB_NAME
+              type: string
+            - description: the git sha of the base of the pull request
+              name: PULL_BASE_SHA
+              type: string
+            - description: the specification of the job
+              name: JOB_SPEC
+              type: string
+            - description: "'the kind of job: postsubmit or presubmit'"
+              name: JOB_TYPE
+              type: string
+            - description: git repository name
+              name: REPO_NAME
+              type: string
+            - description: git repository owner (user or organisation)
+              name: REPO_OWNER
+              type: string
+            - description: the unique build number
+              name: BUILD_ID
+              type: string
+            - description: git pull reference strings of base and latest in the form 'master:$PULL_BASE_SHA,$PULL_NUMBER:$PULL_PULL_SHA:refs/pull/$PULL_NUMBER/head'
+              name: PULL_REFS
+              type: string
+          spec: null
+          stepTemplate:
+            env:
+              - name: HOME
+                value: /tekton/home
+              - name: BUILD_ID
+                value: $(params.BUILD_ID)
+              - name: JOB_NAME
+                value: $(params.JOB_NAME)
+              - name: JOB_SPEC
+                value: $(params.JOB_SPEC)
+              - name: JOB_TYPE
+                value: $(params.JOB_TYPE)
+              - name: PULL_BASE_REF
+                value: $(params.PULL_BASE_REF)
+              - name: PULL_BASE_SHA
+                value: $(params.PULL_BASE_SHA)
+              - name: PULL_NUMBER
+                value: $(params.PULL_NUMBER)
+              - name: PULL_PULL_REF
+                value: $(params.PULL_PULL_REF)
+              - name: PULL_PULL_SHA
+                value: $(params.PULL_PULL_SHA)
+              - name: PULL_REFS
+                value: $(params.PULL_REFS)
+              - name: REPO_NAME
+                value: $(params.REPO_NAME)
+              - name: REPO_OWNER
+                value: $(params.REPO_OWNER)
+              - name: REPO_URL
+                value: $(params.REPO_URL)
+            envFrom:
+              - secretRef:
+                  name: jx-boot-job-env-vars
+                  optional: true
+            name: ""
+            resources: {}
+            workingDir: /workspace/source
+          steps:
+            - env:
+                - name: HOME
+                  value: /tekton/home
+                - name: BUILD_ID
+                  value: $(params.BUILD_ID)
+                - name: JOB_NAME
+                  value: $(params.JOB_NAME)
+                - name: JOB_SPEC
+                  value: $(params.JOB_SPEC)
+                - name: JOB_TYPE
+                  value: $(params.JOB_TYPE)
+                - name: PULL_BASE_REF
+                  value: $(params.PULL_BASE_REF)
+                - name: PULL_BASE_SHA
+                  value: $(params.PULL_BASE_SHA)
+                - name: PULL_NUMBER
+                  value: $(params.PULL_NUMBER)
+                - name: PULL_PULL_REF
+                  value: $(params.PULL_PULL_REF)
+                - name: PULL_PULL_SHA
+                  value: $(params.PULL_PULL_SHA)
+                - name: PULL_REFS
+                  value: $(params.PULL_REFS)
+                - name: REPO_NAME
+                  value: $(params.REPO_NAME)
+                - name: REPO_OWNER
+                  value: $(params.REPO_OWNER)
+                - name: REPO_URL
+                  value: $(params.REPO_URL)
+              envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.27.0
+              name: git-clone
+              resources: {}
+              script: |
+                #!/bin/sh
+                export SUBDIR="source"
+                echo "git cloning url: $REPO_URL version $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER@$PULL_PULL_SHA to dir: $SUBDIR"
+                git config --global --add user.name ${GIT_AUTHOR_NAME:-jenkins-x-bot}
+                git config --global --add user.email ${GIT_AUTHOR_EMAIL:-jenkins-x@googlegroups.com}
+                git config --global credential.helper store
+                git clone $REPO_URL $SUBDIR
+                cd $SUBDIR
+                git fetch origin $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER
+                git checkout $(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER
+                git reset --hard $PULL_PULL_SHA
+                echo "checked out revision: $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER@$PULL_PULL_SHA to dir: $SUBDIR"
+              workingDir: /workspace
+            - env:
+                - name: HOME
+                  value: /tekton/home
+                - name: BUILD_ID
+                  value: $(params.BUILD_ID)
+                - name: JOB_NAME
+                  value: $(params.JOB_NAME)
+                - name: JOB_SPEC
+                  value: $(params.JOB_SPEC)
+                - name: JOB_TYPE
+                  value: $(params.JOB_TYPE)
+                - name: PULL_BASE_REF
+                  value: $(params.PULL_BASE_REF)
+                - name: PULL_BASE_SHA
+                  value: $(params.PULL_BASE_SHA)
+                - name: PULL_NUMBER
+                  value: $(params.PULL_NUMBER)
+                - name: PULL_PULL_REF
+                  value: $(params.PULL_PULL_REF)
+                - name: PULL_PULL_SHA
+                  value: $(params.PULL_PULL_SHA)
+                - name: PULL_REFS
+                  value: $(params.PULL_REFS)
+                - name: REPO_NAME
+                  value: $(params.REPO_NAME)
+                - name: REPO_OWNER
+                  value: $(params.REPO_OWNER)
+                - name: REPO_URL
+                  value: $(params.REPO_URL)
+              envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: ghcr.io/jenkins-x/jx-boot:3.2.352
+              name: git-merge
+              resources: {}
+              script: |
+                #!/usr/bin/env sh
+                jx gitops git merge
+              workingDir: /workspace/source
+            - env:
+                - name: HOME
+                  value: /tekton/home
+                - name: BUILD_ID
+                  value: $(params.BUILD_ID)
+                - name: JOB_NAME
+                  value: $(params.JOB_NAME)
+                - name: JOB_SPEC
+                  value: $(params.JOB_SPEC)
+                - name: JOB_TYPE
+                  value: $(params.JOB_TYPE)
+                - name: PULL_BASE_REF
+                  value: $(params.PULL_BASE_REF)
+                - name: PULL_BASE_SHA
+                  value: $(params.PULL_BASE_SHA)
+                - name: PULL_NUMBER
+                  value: $(params.PULL_NUMBER)
+                - name: PULL_PULL_REF
+                  value: $(params.PULL_PULL_REF)
+                - name: PULL_PULL_SHA
+                  value: $(params.PULL_PULL_SHA)
+                - name: PULL_REFS
+                  value: $(params.PULL_REFS)
+                - name: REPO_NAME
+                  value: $(params.REPO_NAME)
+                - name: REPO_OWNER
+                  value: $(params.REPO_OWNER)
+                - name: REPO_URL
+                  value: $(params.REPO_URL)
+              envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: golangci/golangci-lint:v1.42.1-alpine
+              name: make-lint
+              resources: {}
+              script: |
+                #!/bin/sh
+                golangci-lint run --verbose --deadline 15m0s
+              workingDir: /workspace/source
+          workspaces:
+            - description: The git repo will be cloned onto the volume backing this workspace
+              mountPath: /workspace
+              name: output
+        workspaces:
+          - name: output
+            workspace: output
+    workspaces:
+      - description: The git repo will be cloned onto the volume backing this workspace
+        name: output
+  startTime: "2022-06-15T11:06:34Z"
+  taskRuns:
+    x-plugins-jx-registry-pr-8-lint-dbqqf-jx-secret-lint-fv64p:
+      pipelineTaskName: jx-secret-lint
+      status:
+        completionTime: "2022-06-15T11:09:56Z"
+        conditions:
+          - lastTransitionTime: "2022-06-15T11:09:56Z"
+            message: All Steps have completed executing
+            reason: Succeeded
+            status: "True"
+            type: Succeeded
+        podName: x-plugins-jx-registry-pr-8-lint-dbqqf-jx-secret-lint-fv64-vpvmv
+        startTime: "2022-06-15T11:06:34Z"
+        steps:
+          - container: step-git-clone
+            imageID: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init@sha256:8bfb6edbd8ce4608af957a3a38444512c14713bc9fc0d60308f228c61be4c83f
+            name: git-clone
+            terminated:
+              containerID: containerd://2efca690307362dbacf30c59b71115d0f160c95545f83f571034c82c631578bf
+              exitCode: 0
+              finishedAt: "2022-06-15T11:06:41Z"
+              reason: Completed
+              startedAt: "2022-06-15T11:06:40Z"
+          - container: step-git-merge
+            imageID: ghcr.io/jenkins-x/jx-boot@sha256:29453a2fe6dd5ffef6ad564687864ffc1c01637b32cb77c9f86ef9f2dcc8c626
+            name: git-merge
+            terminated:
+              containerID: containerd://3f3d6b66c8c2371511f4a56dd52121333918bb0027bfeb3482fe5499d3dfecad
+              exitCode: 0
+              finishedAt: "2022-06-15T11:06:44Z"
+              reason: Completed
+              startedAt: "2022-06-15T11:06:42Z"
+          - container: step-make-lint
+            imageID: docker.io/golangci/golangci-lint@sha256:e32b22eaceaf8872a2cbd0f48ea96cd71a7530f98081914b7b23a795f4e4df1a
+            name: make-lint
+            terminated:
+              containerID: containerd://93a89a85df02f4e99ecf4ca2f51fc3ea23498bdc1243946ec0c369b0f199429c
+              exitCode: 0
+              finishedAt: "2022-06-15T11:09:55Z"
+              reason: Completed
+              startedAt: "2022-06-15T11:06:44Z"
+        taskSpec:
+          params:
+            - description: the base git reference of the pull request
+              name: PULL_BASE_REF
+              type: string
+            - description: the git sha of the base of the pull request
+              name: PULL_BASE_SHA
+              type: string
+            - default: ""
+              description: git revision to checkout (branch, tag, sha, ref…)
+              name: PULL_PULL_SHA
+              type: string
+            - description: git repository name
+              name: REPO_NAME
+              type: string
+            - description:
+                git pull reference strings of base and latest in the form
+                'master:$PULL_BASE_SHA,$PULL_NUMBER:$PULL_PULL_SHA:refs/pull/$PULL_NUMBER/head'
+              name: PULL_REFS
+              type: string
+            - description: git repository owner (user or organisation)
+              name: REPO_OWNER
+              type: string
+            - description: git url to clone
+              name: REPO_URL
+              type: string
+            - description: the name of the job which is the trigger context name
+              name: JOB_NAME
+              type: string
+            - default: ""
+              description: git pull request number
+              name: PULL_NUMBER
+              type: string
+            - default: ""
+              description: git pull request ref in the form 'refs/pull/$PULL_NUMBER/head'
+              name: PULL_PULL_REF
+              type: string
+            - description: the unique build number
+              name: BUILD_ID
+              type: string
+            - description: "'the kind of job: postsubmit or presubmit'"
+              name: JOB_TYPE
+              type: string
+            - description: the specification of the job
+              name: JOB_SPEC
+              type: string
+          stepTemplate:
+            env:
+              - name: HOME
+                value: /tekton/home
+              - name: BUILD_ID
+                value: $(params.BUILD_ID)
+              - name: JOB_NAME
+                value: $(params.JOB_NAME)
+              - name: JOB_SPEC
+                value: $(params.JOB_SPEC)
+              - name: JOB_TYPE
+                value: $(params.JOB_TYPE)
+              - name: PULL_BASE_REF
+                value: $(params.PULL_BASE_REF)
+              - name: PULL_BASE_SHA
+                value: $(params.PULL_BASE_SHA)
+              - name: PULL_NUMBER
+                value: $(params.PULL_NUMBER)
+              - name: PULL_PULL_REF
+                value: $(params.PULL_PULL_REF)
+              - name: PULL_PULL_SHA
+                value: $(params.PULL_PULL_SHA)
+              - name: PULL_REFS
+                value: $(params.PULL_REFS)
+              - name: REPO_NAME
+                value: $(params.REPO_NAME)
+              - name: REPO_OWNER
+                value: $(params.REPO_OWNER)
+              - name: REPO_URL
+                value: $(params.REPO_URL)
+            envFrom:
+              - secretRef:
+                  name: jx-boot-job-env-vars
+                  optional: true
+            name: ""
+            resources: {}
+            workingDir: /workspace/source
+          steps:
+            - env:
+                - name: HOME
+                  value: /tekton/home
+                - name: BUILD_ID
+                  value: $(params.BUILD_ID)
+                - name: JOB_NAME
+                  value: $(params.JOB_NAME)
+                - name: JOB_SPEC
+                  value: $(params.JOB_SPEC)
+                - name: JOB_TYPE
+                  value: $(params.JOB_TYPE)
+                - name: PULL_BASE_REF
+                  value: $(params.PULL_BASE_REF)
+                - name: PULL_BASE_SHA
+                  value: $(params.PULL_BASE_SHA)
+                - name: PULL_NUMBER
+                  value: $(params.PULL_NUMBER)
+                - name: PULL_PULL_REF
+                  value: $(params.PULL_PULL_REF)
+                - name: PULL_PULL_SHA
+                  value: $(params.PULL_PULL_SHA)
+                - name: PULL_REFS
+                  value: $(params.PULL_REFS)
+                - name: REPO_NAME
+                  value: $(params.REPO_NAME)
+                - name: REPO_OWNER
+                  value: $(params.REPO_OWNER)
+                - name: REPO_URL
+                  value: $(params.REPO_URL)
+              envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.27.0
+              name: git-clone
+              resources: {}
+              script: |
+                #!/bin/sh
+                export SUBDIR="source"
+                echo "git cloning url: $REPO_URL version $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER@$PULL_PULL_SHA to dir: $SUBDIR"
+                git config --global --add user.name ${GIT_AUTHOR_NAME:-jenkins-x-bot}
+                git config --global --add user.email ${GIT_AUTHOR_EMAIL:-jenkins-x@googlegroups.com}
+                git config --global credential.helper store
+                git clone $REPO_URL $SUBDIR
+                cd $SUBDIR
+                git fetch origin $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER
+                git checkout $(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER
+                git reset --hard $PULL_PULL_SHA
+                echo "checked out revision: $PULL_PULL_REF:$(echo $JOB_NAME | tr '[:lower:]' '[:upper:]')-$PULL_NUMBER@$PULL_PULL_SHA to dir: $SUBDIR"
+              workingDir: /workspace
+            - env:
+                - name: HOME
+                  value: /tekton/home
+                - name: BUILD_ID
+                  value: $(params.BUILD_ID)
+                - name: JOB_NAME
+                  value: $(params.JOB_NAME)
+                - name: JOB_SPEC
+                  value: $(params.JOB_SPEC)
+                - name: JOB_TYPE
+                  value: $(params.JOB_TYPE)
+                - name: PULL_BASE_REF
+                  value: $(params.PULL_BASE_REF)
+                - name: PULL_BASE_SHA
+                  value: $(params.PULL_BASE_SHA)
+                - name: PULL_NUMBER
+                  value: $(params.PULL_NUMBER)
+                - name: PULL_PULL_REF
+                  value: $(params.PULL_PULL_REF)
+                - name: PULL_PULL_SHA
+                  value: $(params.PULL_PULL_SHA)
+                - name: PULL_REFS
+                  value: $(params.PULL_REFS)
+                - name: REPO_NAME
+                  value: $(params.REPO_NAME)
+                - name: REPO_OWNER
+                  value: $(params.REPO_OWNER)
+                - name: REPO_URL
+                  value: $(params.REPO_URL)
+              envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: ghcr.io/jenkins-x/jx-boot:3.2.352
+              name: git-merge
+              resources: {}
+              script: |
+                #!/usr/bin/env sh
+                jx gitops git merge
+              workingDir: /workspace/source
+            - env:
+                - name: HOME
+                  value: /tekton/home
+                - name: BUILD_ID
+                  value: $(params.BUILD_ID)
+                - name: JOB_NAME
+                  value: $(params.JOB_NAME)
+                - name: JOB_SPEC
+                  value: $(params.JOB_SPEC)
+                - name: JOB_TYPE
+                  value: $(params.JOB_TYPE)
+                - name: PULL_BASE_REF
+                  value: $(params.PULL_BASE_REF)
+                - name: PULL_BASE_SHA
+                  value: $(params.PULL_BASE_SHA)
+                - name: PULL_NUMBER
+                  value: $(params.PULL_NUMBER)
+                - name: PULL_PULL_REF
+                  value: $(params.PULL_PULL_REF)
+                - name: PULL_PULL_SHA
+                  value: $(params.PULL_PULL_SHA)
+                - name: PULL_REFS
+                  value: $(params.PULL_REFS)
+                - name: REPO_NAME
+                  value: $(params.REPO_NAME)
+                - name: REPO_OWNER
+                  value: $(params.REPO_OWNER)
+                - name: REPO_URL
+                  value: $(params.REPO_URL)
+              envFrom:
+                - secretRef:
+                    name: jx-boot-job-env-vars
+                    optional: true
+              image: golangci/golangci-lint:v1.42.1-alpine
+              name: make-lint
+              resources: {}
+              script: |
+                #!/bin/sh
+                golangci-lint run --verbose --deadline 15m0s
+              workingDir: /workspace/source
+          workspaces:
+            - description:
+                The git repo will be cloned onto the volume backing this
+                workspace
+              mountPath: /workspace
+              name: output
