@@ -23,6 +23,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
@@ -365,7 +367,7 @@ func describePromoteUpdate(promote *v1.PromoteUpdateStep) string {
 }
 
 func pullRequestStatusString(text string) string {
-	title := strings.Title(text)
+	title := cases.Title(language.Und).String(text)
 	switch text {
 	case "success":
 		return termcolor.ColorInfo(title)

@@ -1,7 +1,6 @@
 package fmt
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,7 +136,7 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) processFile(path string) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load file %s", path)
 	}

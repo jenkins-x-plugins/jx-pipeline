@@ -3,7 +3,6 @@ package lint
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,7 +143,7 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) ProcessFile(path string) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load file %s", path)
 	}
@@ -222,7 +221,7 @@ func ValidateTaskRunVolumesExist(ts *v1beta1.TaskSpec) (errs *apis.FieldError) {
 }
 
 func (o *Options) ProcessDir(dir string) error {
-	fs, err := ioutil.ReadDir(dir)
+	fs, err := os.ReadDir(dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read dir %s", dir)
 	}
@@ -298,7 +297,7 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 }
 
 func loadJobBaseFromSourcePath(ctx context.Context, resolver *inrepo.UsesResolver, path string) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load file %s", path)
 	}

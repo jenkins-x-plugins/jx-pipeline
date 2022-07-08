@@ -1,7 +1,6 @@
 package importcmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -131,7 +130,7 @@ func (o *Options) Validate() error {
 // Run implements this command
 func (o *Options) Run() error {
 	var err error
-	var fs []os.FileInfo
+	var fs []os.DirEntry
 	err = o.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate options")
@@ -170,7 +169,7 @@ func (o *Options) Run() error {
 
 	if o.TaskFolder == "" {
 		var names []string
-		fs, err = ioutil.ReadDir(taskDir)
+		fs, err = os.ReadDir(taskDir)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read task dir %s", taskDir)
 		}
@@ -206,7 +205,7 @@ func (o *Options) Run() error {
 
 	if o.TaskVersion == "" {
 		var versions []string
-		fs, err = ioutil.ReadDir(versionFolder)
+		fs, err = os.ReadDir(versionFolder)
 		if err != nil {
 			return errors.Wrapf(err, "failed to read task dir %s", versionFolder)
 		}
@@ -239,7 +238,7 @@ func (o *Options) Run() error {
 	}
 
 	var fileNames []string
-	fs, err = ioutil.ReadDir(folder)
+	fs, err = os.ReadDir(folder)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read task dir %s", folder)
 	}

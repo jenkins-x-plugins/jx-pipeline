@@ -10,6 +10,8 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -349,7 +351,7 @@ func Humanize(text string) string {
 	wordsText := strings.ReplaceAll(strings.ReplaceAll(text, "-", " "), "_", " ")
 	words := strings.Split(wordsText, " ")
 	for i := range words {
-		words[i] = strings.Title(words[i])
+		words[i] = cases.Title(language.Und).String(words[i])
 	}
 	return strings.Join(words, " ")
 }

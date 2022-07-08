@@ -1,7 +1,6 @@
 package convert
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -202,7 +201,7 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) ProcessDir(dir string) error {
-	fs, err := ioutil.ReadDir(dir)
+	fs, err := os.ReadDir(dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read dir %s", dir)
 	}
