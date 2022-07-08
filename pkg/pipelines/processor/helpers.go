@@ -2,7 +2,7 @@ package processor
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
@@ -18,7 +18,7 @@ var info = termcolor.ColorInfo
 // ProcessFile processes the given file with the processor
 func ProcessFile(processor Interface, path string) (bool, error) {
 	var err error
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to load file %s", path)
 	}

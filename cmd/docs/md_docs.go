@@ -151,7 +151,7 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	}
 	defer f.Close()
 
-	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
+	if _, err := f.WriteString(filePrepender(filename)); err != nil {
 		return err
 	}
 	if err := GenMarkdownCustom(cmd, f, linkHandler); err != nil {

@@ -176,7 +176,7 @@ func (o *Options) Run() error {
 }
 
 func (o *Options) ProcessDir(dir string) error {
-	fs, err := ioutil.ReadDir(dir)
+	fs, err := os.ReadDir(dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read dir %s", dir)
 	}
@@ -523,7 +523,7 @@ func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1be
 }
 
 func findFirstStepLine(path string) (string, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to load pipeline file %s", path)
 	}

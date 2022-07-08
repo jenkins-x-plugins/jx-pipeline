@@ -1,7 +1,7 @@
 package lighthouses
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
@@ -11,7 +11,7 @@ import (
 
 // LoadEffectivePipelineRun loads the effective pipeline run
 func LoadEffectivePipelineRun(resolver *inrepo.UsesResolver, path string) (*tektonv1beta1.PipelineRun, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load file %s", path)
 	}

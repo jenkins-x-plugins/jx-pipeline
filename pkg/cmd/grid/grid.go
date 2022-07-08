@@ -167,7 +167,7 @@ func (o *Options) Run() error {
 	informerFactory.Start(stop)
 	if !cache.WaitForCacheSync(stop, informer.HasSynced) {
 		msg := "timed out waiting for jx caches to sync"
-		runtime.HandleError(fmt.Errorf(msg))
+		return fmt.Errorf("%s", msg)
 	}
 
 	p := tea.NewProgram(m)

@@ -43,7 +43,6 @@ func (p *inliner) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
 }
 
 func (p *inliner) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
-	// TODO
 	return false, nil
 }
 

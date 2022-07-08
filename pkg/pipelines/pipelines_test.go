@@ -1,7 +1,7 @@
 package pipelines_test
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -41,7 +41,7 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 
 	tmpDir := t.TempDir()
 
-	data, err := ioutil.ReadFile(prFile)
+	data, err := os.ReadFile(prFile)
 	require.NoError(t, err, "failed to load %s", prFile)
 
 	pr := &v1beta1.PipelineRun{}

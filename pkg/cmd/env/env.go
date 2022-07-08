@@ -486,6 +486,6 @@ func (o *Options) logEnvVar(buf *strings.Builder, k, v string) {
 		}
 		buf.WriteString(fmt.Sprintf("%s=%s", k, v))
 	default:
-		buf.WriteString(fmt.Sprintf("export %s=\"%s\"\n", k, v))
+		buf.WriteString(fmt.Sprintf("export %q=%q\n", k, v))
 	}
 }

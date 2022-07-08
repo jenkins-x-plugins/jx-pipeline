@@ -7,6 +7,8 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func (m model) View() string {
@@ -83,12 +85,12 @@ func ToLastStep(pa *v1.PipelineActivity) string {
 			}
 			if prURL != "" {
 				title := ""
-				//Todo: Can be simplified
+				// Todo: Can be simplified
 				if pr != nil {
 					title = pr.Name
 				}
 				if promote.Environment != "" {
-					title = fmt.Sprintf("Promote to %s", strings.Title(promote.Environment))
+					title = fmt.Sprintf("Promote to %s", cases.Title(language.Und).String(promote.Environment))
 				}
 				return fmt.Sprintf(`%s %s`, title, prURL)
 			}

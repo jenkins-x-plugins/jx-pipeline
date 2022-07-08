@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -81,7 +80,7 @@ func ReadURL(ctx context.Context, urlText string, timeout time.Duration, httpFn 
 func ReadHTTPURL(u string, headerFunc func(*http.Request), timeout time.Duration) (io.ReadCloser, error) {
 	httpClient := httphelpers.GetClientWithTimeout(timeout)
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", u, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +129,7 @@ func WriteBucket(ctx context.Context, bucketURL, key string, reader io.Reader, t
 	if err != nil {
 		return errors.Wrapf(err, "failed to open bucket %s", bucketURL)
 	}
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read data for key %s in bucket %s", key, bucketURL)
 	}

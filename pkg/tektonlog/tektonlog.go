@@ -380,7 +380,7 @@ func (t *TektonLogger) getContainerLogsFromPod(ctx context.Context, pod *corev1.
 				Line: errorColor.Sprintf("\nPipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped.", stageName, ic.Name),
 			}
 			if t.FailIfPodFails {
-				return errors.Errorf("Pipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped.", stageName, ic.Name)
+				return errors.Errorf("pipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped", stageName, ic.Name)
 			}
 			break
 		}

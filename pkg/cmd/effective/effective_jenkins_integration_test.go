@@ -2,7 +2,6 @@ package effective_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -83,7 +82,7 @@ func TestPipelineEffectiveJenkinsClientDiscoverGit(t *testing.T) {
 
 	gitConfig := filepath.Join(gitDir, "config")
 	gitConfigText := fmt.Sprintf(gitConfigTemplate, testGitURL)
-	err = ioutil.WriteFile(gitConfig, []byte(gitConfigText), files.DefaultFileWritePermissions)
+	err = os.WriteFile(gitConfig, []byte(gitConfigText), files.DefaultFileWritePermissions)
 	require.NoError(t, err, "failed to save file %s", gitConfig)
 
 	e := CreateTestEnvVars(t, tmpDir)
