@@ -35,6 +35,10 @@ func (o *ResolverOptions) AddFlags(cmd *cobra.Command) {
 
 // CreateResolver creates the resolver from the available options
 func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
+	if o.Factory.GitServerURL == "" {
+		o.Factory.GitServerURL = "https://github.com"
+	}
+
 	f := o.Factory
 
 	fb := o.FileBrowser
@@ -54,12 +58,7 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 
 		var gitServerURL *url.URL
 		if f.GitServerURL != "" {
-			// ToDo: Why are we calling url.Parse twice?
 			gitServerURL, err = url.Parse(f.GitServerURL)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse git URL %s", f.GitServerURL)
-			}
-			_, err = url.Parse(f.GitServerURL)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to parse git URL %s", f.GitServerURL)
 			}
