@@ -113,8 +113,3 @@ release:
   # Default is `{{.Tag}}`
   name_template: "{{.Env.VERSION}}"
 
-sboms:
-  - id: jx-pipeline
-    artifacts: archive
-  - id: jx-pipeline-effective
-    artifacts: archive
