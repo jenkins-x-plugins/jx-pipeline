@@ -19,3 +19,4 @@ export PUSH_CONTAINER_REGISTRY='ghcr.io'
 export REPO_NAME='jx-pipeline'
 export REPO_OWNER='jenkins-x-plugins'
 export VERSION='0.3.0'
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/workspace/source/bin
