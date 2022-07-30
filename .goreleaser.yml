@@ -114,7 +114,4 @@ release:
   name_template: "{{.Env.VERSION}}"
 
 sboms:
-  - id: jx-pipeline
-    artifacts: archive
-  - id: jx-pipeline-effective
-    artifacts: archive
+  - artifacts: archive
