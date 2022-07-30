@@ -64,3 +64,9 @@ docs/apidocs/static/scroll.js
 pkg/jx/cmd/verify-pod.log
 
 plugin.gz
+
+# codecov
+codecov*
+
+# syft
+bin/syft
