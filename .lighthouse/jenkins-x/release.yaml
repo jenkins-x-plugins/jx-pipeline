@@ -72,7 +72,11 @@ spec:
             curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | \
             sh -s -- -b /workspace/source/bin v0.52.0
             chmod +x /workspace/source/bin/syft
-            echo "export PATH=$PATH:/workspace/source/bin" >> .jx/variables.sh
+            # Todo(@ankitm123/@osama): It would be better to just append workspace/source/bin in the upload-binaries step.
+            # The reason we are adding /go/bin:/usr/local/go/bin is because goreleaser image needs that to locate the go executable when 
+            # running the upload-binaries step
+            # We could use goreleaser image for this step also
+            echo "export PATH=$PATH:/go/bin:/usr/local/go/bin:/workspace/source/bin" >> .jx/variables.sh
         - name: upload-binaries
           resources: {}
         - name: promote-release
