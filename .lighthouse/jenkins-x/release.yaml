@@ -77,6 +77,9 @@ spec:
             # running the upload-binaries step
             # We could use goreleaser image for this step also
             echo "export PATH=$PATH:/go/bin:/usr/local/go/bin:/workspace/source/bin" >> .jx/variables.sh
+        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/supply-chain-security/task.yaml@versionStream
+          name: build-and-push-sbom
+          resources: {}
         - name: upload-binaries
           resources: {}
         - name: promote-release
