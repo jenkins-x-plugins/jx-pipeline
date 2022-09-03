@@ -65,6 +65,8 @@ spec:
           resources: {}
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/supply-chain-security/task.yaml@versionStream
           name: download-syft
+        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/supply-chain-security/task.yaml@versionStream
+          name: build-and-push-sbom
           resources: {}
         - name: upload-binaries
           resources: {}
