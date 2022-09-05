@@ -70,3 +70,6 @@ codecov*
 
 # syft
 bin/syft
+
+# image tar files
+image.tar
