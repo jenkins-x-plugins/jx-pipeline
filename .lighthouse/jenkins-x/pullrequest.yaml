@@ -6,7 +6,7 @@ metadata:
 spec:
   pipelineSpec:
     tasks:
-    - name: from-build-pack
+    - name: jx-pipeline-pr
       resources: {}
       taskSpec:
         metadata: {}
