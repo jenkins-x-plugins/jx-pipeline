@@ -6,7 +6,7 @@ metadata:
 spec:
   pipelineSpec:
     tasks:
-    - name: chart
+    - name: jx-pipeline-release
       resources: {}
       taskSpec:
         metadata: {}
