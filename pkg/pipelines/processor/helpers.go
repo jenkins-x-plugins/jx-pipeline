@@ -23,7 +23,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		return false, errors.Wrapf(err, "failed to load file %s", path)
 	}
 	if len(data) == 0 {
-		return false, errors.Errorf("empty file file %s", path)
+		return false, errors.Errorf("empty file: %s", path)
 	}
 
 	message := fmt.Sprintf("for file %s", path)

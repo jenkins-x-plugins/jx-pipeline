@@ -16,7 +16,7 @@ func LoadEffectivePipelineRun(resolver *inrepo.UsesResolver, path string) (*tekt
 		return nil, errors.Wrapf(err, "failed to load file %s", path)
 	}
 	if len(data) == 0 {
-		return nil, errors.Errorf("empty file file %s", path)
+		return nil, errors.Errorf("empty file: %s", path)
 	}
 
 	dir := filepath.Dir(path)

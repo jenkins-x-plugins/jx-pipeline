@@ -264,6 +264,7 @@ func (o *Options) getTektonLogs() (bool, error) {
 		return true, errors.New("there are no build logs for the supplied filters")
 	}
 
-	o.setOutput()
-	return false, o.TektonLogger.GetLogsForActivity(ctx, o.Out, pa, name, prList)
+	return false, o.handleOutput(func() error {
+		return o.TektonLogger.GetLogsForActivity(ctx, o.Out, pa, name, prList)
+	})
 }

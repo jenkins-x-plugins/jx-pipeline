@@ -10,7 +10,7 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 )
 
-func (o *Options) setOutput() {
+func (o *Options) handleOutput(f func() error) error {
 	if o.Out == nil {
 		if !o.BatchMode {
 			err := pager.Open()
@@ -22,4 +22,5 @@ func (o *Options) setOutput() {
 		}
 		o.Out = os.Stdout
 	}
+	return f()
 }
