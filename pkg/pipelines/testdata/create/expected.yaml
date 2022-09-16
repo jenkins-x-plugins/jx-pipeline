@@ -31,38 +31,40 @@ spec:
   gitRepository: nodey510
   gitUrl: https://github.com/jstrachan/nodey510.git
   lastCommitSHA: 5a694a615045f2821aa40aefe86aab9192667193
+  message: "Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0"
   pipeline: jstrachan/nodey510/master
   status: Running
   steps:
-  - kind: Stage
-    stage:
-      name: from build pack
-      status: Running
-      steps:
-      - name: Git Clone
-        status: Succeeded
-      - name: Git Setup
-        status: Succeeded
-      - name: Next Version
-        status: Succeeded
-      - name: Tag Version
-        status: Succeeded
-      - name: Setup Builder Home
-        status: Succeeded
-      - name: Git Merge
-        status: Succeeded
-      - name: Build Npmrc
-        status: Succeeded
-      - name: Build Npm Install
+    - kind: Stage
+      stage:
+        message: Not all Steps in the Task have finished executing
+        name: from build pack
         status: Running
-      - name: Build Npm Test
-        status: Pending
-      - name: Build Container Build
-        status: Pending
-      - name: Promote Changelog
-        status: Pending
-      - name: Promote Helm Release
-        status: Pending
-      - name: Promote Jx Promote
-        status: Pending
+        steps:
+          - name: Git Clone
+            status: Succeeded
+          - name: Git Setup
+            status: Succeeded
+          - name: Next Version
+            status: Succeeded
+          - name: Tag Version
+            status: Succeeded
+          - name: Setup Builder Home
+            status: Succeeded
+          - name: Git Merge
+            status: Succeeded
+          - name: Build Npmrc
+            status: Succeeded
+          - name: Build Npm Install
+            status: Running
+          - name: Build Npm Test
+            status: Pending
+          - name: Build Container Build
+            status: Pending
+          - name: Promote Changelog
+            status: Pending
+          - name: Promote Helm Release
+            status: Pending
+          - name: Promote Jx Promote
+            status: Pending
 status: {}
