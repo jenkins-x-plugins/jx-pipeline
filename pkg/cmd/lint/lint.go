@@ -148,7 +148,7 @@ func (o *Options) ProcessFile(path string) error {
 		return errors.Wrapf(err, "failed to load file %s", path)
 	}
 	if len(data) == 0 {
-		return errors.Errorf("empty file file %s", path)
+		return errors.Errorf("empty file: %s", path)
 	}
 
 	u := &unstructured.Unstructured{}
@@ -302,7 +302,7 @@ func loadJobBaseFromSourcePath(ctx context.Context, resolver *inrepo.UsesResolve
 		return errors.Wrapf(err, "failed to load file %s", path)
 	}
 	if len(data) == 0 {
-		return errors.Errorf("empty file file %s", path)
+		return errors.Errorf("empty file: %s", path)
 	}
 
 	dir := filepath.Dir(path)
