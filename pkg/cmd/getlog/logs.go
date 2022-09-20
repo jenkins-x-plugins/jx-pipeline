@@ -119,6 +119,10 @@ func (o *Options) Validate() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create kube client")
 	}
+	o.Namespace, _, err = jxenv.GetDevNamespace(o.KubeClient, o.Namespace)
+	if err != nil {
+		log.Logger().Warnf("Failed to find dev namespace. Will continue to use %s. %s", o.Namespace, err)
+	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the jx client")
