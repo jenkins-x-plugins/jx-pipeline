@@ -10,20 +10,16 @@ spec:
               \s+PipelineVersion = "(.*)"
             files:
               - "pkg/plugins/versions.go"
-    - changes:
+    - urls:
+      - https://github.com/jenkins-x-plugins/jx-build-controller
+      changes:
       - regex:
           pattern: |
             github.com/jenkins-x-plugins/jx-pipeline v(.*)
           files:
           - "go.mod"
-      - go:
-          owner:
-          - jenkins-x-plugins
-          repositories:
-            include:
-            - jx-build-controller
-          package: github.com/jenkins-x-plugins/jx-pipeline
-          upgradePackages:
-            include:
-            - "github.com/jenkins-x/*"
-            - "github.com/jenkins-x-plugins/*"
+      - command:
+          name: go
+          args:
+          - mod
+          - tidy
