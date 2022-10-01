@@ -26,6 +26,14 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 )
 
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+var (
+	HttpClient HTTPClient
+)
+
 // CreateBucketURL creates a go-cloud URL to a bucket
 func CreateBucketURL(name, kind, cloudProvider string) (string, error) {
 	if kind == "" {
@@ -76,26 +84,30 @@ func ReadURL(ctx context.Context, urlText string, timeout time.Duration, httpFn 
 	}
 }
 
+var GetClientWithTimeout = func(timeout time.Duration) HTTPClient {
+	return httphelpers.GetClientWithTimeout(timeout)
+}
+
 // ReadHTTPURL reads the HTTP based URL, modifying the headers as needed, and returns the data or returning an error if a 2xx status is not returned
 func ReadHTTPURL(u string, headerFunc func(*http.Request), timeout time.Duration) (io.ReadCloser, error) {
-	httpClient := httphelpers.GetClientWithTimeout(timeout)
+	HttpClient = GetClientWithTimeout(timeout)
 
 	req, err := http.NewRequest("GET", u, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
-	headerFunc(req)
-	resp, err := httpClient.Do(req)
+	if headerFunc != nil {
+		headerFunc(req)
+	}
+	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to invoke GET on %s", u)
 	}
-	stream := resp.Body
 
 	if resp.StatusCode >= 400 {
-		_ = stream.Close()
 		return nil, fmt.Errorf("status %s when performing GET on %s", resp.Status, u)
 	}
-	return stream, nil
+	return resp.Body, nil
 }
 
 // ReadBucketURL reads the content of a bucket URL of the for 's3://bucketName/foo/bar/whatnot.txt?param=123'
