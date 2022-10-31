@@ -50,7 +50,7 @@ func (p *inliner) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (bo
 	return ProcessPipelineSpec(ps, path, p.processTaskSpec)
 }
 
-//nolint
+// nolint
 func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
 	templateImage := ""
 	if ts.StepTemplate != nil {
