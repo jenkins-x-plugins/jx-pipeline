@@ -194,12 +194,20 @@ func ValidatePipelineRun(ctx context.Context, pr *v1beta1.PipelineRun) *apis.Fie
 	if ps == nil {
 		return nil
 	}
-	for i := range ps.Tasks {
-		pt := &ps.Tasks[i]
-		if pt.TaskSpec == nil {
-			continue
+
+	tasksAndFinally := [][]v1beta1.PipelineTask{
+		ps.Tasks,
+		ps.Finally,
+	}
+	for i := range tasksAndFinally {
+		pipelineTasks := tasksAndFinally[i]
+		for j := range pipelineTasks {
+			pt := &pipelineTasks[j]
+			if pt.TaskSpec == nil {
+				continue
+			}
+			err = err.Also(ValidateTaskRunVolumesExist(&pt.TaskSpec.TaskSpec).ViaFieldIndex("tasks", i)).ViaField("spec", "pipelineSpec")
 		}
-		err = err.Also(ValidateTaskRunVolumesExist(&pt.TaskSpec.TaskSpec).ViaFieldIndex("tasks", i)).ViaField("spec", "pipelineSpec")
 	}
 	return err
 }

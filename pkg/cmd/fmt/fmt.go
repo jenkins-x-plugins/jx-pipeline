@@ -214,24 +214,31 @@ func (o *Options) processPipelineRun(prs *v1beta1.PipelineRun, path string) erro
 
 func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec) error { //nolint:unparam
 	spec.Params = RemoveDefaultParamSpecs(spec.Params)
-	for i := range spec.Tasks {
-		task := &spec.Tasks[i]
-		task.Params = RemoveDefaultParams(task.Params)
-		ts := task.TaskSpec
-		if ts != nil {
-			ts.Params = RemoveDefaultParamSpecs(ts.Params)
-			var steps []v1beta1.Step
-			for j := range ts.Steps {
-				s := ts.Steps[j]
-				if !removeStepNames[s.Name] {
-					s = o.convertToScriptStep(&s)
-					steps = append(steps, s)
+	tasksAndFinally := [][]v1beta1.PipelineTask{
+		spec.Tasks,
+		spec.Finally,
+	}
+	for i := range tasksAndFinally {
+		pipelineTasks := tasksAndFinally[i]
+		for j := range pipelineTasks {
+			task := &pipelineTasks[j]
+			task.Params = RemoveDefaultParams(task.Params)
+			ts := task.TaskSpec
+			if ts != nil {
+				ts.Params = RemoveDefaultParamSpecs(ts.Params)
+				var steps []v1beta1.Step
+				for j := range ts.Steps {
+					s := ts.Steps[j]
+					if !removeStepNames[s.Name] {
+						s = o.convertToScriptStep(&s)
+						steps = append(steps, s)
+					}
 				}
-			}
-			ts.Steps = steps
-			ss := ts.StepTemplate
-			if ss != nil {
-				ss.Env = RemoveDefaultEnvVars(ss.Env)
+				ts.Steps = steps
+				ss := ts.StepTemplate
+				if ss != nil {
+					ss.Env = RemoveDefaultEnvVars(ss.Env)
+				}
 			}
 		}
 	}

@@ -292,10 +292,17 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 			return nil, err
 		}
 		if refreshedPr.Status.PipelineSpec != nil {
-			for k := range refreshedPr.Status.PipelineSpec.Tasks {
-				taskStatus := refreshedPr.Status.PipelineSpec.Tasks[k]
-				podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
-				stageTimes = append(stageTimes, podTime)
+			tasksAndFinally := [][]tektonapis.PipelineTask{
+				refreshedPr.Status.PipelineSpec.Tasks,
+				refreshedPr.Status.PipelineSpec.Finally,
+			}
+			for j := range tasksAndFinally {
+				pipelineTasks := tasksAndFinally[j]
+				for k := range pipelineTasks {
+					taskStatus := pipelineTasks[k]
+					podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
+					stageTimes = append(stageTimes, podTime)
+				}
 			}
 		} else if refreshedPr.Spec.PipelineRef != nil && refreshedPr.Spec.PipelineRef.Name != "" {
 			// if the tasks definition is not available in the PipelineRun, let's retrieve it from the Pipeline itself
@@ -303,10 +310,17 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 			if err != nil {
 				return nil, err
 			}
-			for k := range pipeline.Spec.Tasks {
-				task := pipeline.Spec.Tasks[k]
-				podTime := findExecutedOrSkippedStagesStage(task.Name, refreshedPr)
-				stageTimes = append(stageTimes, podTime)
+			tasksAndFinally := [][]tektonapis.PipelineTask{
+				pipeline.Spec.Tasks,
+				pipeline.Spec.Finally,
+			}
+			for j := range tasksAndFinally {
+				pipelineTasks := tasksAndFinally[j]
+				for k := range pipelineTasks {
+					task := pipelineTasks[k]
+					podTime := findExecutedOrSkippedStagesStage(task.Name, refreshedPr)
+					stageTimes = append(stageTimes, podTime)
+				}
 			}
 		} else {
 			log.Logger().Warningf("Could not retrieve tasks for PipelineRun %s", pr.Name)

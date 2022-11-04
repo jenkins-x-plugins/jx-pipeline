@@ -226,14 +226,22 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 
 	var taskNames []string
 	tasks := map[string]*v1beta1.TaskSpec{}
-	for i := range ps.Tasks {
-		pt := &ps.Tasks[i]
-		if pt.TaskSpec == nil {
-			continue
+
+	tasksAndFinally := [][]v1beta1.PipelineTask{
+		ps.Tasks,
+		ps.Finally,
+	}
+	for i := range tasksAndFinally {
+		pipelineTasks := tasksAndFinally[i]
+		for j := range pipelineTasks {
+			pt := &pipelineTasks[j]
+			if pt.TaskSpec == nil {
+				continue
+			}
+			ts := &pt.TaskSpec.TaskSpec
+			taskNames = append(taskNames, pt.Name)
+			tasks[pt.Name] = ts
 		}
-		ts := &pt.TaskSpec.TaskSpec
-		taskNames = append(taskNames, pt.Name)
-		tasks[pt.Name] = ts
 	}
 	taskName, err := o.Input.PickNameWithDefault(taskNames, "Pick the task you wish to view the environment for: ", "", "Please select the pipeline task you wish to view")
 	if err != nil {
