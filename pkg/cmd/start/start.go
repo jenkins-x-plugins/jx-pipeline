@@ -435,7 +435,15 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 		}
 
-		configureOpts := func(opts *gitv2.ClientFactoryOpts) {}
+		configureOpts := func(opts *gitv2.ClientFactoryOpts) {
+			opts.Token = func() []byte {
+				return []byte(o.GitToken)
+			}
+			if gitInfo != nil {
+				opts.Host = gitInfo.Host
+				opts.Scheme = gitInfo.Scheme
+			}
+		}
 		gitFactory, err := gitv2.NewClientFactory(configureOpts)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create git factory")
