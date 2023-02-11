@@ -1,7 +1,6 @@
 package effective
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -322,7 +321,7 @@ func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.Pip
 			fileName = "jx-pipeline"
 		}
 		tmpFileName := fileName + "-" + strings.ReplaceAll(name, string(os.PathSeparator), "-") + "-*.yaml"
-		tmpFile, err := ioutil.TempFile("", tmpFileName)
+		tmpFile, err := os.CreateTemp("", tmpFileName)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create temp file")
 		}
