@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tektoncd/pipeline v0.32.4
 	gocloud.dev v0.25.0
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.3.8
 	k8s.io/api v0.22.15
 	k8s.io/apimachinery v0.22.15
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
@@ -154,7 +154,6 @@ require (
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
-	golang.org/x/tools v0.1.12 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/api v0.74.0 // indirect
