@@ -78,7 +78,13 @@ spec:
             rm -f /workspace/source/image.tar
         - name: upload-binaries
           resources: {}
-        - name: promote-release
+        - command:
+          - jx-updatebot
+          - pr
+          - --add-changelog
+          - changelog.md
+          image: ghcr.io/jenkins-x/jx-updatebot:0.0.0-PR-68-3-SNAPSHOT
+          name: promote-release
           resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
