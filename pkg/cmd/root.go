@@ -40,7 +40,7 @@ func Main() *cobra.Command {
 
 	cmd.AddCommand(cobras.SplitCommand(activities.NewCmdActivities()))
 	cmd.AddCommand(cobras.SplitCommand(breakpoint.NewCmdPipelineBreakpoint()))
-	cmd.AddCommand(cobras.SplitCommand(convert.NewCmdPipelineConvert()))
+	cmd.AddCommand(convert.NewCmdPipelineConvert())
 	cmd.AddCommand(cobras.SplitCommand(effective.NewCmdPipelineEffective()))
 	cmd.AddCommand(cobras.SplitCommand(env.NewCmdPipelineEnv()))
 	cmd.AddCommand(cobras.SplitCommand(get.NewCmdPipelineGet()))
