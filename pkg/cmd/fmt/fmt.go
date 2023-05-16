@@ -12,8 +12,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/pkg/errors"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
@@ -286,7 +285,7 @@ func (o *Options) convertToScriptStep(s *v1beta1.Step) v1beta1.Step {
 }
 
 // RemoveDefaultParamSpecs removes default parameters
-func RemoveDefaultParamSpecs(from []v1alpha1.ParamSpec) []v1alpha1.ParamSpec {
+func RemoveDefaultParamSpecs(from []v1beta1.ParamSpec) []v1beta1.ParamSpec {
 	var params []v1beta1.ParamSpec
 	for _, p := range from {
 		if !defaultParameterNames[p.Name] {
@@ -297,7 +296,7 @@ func RemoveDefaultParamSpecs(from []v1alpha1.ParamSpec) []v1alpha1.ParamSpec {
 }
 
 // RemoveDefaultParams removes default params
-func RemoveDefaultParams(from []v1alpha1.Param) []v1alpha1.Param {
+func RemoveDefaultParams(from []v1beta1.Param) []v1beta1.Param {
 	var params []v1beta1.Param
 	for _, p := range from {
 		if !defaultParameterNames[p.Name] {

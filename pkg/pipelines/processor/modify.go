@@ -38,7 +38,7 @@ func (p *modifier) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (b
 
 func (p *modifier) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
 	if ts.StepTemplate == nil {
-		ts.StepTemplate = &corev1.Container{}
+		ts.StepTemplate = &v1beta1.StepTemplate{}
 	}
 	modified := false
 	if p.templateEnvs != nil {
