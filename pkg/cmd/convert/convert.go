@@ -24,6 +24,8 @@ var (
 	convertCmdExample = templates.Examples(`
 		# Convert a pipeline to use "image:uses:"
 		jx pipeline convert uses
+		# Convert a pipeline to use native Tekton
+		jx pipeline convert remotetasks
 	`)
 )
 
@@ -43,5 +45,6 @@ func NewCmdPipelineConvert() *cobra.Command {
 	}
 
 	cmd.AddCommand(cobras.SplitCommand(NewCmdPipelineConvertUses()))
+	cmd.AddCommand(cobras.SplitCommand(NewCmdPipelineConvertRemoteTasks()))
 	return cmd
 }

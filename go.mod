@@ -11,7 +11,7 @@ require (
 	github.com/jenkins-x-plugins/jx-gitops v0.7.22
 	github.com/jenkins-x/go-scm v1.13.14
 	github.com/jenkins-x/jx-api/v4 v4.6.1
-	github.com/jenkins-x/jx-helpers/v3 v3.4.0
+	github.com/jenkins-x/jx-helpers/v3 v3.5.0
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.4
 	github.com/jenkins-x/jx-logging/v3 v3.0.10
 	github.com/jenkins-x/lighthouse-client v0.0.825

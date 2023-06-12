@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -29,7 +31,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	message := fmt.Sprintf("for file %s", path)
 
 	kindPrefix := "kind:"
-	kind := "PipelineRun"
+	var kind string
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		if !strings.HasPrefix(line, kindPrefix) {
@@ -124,4 +126,80 @@ func ProcessPipelineSpec(ps *tektonv1beta1.PipelineSpec, path string, fn func(ts
 		}
 	}
 	return modified, nil
+}
+
+func AppendParamsIfNotPresent(existing, toAdd []tektonv1beta1.ParamSpec) []tektonv1beta1.ParamSpec {
+	for _, param := range toAdd {
+		if !containsParam(existing, param.Name) {
+			existing = append(existing, param)
+		}
+	}
+	return existing
+}
+
+func containsParam(existing []tektonv1beta1.ParamSpec, name string) bool {
+	for _, param := range existing {
+		if param.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func AppendEnvsIfNotPresent(existing, toAdd []v1.EnvVar) []v1.EnvVar {
+	for _, env := range toAdd {
+		if !containsEnv(existing, env.Name) {
+			existing = append(existing, env)
+		}
+	}
+	return existing
+}
+
+func ReplaceOrAppendEnv(existing []v1.EnvVar, toAdd v1.EnvVar) []v1.EnvVar {
+	for i, env := range existing {
+		if env.Name == toAdd.Name {
+			existing[i] = toAdd
+			return existing
+		}
+	}
+	return append(existing, toAdd)
+}
+
+func containsEnv(existing []v1.EnvVar, name string) bool {
+	for _, env := range existing {
+		if env.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func AppendEnvsFromIfNotPresent(existing, toAdd []v1.EnvFromSource) []v1.EnvFromSource {
+	for _, envFrom := range toAdd {
+		if !containsEnvFrom(existing, envFrom.Prefix) {
+			existing = append(existing, envFrom)
+		}
+	}
+	return existing
+}
+
+func containsEnvFrom(existing []v1.EnvFromSource, prefix string) bool {
+	for _, envFrom := range existing {
+		if envFrom.Prefix == prefix {
+			return true
+		}
+	}
+	return false
+}
+
+func ParamsToEnvVars(params []tektonv1beta1.ParamSpec) []v1.EnvVar {
+	envVars := make([]v1.EnvVar, len(params))
+	for idx, param := range params {
+		envVars[idx] = v1.EnvVar{
+			Name:      param.Name,
+			Value:     fmt.Sprintf("$(params.%s)", param.Name),
+			ValueFrom: nil,
+		}
+	}
+	return envVars
 }
