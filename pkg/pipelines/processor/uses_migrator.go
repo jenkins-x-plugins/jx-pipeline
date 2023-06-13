@@ -121,11 +121,11 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		if !p.catalog {
 			catalogStep = FindStep(p.CatalogTaskSpec, step.Name)
 			if catalogStep == nil {
-				// this step is not in the catalog so don' replace with uses:
+				// this step is not in the catalog so don't replace with uses:
 				continue
 			}
 
-			// lets not reuse a step if the images are different (other than version)
+			// let's not reuse a step if the images are different (other than version)
 			if ImageWithoutVersionTag(image) != ImageWithoutVersionTag(catalogStep.Image) {
 				continue
 			}
@@ -137,7 +137,7 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		usesImage := fmt.Sprintf("uses:%s/%s/%s@%s", p.Owner, p.Repository, usesPath, sha)
 
 		if ts.StepTemplate == nil {
-			ts.StepTemplate = &corev1.Container{}
+			ts.StepTemplate = &v1beta1.StepTemplate{}
 		}
 		if ts.StepTemplate.Image == "" {
 			ts.StepTemplate.Image = usesImage
@@ -148,10 +148,8 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 
 		// lets translate to the uses string
 		replaceStep := v1beta1.Step{
-			Container: corev1.Container{
-				Name:  step.Name,
-				Image: usesImage,
-			},
+			Name:  step.Name,
+			Image: usesImage,
 		}
 
 		if !p.catalog {
@@ -196,9 +194,7 @@ func replaceStepAnnotations(ann map[string]string, ts *v1beta1.TaskSpec) bool {
 		modified = true
 		newSteps := []v1beta1.Step{
 			{
-				Container: corev1.Container{
-					Image: value,
-				},
+				Image: value,
 			},
 		}
 		ts.Steps = append(newSteps, ts.Steps...)
@@ -207,9 +203,7 @@ func replaceStepAnnotations(ann map[string]string, ts *v1beta1.TaskSpec) bool {
 	if value != "" {
 		modified = true
 		ts.Steps = append(ts.Steps, v1beta1.Step{
-			Container: corev1.Container{
-				Image: value,
-			},
+			Image: value,
 		})
 	}
 	return modified

@@ -23,7 +23,7 @@ spec:
           resources: {}
         - name: jx-variables
           resources: {}
-        - image: golang:1.17.9-alpine3.15
+        - image: golang:1.19-alpine3.16
           name: coverage-report
           resources: {}
           script: |

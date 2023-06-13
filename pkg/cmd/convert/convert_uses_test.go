@@ -44,7 +44,7 @@ func TestConvertCatalog(t *testing.T) {
 
 	t.Logf("running tests in %s\n", tmpDir)
 
-	_, o := convert.NewCmdPipelineConvert()
+	_, o := convert.NewCmdPipelineConvertUses()
 
 	runner := &fakerunner.FakeRunner{}
 	o.CommandRunner = runner.Run
@@ -81,7 +81,7 @@ func TestConvertRepository(t *testing.T) {
 
 	t.Logf("running tests in %s\n", tmpDir)
 
-	_, o := convert.NewCmdPipelineConvert()
+	_, o := convert.NewCmdPipelineConvertUses()
 
 	runner := &fakerunner.FakeRunner{}
 	o.CommandRunner = runner.Run

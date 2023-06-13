@@ -8,7 +8,6 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/pkg/errors"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type inliner struct {
@@ -132,7 +131,7 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 		newStep := v1beta1.Step{}
 		newStep.Name = s.Name
 		if ts.StepTemplate == nil {
-			ts.StepTemplate = &corev1.Container{}
+			ts.StepTemplate = &v1beta1.StepTemplate{}
 		}
 		if ts.StepTemplate.Image == "" {
 			ts.StepTemplate.Image = so.image
@@ -215,30 +214,12 @@ func (p *inliner) inlineStep(s, catalogStep *v1beta1.Step) error {
 			s.Image = catalogStep.Image
 		case "imagePullPolicy":
 			s.ImagePullPolicy = catalogStep.ImagePullPolicy
-		case "lifecycle":
-			s.Lifecycle = catalogStep.Lifecycle
-		case "livenessProbe":
-			if catalogStep.LivenessProbe != nil {
-				s.LivenessProbe = catalogStep.LivenessProbe
-			}
-		case "readinessProbe":
-			if catalogStep.ReadinessProbe != nil {
-				s.ReadinessProbe = catalogStep.ReadinessProbe
-			}
 		case "resources":
 			s.Resources = catalogStep.Resources
 		case "script":
 			s.Script = catalogStep.Script
 		case "securityContext":
 			s.SecurityContext = catalogStep.SecurityContext
-		case "startupProbe":
-			if catalogStep.StartupProbe != nil {
-				s.StartupProbe = catalogStep.StartupProbe
-			}
-		case "terminationMessagePath":
-			s.TerminationMessagePath = catalogStep.TerminationMessagePath
-		case "terminationMessagePolicy":
-			s.TerminationMessagePolicy = catalogStep.TerminationMessagePolicy
 		case "timeout":
 			if catalogStep.Timeout != nil {
 				s.Timeout = catalogStep.Timeout
