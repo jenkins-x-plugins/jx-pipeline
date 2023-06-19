@@ -1,86 +1,82 @@
 package processor
 
 import (
+	"bytes"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 )
 
-// GitResolverRef is a representation of the Tekton git resolver params
-type GitResolverRef struct {
-	URL        string
-	Revision   string
-	PathInRepo string
+type GitRefResolver struct {
+	isPublicRepositories map[string]bool
+	reversionOverride    string
 }
 
-// NewRefFromUsesImage parses an image name of "uses:image" syntax as a GitResolverRef
-func NewRefFromUsesImage(image, stepName, reversionOverride string) GitResolverRef {
+func NewGitRefResolver(reversionOverride string) *GitRefResolver {
+	return &GitRefResolver{reversionOverride: reversionOverride, isPublicRepositories: map[string]bool{}}
+}
+
+// NewRefFromUsesImage parses an image name of "uses:image" syntax as a GitRef
+func (g *GitRefResolver) NewRefFromUsesImage(image, stepName string) (*GitRef, error) {
 	if !strings.HasPrefix(image, "uses:") {
-		return GitResolverRef{}
+		return nil, nil
 	}
 	image = strings.TrimPrefix(image, "uses:")
 	split := strings.Split(image, "@")
 
 	fullURL, revision := split[0], split[1]
-	if reversionOverride != "" {
-		revision = reversionOverride
+	if g.reversionOverride != "" {
+		revision = g.reversionOverride
 	}
 
 	if !strings.HasPrefix(fullURL, "https://") {
 		// If the URL doesn't start with https:// then we can assume that it is a GitHub URL and so prepend that domain
-		fullURL = fmt.Sprintf("https://github.com/%s", fullURL)
+		fullURL = fmt.Sprintf("%s/%s", giturl.GitHubURL, fullURL)
 	}
 
 	split = strings.SplitAfter(fullURL, "/")
 	repoURL := strings.Join(split[:5], "")
+	org, repo := strings.TrimSuffix(split[3], "/"), strings.TrimSuffix(split[4], "/")
 	repoURL = strings.TrimSuffix(repoURL, "/") + ".git"
+
+	isPublic, ok := g.isPublicRepositories[repoURL]
+	if !ok {
+		var err error
+		isPublic, err = g.isRepositoryPublic(repoURL)
+		if err != nil {
+			return nil, err
+		}
+		g.isPublicRepositories[repoURL] = isPublic
+	}
 
 	pathInRepo := strings.Join(split[5:], "")
 	if stepName != "" {
 		pathInRepo = filepath.Join(strings.TrimSuffix(pathInRepo, ".yaml"), stepName) + ".yaml"
 	}
 
-	return GitResolverRef{
+	return &GitRef{
 		URL:        repoURL,
+		Org:        org,
+		Repository: repo,
 		Revision:   revision,
 		PathInRepo: pathInRepo,
+		IsPublic:   isPublic,
+	}, nil
+}
+
+func (g *GitRefResolver) isRepositoryPublic(cloneURL string) (bool, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("HEAD", cloneURL, &bytes.Buffer{})
+	if err != nil {
+		return false, err
 	}
-}
-
-// IsEmpty returns true if all the fields are empty
-func (g GitResolverRef) IsEmpty() bool {
-	return g.URL == "" && g.Revision == "" && g.PathInRepo == ""
-}
-
-// GetParentFileName returns the filename of the parent pipeline run
-func (g GitResolverRef) GetParentFileName() string {
-	return strings.TrimSuffix(filepath.Base(g.PathInRepo), ".yaml")
-}
-
-// ToParams converts the GitResolverRef to a slice of v1beta1.Param
-func (g GitResolverRef) ToParams() []v1beta1.Param {
-	return []v1beta1.Param{
-		{
-			Name:  "url",
-			Value: v1beta1.ParamValue{StringVal: g.URL, Type: v1beta1.ParamTypeString},
-		},
-		{
-			Name:  "revision",
-			Value: v1beta1.ParamValue{StringVal: g.Revision, Type: v1beta1.ParamTypeString},
-		},
-		{
-			Name:  "pathInRepo",
-			Value: v1beta1.ParamValue{StringVal: g.PathInRepo, Type: v1beta1.ParamTypeString},
-		},
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
 	}
-}
-
-// ToResolverRef converts the GitResolverRef to a v1beta1.ResolverRef
-func (g GitResolverRef) ToResolverRef() v1beta1.ResolverRef {
-	return v1beta1.ResolverRef{
-		Resolver: "git",
-		Params:   g.ToParams(),
-	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK, nil
 }

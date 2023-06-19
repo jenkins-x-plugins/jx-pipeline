@@ -13,61 +13,75 @@ func TestNewRefFromUsesImage(t *testing.T) {
 		image             string
 		stepName          string
 		reversionOverride string
-		expected          processor.GitResolverRef
+		expected          *processor.GitRef
 	}{
 		{
 			name:     "empty",
 			image:    "",
-			expected: processor.GitResolverRef{},
+			expected: nil,
 		},
 		{
 			name:     "NonUsesImage",
 			image:    "ghcr.io/jenkins-x/jx-boot:3.10.86",
-			expected: processor.GitResolverRef{},
+			expected: nil,
 		},
 		{
 			name:  "StandardJXPath",
 			image: "uses:jenkins-x/jx3-pipeline-catalog/tasks/go/pullrequest.yaml@versionStream",
-			expected: processor.GitResolverRef{
+			expected: &processor.GitRef{
 				URL:        "https://github.com/jenkins-x/jx3-pipeline-catalog.git",
 				Revision:   "versionStream",
+				Org:        "jenkins-x",
+				Repository: "jx3-pipeline-catalog",
 				PathInRepo: "tasks/go/pullrequest.yaml",
+				IsPublic:   true,
 			},
 		},
 		{
 			name:  "GitlabPath",
-			image: "uses:https://gitlab.com/jenkins-x/jx3-pipeline-catalog/tasks/go/pullrequest.yaml@versionStream",
-			expected: processor.GitResolverRef{
-				URL:        "https://gitlab.com/jenkins-x/jx3-pipeline-catalog.git",
+			image: "uses:https://gitlab.com/open-source-archie/retry/tasks/go/pullrequest.yaml@versionStream",
+			expected: &processor.GitRef{
+				URL:        "https://gitlab.com/open-source-archie/retry.git",
+				Org:        "open-source-archie",
+				Repository: "retry",
 				Revision:   "versionStream",
 				PathInRepo: "tasks/go/pullrequest.yaml",
+				IsPublic:   true,
 			},
 		},
 		{
 			name:              "OverrideRevision",
 			image:             "uses:jenkins-x/jx3-pipeline-catalog/tasks/go/pullrequest.yaml@versionStream",
 			reversionOverride: "master",
-			expected: processor.GitResolverRef{
+			expected: &processor.GitRef{
 				URL:        "https://github.com/jenkins-x/jx3-pipeline-catalog.git",
+				Org:        "jenkins-x",
+				Repository: "jx3-pipeline-catalog",
 				Revision:   "master",
 				PathInRepo: "tasks/go/pullrequest.yaml",
+				IsPublic:   true,
 			},
 		},
 		{
 			name:     "AddStepName",
 			image:    "uses:jenkins-x/jx3-pipeline-catalog/tasks/go/pullrequest.yaml@versionStream",
 			stepName: "build-make-build",
-			expected: processor.GitResolverRef{
+			expected: &processor.GitRef{
 				URL:        "https://github.com/jenkins-x/jx3-pipeline-catalog.git",
+				Org:        "jenkins-x",
+				Repository: "jx3-pipeline-catalog",
 				Revision:   "versionStream",
 				PathInRepo: "tasks/go/pullrequest/build-make-build.yaml",
+				IsPublic:   true,
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := processor.NewRefFromUsesImage(tc.image, tc.stepName, tc.reversionOverride)
+			gitResolver := processor.NewGitRefResolver(tc.reversionOverride)
+			actual, err := gitResolver.NewRefFromUsesImage(tc.image, tc.stepName)
+			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

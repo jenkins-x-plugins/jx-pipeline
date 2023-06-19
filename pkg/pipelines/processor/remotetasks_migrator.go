@@ -120,13 +120,15 @@ var (
 )
 
 type RemoteTasksMigrator struct {
-	overrideSHA             string
 	workspaceVolumeQuantity resource.Quantity
+	gitResolver             *GitRefResolver
 }
 
 // NewRemoteTasksMigrator creates a new uses migrator
 func NewRemoteTasksMigrator(overrideSHA string, workspaceVolumeQuantity resource.Quantity) *RemoteTasksMigrator {
-	return &RemoteTasksMigrator{overrideSHA: overrideSHA, workspaceVolumeQuantity: workspaceVolumeQuantity}
+	return &RemoteTasksMigrator{workspaceVolumeQuantity: workspaceVolumeQuantity,
+		gitResolver: NewGitRefResolver(overrideSHA),
+	}
 }
 
 func (p *RemoteTasksMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
@@ -150,7 +152,11 @@ func (p *RemoteTasksMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path 
 		return p.migrateToTasks(prs, path)
 	}
 
-	if prsParent := NewRefFromUsesImage(stepTemplate.Image, "", p.overrideSHA); !prsParent.IsEmpty() {
+	prsParent, err := p.gitResolver.NewRefFromUsesImage(stepTemplate.Image, "")
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to create new ref from uses image %s", stepTemplate.Image)
+	}
+	if prsParent != nil {
 		// If the step template image is a uses image then we can assume that the pipeline run is a child pipeline run,
 		// and so we should migrate it to a new pipeline run
 		log.Logger().Infof("StepTemplate has image \"%s\". Migrating to new pipelineRun", stepTemplate.Image)
@@ -281,34 +287,44 @@ func (p *RemoteTasksMigrator) appendDefaultValues(task *v1beta1.Task) {
 }
 
 func (p *RemoteTasksMigrator) NewPipelineTaskFromStepAndPipelineRun(step *v1beta1.Step, prs *v1beta1.PipelineRun) (v1beta1.PipelineTask, error) {
-	parentRef := NewRefFromUsesImage(step.Image, step.Name, p.overrideSHA)
-	name := parentRef.GetParentFileName()
-	if parentRef.IsEmpty() {
-		// If the step itself does not have a parent then it can either be an embedded step or a child step inferred
-		// from the parent pipeline run in the step template
-		if step.Image != "" {
-			// If the step image is populated then it's an embedded step, and we can just convert it to an embedded task
-			task, err := p.NewTaskFromStepAndPipelineRun(step, prs, true)
-			if err != nil {
-				return v1beta1.PipelineTask{}, err
-			}
-			return v1beta1.PipelineTask{
-				Name: step.Name,
-				TaskSpec: &v1beta1.EmbeddedTask{
-					TaskSpec: task.Spec,
-				},
-			}, nil
-		}
-
-		// Otherwise it's a child step, and we need to infer the parent from the pipeline run step template
-		parentRef = NewRefFromUsesImage(prs.Spec.PipelineSpec.Tasks[0].TaskSpec.StepTemplate.Image, step.Name, p.overrideSHA)
-		name = step.Name
+	stepParentRef, err := p.gitResolver.NewRefFromUsesImage(step.Image, step.Name)
+	if err != nil {
+		return v1beta1.PipelineTask{}, err
 	}
 
-	return p.pipelineTaskFromParentRef(name, parentRef), nil
+	if stepParentRef != nil {
+		// If the step has a parent then we can just convert it to a pipeline task
+		return p.pipelineTaskFromParentRef(stepParentRef.GetParentFileName(), stepParentRef), nil
+	}
+
+	if step.Image != "" {
+		// If the step has no parent and also has an image then it's a root step and can just be converted to an embedded task
+		return p.pipelineTaskFromStep(step, prs)
+	}
+
+	// Otherwise it's a child step and is inherited from the parent pipelineRun in the stepTemplate
+	stepTemplateParentRef, err := p.gitResolver.NewRefFromUsesImage(prs.Spec.PipelineSpec.Tasks[0].TaskSpec.StepTemplate.Image, step.Name)
+	if err != nil {
+		return v1beta1.PipelineTask{}, err
+	}
+
+	return p.pipelineTaskFromParentRef(step.Name, stepTemplateParentRef), nil
 }
 
-func (p *RemoteTasksMigrator) pipelineTaskFromParentRef(name string, ref GitResolverRef) v1beta1.PipelineTask {
+func (p *RemoteTasksMigrator) pipelineTaskFromStep(step *v1beta1.Step, prs *v1beta1.PipelineRun) (v1beta1.PipelineTask, error) {
+	task, err := p.NewTaskFromStepAndPipelineRun(step, prs, true)
+	if err != nil {
+		return v1beta1.PipelineTask{}, err
+	}
+	return v1beta1.PipelineTask{
+		Name: step.Name,
+		TaskSpec: &v1beta1.EmbeddedTask{
+			TaskSpec: task.Spec,
+		},
+	}, nil
+}
+
+func (p *RemoteTasksMigrator) pipelineTaskFromParentRef(name string, ref *GitRef) v1beta1.PipelineTask {
 	return v1beta1.PipelineTask{
 		Name: name,
 		TaskRef: &v1beta1.TaskRef{
