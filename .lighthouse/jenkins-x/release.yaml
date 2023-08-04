@@ -8,6 +8,7 @@ spec:
     tasks:
     - name: jx-pipeline-release
       resources: {}
+      timeout: 4h
       taskSpec:
         metadata: {}
         stepTemplate:
@@ -82,5 +83,5 @@ spec:
           resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
-  timeout: 1h30m0s
+  timeout: 4h
 status: {}
