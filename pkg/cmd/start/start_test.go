@@ -20,6 +20,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/yaml"
 )
@@ -34,10 +35,11 @@ func TestPipelineStart(t *testing.T) {
 	fullName := scm.Join(owner, repo)
 
 	testCases := []struct {
-		name       string
-		shouldFail bool
-		init       func(o *start.Options)
-		verify     func(o *start.Options, params map[string]string)
+		name         string
+		shouldFail   bool
+		init         func(o *start.Options)
+		verifyParams func(o *start.Options, params map[string]string)
+		verifyEnvs   func(o *start.Options, envs map[string]string)
 	}{
 		{
 			name: "file",
@@ -45,13 +47,11 @@ func TestPipelineStart(t *testing.T) {
 				o.File = filepath.Join("test_data", "release.yaml")
 				os.Setenv("SOURCE_URL", "https://github.com/jenkins-x-plugins/jx-pipeline")
 			},
-			verify: func(o *start.Options, params map[string]string) {
-			},
 		},
 		{
 			name: "defaults",
 			init: nil,
-			verify: func(o *start.Options, params map[string]string) {
+			verifyParams: func(o *start.Options, params map[string]string) {
 				assert.Equal(t, "defaultValue", params["myparam"], "myparam value")
 				assert.Len(t, params, 1, "parameter count")
 			},
@@ -62,7 +62,7 @@ func TestPipelineStart(t *testing.T) {
 				o.Context = "lint"
 				o.PipelineKind = "presubmit"
 			},
-			verify: func(o *start.Options, params map[string]string) {
+			verifyParams: func(o *start.Options, params map[string]string) {
 				assert.Equal(t, "linter", params["prParam"], "prParam value")
 			},
 		},
@@ -72,7 +72,7 @@ func TestPipelineStart(t *testing.T) {
 				o.Context = "tests"
 				o.PipelineKind = "presubmit"
 			},
-			verify: func(o *start.Options, params map[string]string) {
+			verifyParams: func(o *start.Options, params map[string]string) {
 				assert.Equal(t, "tester", params["prParam"], "prParam value")
 			},
 		},
@@ -96,11 +96,23 @@ func TestPipelineStart(t *testing.T) {
 			init: func(o *start.Options) {
 				o.CustomParameters = []string{"anotherParam=myNewValue", "newParam=somethingNew"}
 			},
-			verify: func(o *start.Options, params map[string]string) {
+			verifyParams: func(o *start.Options, params map[string]string) {
 				assert.Equal(t, "defaultValue", params["myparam"], "myparam value")
 				assert.Equal(t, "myNewValue", params["anotherParam"], "anotherParam value")
 				assert.Equal(t, "somethingNew", params["newParam"], "newParam value")
 				assert.Len(t, params, 3, "parameter count")
+			},
+		},
+		{
+			name: "add-custom-envs",
+			init: func(o *start.Options) {
+				o.File = filepath.Join("test_data", "release.yaml")
+				os.Setenv("SOURCE_URL", "https://github.com/jenkins-x-plugins/jx-pipeline")
+				o.CustomEnvs = map[string]string{"VAR1": "VALUE1", "VAR2": "VALUE2"}
+			},
+			verifyEnvs: func(o *start.Options, envs map[string]string) {
+				assert.Equal(t, "VALUE1", envs["VAR1"])
+				assert.Equal(t, "VALUE2", envs["VAR2"])
 			},
 		},
 	}
@@ -120,6 +132,18 @@ func TestPipelineStart(t *testing.T) {
 							Name:  "release",
 							Agent: job.TektonPipelineAgent,
 							PipelineRunSpec: &v1beta1.PipelineRunSpec{
+								PipelineSpec: &v1beta1.PipelineSpec{
+									Tasks: v1beta1.PipelineTaskList{v1beta1.PipelineTask{
+										Name:    "test-task",
+										TaskRef: nil,
+										TaskSpec: &v1beta1.EmbeddedTask{
+											TypeMeta: runtime.TypeMeta{},
+											Spec:     runtime.RawExtension{},
+											Metadata: v1beta1.PipelineTaskMetadata{},
+											TaskSpec: v1beta1.TaskSpec{StepTemplate: &v1beta1.StepTemplate{}},
+										},
+									}},
+								},
 								PipelineRef: &v1beta1.PipelineRef{
 									Name:       "my-pipeline",
 									APIVersion: "v1beta1",
@@ -260,19 +284,30 @@ func TestPipelineStart(t *testing.T) {
 		require.Len(t, lhResources.Items, 1, "should have created a lhjob in namespace %s for test %s", ns, name)
 
 		lhjob := lhResources.Items[0]
-		if name != "file" {
+
+		if tc.verifyParams != nil {
+			params := map[string]string{}
+			for i, p := range lhjob.Spec.PipelineRunParams {
+				t.Logf("test %s: param[%d] name: %s value %s\n", name, i, p.Name, p.ValueTemplate)
+				params[p.Name] = p.ValueTemplate
+			}
+
 			require.NotEmpty(t, lhjob.Spec.PipelineRunParams, "should have pipeline run params")
+			tc.verifyParams(o, params)
 		}
 
-		params := map[string]string{}
-		for i, p := range lhjob.Spec.PipelineRunParams {
-			t.Logf("test %s: param[%d] name: %s value %s\n", name, i, p.Name, p.ValueTemplate)
-			params[p.Name] = p.ValueTemplate
+		if tc.verifyEnvs != nil {
+			envs := map[string]string{}
+			tasks := lhjob.Spec.PipelineRunSpec.PipelineSpec.Tasks
+			for _, task := range tasks {
+				stepTemplateEnv := task.TaskSpec.StepTemplate.Env
+				for _, env := range stepTemplateEnv {
+					envs[env.Name] = env.Value
+				}
+			}
+			tc.verifyEnvs(o, envs)
 		}
 
-		if tc.verify != nil {
-			tc.verify(o, params)
-		}
 	}
 }
 

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
@@ -82,7 +84,7 @@ type Options struct {
 	// meta pipeline options
 	Context          string
 	CustomLabels     []string
-	CustomEnvs       []string
+	CustomEnvs       map[string]string
 	CustomParameters []string
 
 	// ScmClients cache of Scm Clients mostly used for testing
@@ -146,7 +148,7 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.GitToken, "git-token", "", "", "the git token used to access the git repository for in-repo configurations in lighthouse")
 	cmd.Flags().StringVarP(&o.GitUsername, "git-username", "", "", "the git username used to access the git repository for in-repo configurations in lighthouse")
 	cmd.Flags().StringArrayVarP(&o.CustomLabels, "label", "l", nil, "List of custom labels to be applied to the generated PipelineRun (can be use multiple times)")
-	cmd.Flags().StringArrayVarP(&o.CustomEnvs, "env", "e", nil, "List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)")
+	cmd.Flags().StringToStringVarP(&o.CustomEnvs, "env", "e", nil, "List of custom environment variables to be applied to the generated PipelineRun that are created (can be use multiple times)")
 	cmd.Flags().StringArrayVarP(&o.CustomParameters, "param", "", nil, "List of name=value PipelineRun parameters passed into the ligthhousejob which add or override any parameter values in the lighthouse postsubmit configuration")
 	cmd.Flags().BoolVarP(&o.Wait, "wait", "", false, "Waits until the trigger has been setup in Lighthouse for when a new repository is being imported via GitOps")
 	cmd.Flags().DurationVarP(&o.WaitDuration, "duration", "", time.Minute*20, "Maximum duration to wait for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
@@ -279,6 +281,9 @@ func (o *Options) processFile(path string) error {
 	ns := o.Namespace
 	if o.Context == "" {
 		o.Context = "trigger"
+	}
+	if len(o.CustomEnvs) > 0 {
+		o.addCustomEnvsToStepTemplate(pr.Spec.PipelineSpec)
 	}
 	jobName := o.Context
 	jobType := job.PostsubmitJob
@@ -523,6 +528,18 @@ func (o *Options) combineWithCustomParameters(params []job.PipelineRunParam) []j
 		}
 	}
 	return params
+}
+
+func (o *Options) addCustomEnvsToStepTemplate(spec *v1beta1.PipelineSpec) {
+	for name, value := range o.CustomEnvs {
+		for i := range spec.Tasks {
+			stepTemplate := spec.Tasks[i].TaskSpec.StepTemplate
+			stepTemplate.Env = append(stepTemplate.Env, v1.EnvVar{
+				Name:  name,
+				Value: value,
+			})
+		}
+	}
 }
 
 // pipelineNames returns the pipeline names to trigger
