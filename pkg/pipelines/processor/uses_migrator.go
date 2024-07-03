@@ -13,7 +13,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,14 +56,14 @@ func (p *UsesMigrator) ProcessTask(task *v1beta1.Task, path string) (bool, error
 	return p.processTaskSpec(&task.Spec, &task.ObjectMeta, path)
 }
 
-func (p *UsesMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
+func (p *UsesMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
 func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
 	hasRealImage, err := ProcessPipelineSpec(ps, path, hasRealImage)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to check for real times")
+		return false, fmt.Errorf("failed to check for real times: %w", err)
 	}
 	if !hasRealImage {
 		return false, nil
@@ -83,13 +83,13 @@ func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 		}
 		err = p.saveOriginalResource(path, resource)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to save original resource so we can reuse")
+			return false, fmt.Errorf("failed to save original resource so we can reuse: %w", err)
 		}
 
 		// lets use the original metadata for the migration of prepend/append steps
 		metadata = &originalMetadata
 	}
-	fn := func(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
+	fn := func(ts *v1beta1.TaskSpec, path, _ string) (bool, error) {
 		return p.processTaskSpec(ts, metadata, path)
 	}
 	return ProcessPipelineSpec(ps, path, fn)
@@ -98,7 +98,7 @@ func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.ObjectMeta, path string) (bool, error) {
 	usesPath, err := p.usesPath(path)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to get uses: path")
+		return false, fmt.Errorf("failed to get uses: path: %w", err)
 	}
 	if usesPath == "" {
 		return false, nil
@@ -155,7 +155,7 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		if !p.catalog {
 			err = p.addLocalOverrides(replaceStep, step, catalogStep)
 			if err != nil {
-				return false, errors.Wrapf(err, "failed to perform local overrides")
+				return false, fmt.Errorf("failed to perform local overrides: %w", err)
 			}
 		}
 		ts.Steps[i] = replaceStep
@@ -250,7 +250,7 @@ func (p *UsesMigrator) usesPath(path string) (string, error) {
 	// lets make sure we save the original file
 	rel, err := filepath.Rel(p.Dir, path)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find relative path to %s for %s", p.Dir, path)
+		return "", fmt.Errorf("failed to find relative path to %s for %s: %w", p.Dir, path, err)
 	}
 	paths := strings.Split(rel, string(os.PathSeparator))
 	if p.catalog {
@@ -270,7 +270,7 @@ func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) e
 	// lets make sure we save the original file
 	rel, err := filepath.Rel(p.Dir, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find relative path to %s for %s", p.Dir, path)
+		return fmt.Errorf("failed to find relative path to %s for %s: %w", p.Dir, path, err)
 	}
 
 	// lets save the raw image in the tasks folder
@@ -283,13 +283,13 @@ func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) e
 	outDir := filepath.Join(p.Dir, p.TasksFolder, paths[1])
 	err = os.MkdirAll(outDir, files.DefaultDirWritePermissions)
 	if err != nil {
-		return errors.Wrapf(err, "failed to make Dir %s", outDir)
+		return fmt.Errorf("failed to make Dir %s: %w", outDir, err)
 	}
 	outFile := filepath.Join(outDir, paths[len(paths)-1])
 
 	err = yamls.SaveFile(resource, outFile)
 	if err != nil {
-		return errors.Wrapf(err, "failed to save file %s", outFile)
+		return fmt.Errorf("failed to save file %s: %w", outFile, err)
 	}
 	log.Logger().Infof("saved reuse file %s", info(outFile))
 	return nil
@@ -373,7 +373,7 @@ func overrideVolumeMounts(overrides, from []corev1.VolumeMount) []corev1.VolumeM
 	return answer
 }
 
-func hasRealImage(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
+func hasRealImage(ts *v1beta1.TaskSpec, path, name string) (bool, error) { //nolint:revive
 	hasRealImage := false
 	for i := range ts.Steps {
 		step := &ts.Steps[i]

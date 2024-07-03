@@ -22,7 +22,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 )
 
@@ -66,7 +66,7 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 		Short:   "Lints the lighthouse trigger and tekton pipelines",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -85,13 +85,13 @@ func NewCmdPipelineLint() (*cobra.Command, *Options) {
 func (o *Options) Validate() error {
 	err := o.Options.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate base options")
+		return fmt.Errorf("failed to validate base options: %w", err)
 	}
 
 	if o.Resolver == nil {
 		o.Resolver, err = o.ResolverOptions.CreateResolver()
 		if err != nil {
-			return errors.Wrapf(err, "failed to create a UsesResolver")
+			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}
 	}
 	return nil
@@ -101,7 +101,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	rootDir := o.Dir
@@ -145,16 +145,16 @@ func (o *Options) Run() error {
 func (o *Options) ProcessFile(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load file %s", path)
+		return fmt.Errorf("failed to load file %s: %w", path, err)
 	}
 	if len(data) == 0 {
-		return errors.Errorf("empty file: %s", path)
+		return fmt.Errorf("empty file: %s", path)
 	}
 
 	u := &unstructured.Unstructured{}
 	err = yaml.Unmarshal(data, u)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal file %s", path)
+		return fmt.Errorf("failed to unmarshal file %s: %w", path, err)
 	}
 
 	kind := u.GetKind()
@@ -223,7 +223,7 @@ func ValidateTaskRunVolumesExist(ts *v1beta1.TaskSpec) (errs *apis.FieldError) {
 func (o *Options) ProcessDir(dir string) error {
 	fs, err := os.ReadDir(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read dir %s", dir)
+		return fmt.Errorf("failed to read dir %s: %w", dir, err)
 	}
 	for _, f := range fs {
 		name := f.Name()
@@ -235,7 +235,7 @@ func (o *Options) ProcessDir(dir string) error {
 		triggersFile := filepath.Join(triggerDir, "triggers.yaml")
 		exists, err := files.FileExists(triggersFile)
 		if err != nil {
-			return errors.Wrapf(err, "failed to check if file exists %s", triggersFile)
+			return fmt.Errorf("failed to check if file exists %s: %w", triggersFile, err)
 		}
 		if !exists {
 			continue
@@ -299,22 +299,22 @@ func (o *Options) loadConfigFile(repoConfig *triggerconfig.Config, dir string) *
 func loadJobBaseFromSourcePath(ctx context.Context, resolver *inrepo.UsesResolver, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load file %s", path)
+		return fmt.Errorf("failed to load file %s: %w", path, err)
 	}
 	if len(data) == 0 {
-		return errors.Errorf("empty file: %s", path)
+		return fmt.Errorf("empty file: %s", path)
 	}
 
 	dir := filepath.Dir(path)
 	resolver.Dir = dir
 	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
+		return fmt.Errorf("failed to unmarshal YAML file %s: %w", path, err)
 	}
 
 	fieldError := ValidatePipelineRun(ctx, pr)
 	if fieldError != nil {
-		return errors.Wrapf(fieldError, "failed to validate YAML file %s", path)
+		return fmt.Errorf("failed to validate YAML file %s: %w", path, fieldError)
 	}
 	return nil
 }

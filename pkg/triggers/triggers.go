@@ -2,10 +2,11 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/config"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
-	"github.com/pkg/errors"
+
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,9 +21,9 @@ func LoadLighthouseConfig(ctx context.Context, kubeClient kubernetes.Interface, 
 			if allowEmpty {
 				return CreateEmptyConfig(), nil
 			}
-			return nil, errors.Errorf("no ConfigMap %s exists in namespace %s. you can switch namespaces via: jx ns", name, ns)
+			return nil, fmt.Errorf("no ConfigMap %s exists in namespace %s. you can switch namespaces via: jx ns", name, ns)
 		}
-		return nil, errors.Wrapf(err, "failed to find ConfigMap %s in namespace %s", name, ns)
+		return nil, fmt.Errorf("failed to find ConfigMap %s in namespace %s: %w", name, ns, err)
 	}
 	key := "config.yaml"
 	configYaml := ""
@@ -33,11 +34,11 @@ func LoadLighthouseConfig(ctx context.Context, kubeClient kubernetes.Interface, 
 		if allowEmpty {
 			return CreateEmptyConfig(), nil
 		}
-		return nil, errors.Errorf("lighthouse ConfigMap %s in namespace %s does not contain key %s", name, ns, key)
+		return nil, fmt.Errorf("lighthouse ConfigMap %s in namespace %s does not contain key %s", name, ns, key)
 	}
 	cfg, err := LoadLighthouseConfigYAML(configYaml)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load lighthouse config")
+		return nil, fmt.Errorf("failed to load lighthouse config: %w", err)
 	}
 	return cfg, nil
 }
@@ -61,7 +62,7 @@ func LoadLighthouseConfigYAML(configYaml string) (*config.Config, error) {
 
 	cfg, err := config.LoadYAMLConfig([]byte(configYaml))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse Lighthouse config YAML")
+		return nil, fmt.Errorf("failed to parse Lighthouse config YAML: %w", err)
 	}
 	return cfg, nil
 }

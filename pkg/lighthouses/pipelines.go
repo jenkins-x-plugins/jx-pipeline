@@ -1,11 +1,12 @@
 package lighthouses
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
@@ -13,17 +14,17 @@ import (
 func LoadEffectivePipelineRun(resolver *inrepo.UsesResolver, path string) (*tektonv1beta1.PipelineRun, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load file %s", path)
+		return nil, fmt.Errorf("failed to load file %s: %w", path, err)
 	}
 	if len(data) == 0 {
-		return nil, errors.Errorf("empty file: %s", path)
+		return nil, fmt.Errorf("empty file: %s", path)
 	}
 
 	dir := filepath.Dir(path)
 	resolver.Dir = dir
 	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal YAML file %s", path)
+		return nil, fmt.Errorf("failed to unmarshal YAML file %s: %w", path, err)
 	}
 	return pr, nil
 }

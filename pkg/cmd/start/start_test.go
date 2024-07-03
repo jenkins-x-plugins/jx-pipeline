@@ -51,7 +51,7 @@ func TestPipelineStart(t *testing.T) {
 		{
 			name: "defaults",
 			init: nil,
-			verifyParams: func(o *start.Options, params map[string]string) {
+			verifyParams: func(_ *start.Options, params map[string]string) {
 				assert.Equal(t, "defaultValue", params["myparam"], "myparam value")
 				assert.Len(t, params, 1, "parameter count")
 			},
@@ -62,7 +62,7 @@ func TestPipelineStart(t *testing.T) {
 				o.Context = "lint"
 				o.PipelineKind = "presubmit"
 			},
-			verifyParams: func(o *start.Options, params map[string]string) {
+			verifyParams: func(_ *start.Options, params map[string]string) {
 				assert.Equal(t, "linter", params["prParam"], "prParam value")
 			},
 		},
@@ -72,7 +72,7 @@ func TestPipelineStart(t *testing.T) {
 				o.Context = "tests"
 				o.PipelineKind = "presubmit"
 			},
-			verifyParams: func(o *start.Options, params map[string]string) {
+			verifyParams: func(_ *start.Options, params map[string]string) {
 				assert.Equal(t, "tester", params["prParam"], "prParam value")
 			},
 		},
@@ -96,7 +96,7 @@ func TestPipelineStart(t *testing.T) {
 			init: func(o *start.Options) {
 				o.CustomParameters = []string{"anotherParam=myNewValue", "newParam=somethingNew"}
 			},
-			verifyParams: func(o *start.Options, params map[string]string) {
+			verifyParams: func(_ *start.Options, params map[string]string) {
 				assert.Equal(t, "defaultValue", params["myparam"], "myparam value")
 				assert.Equal(t, "myNewValue", params["anotherParam"], "anotherParam value")
 				assert.Equal(t, "somethingNew", params["newParam"], "newParam value")
@@ -110,7 +110,7 @@ func TestPipelineStart(t *testing.T) {
 				os.Setenv("SOURCE_URL", "https://github.com/jenkins-x-plugins/jx-pipeline")
 				o.CustomEnvs = map[string]string{"VAR1": "VALUE1", "VAR2": "VALUE2"}
 			},
-			verifyEnvs: func(o *start.Options, envs map[string]string) {
+			verifyEnvs: func(_ *start.Options, envs map[string]string) {
 				assert.Equal(t, "VALUE1", envs["VAR1"])
 				assert.Equal(t, "VALUE2", envs["VAR2"])
 			},

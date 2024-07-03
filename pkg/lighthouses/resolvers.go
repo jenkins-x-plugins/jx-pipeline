@@ -1,6 +1,7 @@
 package lighthouses
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -10,7 +11,6 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 	gitv2 "github.com/jenkins-x/lighthouse-client/pkg/git/v2"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
 )
 
 // ResolverOptions the options to create a resolver
@@ -60,7 +60,7 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		if f.GitServerURL != "" {
 			gitServerURL, err = url.Parse(f.GitServerURL)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse git URL %s", f.GitServerURL)
+				return nil, fmt.Errorf("failed to parse git URL %s: %w", f.GitServerURL, err)
 			}
 		}
 
@@ -83,14 +83,14 @@ func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
 		}
 		gitFactory, gitErr := gitv2.NewClientFactory(configureOpts)
 		if gitErr != nil {
-			return nil, errors.Wrapf(gitErr, "failed to create git factory")
+			return nil, fmt.Errorf("failed to create git factory: %w", gitErr)
 		}
 		fb = filebrowser.NewFileBrowserFromGitClient(gitFactory)
 	}
 
 	fileBrowsers, err := filebrowser.NewFileBrowsers(f.GitServerURL, fb)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create file browsers")
+		return nil, fmt.Errorf("failed to create file browsers: %w", err)
 	}
 
 	DefaultPipelineCatalogSHA(o.CatalogSHA)

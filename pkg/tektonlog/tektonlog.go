@@ -3,6 +3,7 @@ package tektonlog
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -19,7 +20,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
@@ -83,7 +84,7 @@ func (t *TektonLogger) GetLogsForActivity(ctx context.Context, out io.Writer, pa
 func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.Context, filter *BuildPodInfoFilter) ([]string, map[string]*v1.PipelineActivity, map[string][]*tektonapis.PipelineRun, error) {
 	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return nil, nil, nil, errors.Wrap(err, "there was a problem getting the PipelineActivities")
+		return nil, nil, nil, fmt.Errorf("there was a problem getting the PipelineActivities: %w", err)
 	}
 
 	paNameMap := make(map[string]*v1.PipelineActivity)
@@ -156,7 +157,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 func GetPipelineActivityForPipelineRun(ctx context.Context, activityInterface typev1.PipelineActivityInterface, pr *tektonapis.PipelineRun) (*v1.PipelineActivity, error) {
 	resources, err := activityInterface.List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return nil, errors.Wrapf(err, "failed to load PipelineActivity resources")
+		return nil, fmt.Errorf("failed to load PipelineActivity resources: %w", err)
 	}
 	var paList []v1.PipelineActivity
 	if resources != nil {
@@ -171,7 +172,7 @@ func GetPipelineActivityForPipelineRun(ctx context.Context, activityInterface ty
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return pa, errors.Wrapf(err, "failed to find PipelineActivity %s", name)
+		return pa, fmt.Errorf("failed to find PipelineActivity %s: %w", name, err)
 	}
 	return pa, nil
 }
@@ -227,7 +228,7 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 	for !loggedAllRunsForActivity {
 		stages, err := t.collectStages(ctx, pipelineRuns)
 		if err != nil {
-			return errors.Wrapf(err, "not able retrieve information about pipeline stages: %s %s", pa.Name, t.Namespace)
+			return fmt.Errorf("not able retrieve information about pipeline stages: %s %s: %w", pa.Name, t.Namespace, err)
 		}
 
 		for _, stage := range stages {
@@ -247,12 +248,12 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 					return nil
 				}
 				if err != nil {
-					return errors.Wrapf(err, "failed to load pod %s in namespace %s", podName, t.Namespace)
+					return fmt.Errorf("failed to load pod %s in namespace %s: %w", podName, t.Namespace, err)
 				}
 
 				err = t.getContainerLogsFromPod(ctx, pod, pa, buildName, stageName, out)
 				if err != nil {
-					return errors.Wrapf(err, "failed to get logs for pod %s", podName)
+					return fmt.Errorf("failed to get logs for pod %s: %w", podName, err)
 				}
 
 				err = pods.WaitForPodNameToBeComplete(t.KubeClient, t.Namespace, podName, 1*time.Second)
@@ -371,18 +372,18 @@ func (t *TektonLogger) getContainerLogsFromPod(ctx context.Context, pod *corev1.
 				infoColor.Sprintf(buildName), infoColor.Sprintf(stageName), infoColor.Sprintf(ic.Name)),
 		}
 		if err != nil {
-			return errors.Wrapf(err, "there was a problem writing a single line into the logs writer")
+			return fmt.Errorf("there was a problem writing a single line into the logs writer: %w", err)
 		}
 		err = t.fetchLogsToChannel(ctx, pod, ic, out)
 		if err != nil {
-			return errors.Wrap(err, "couldn't fetch logs into the logs channel")
+			return fmt.Errorf("couldn't fetch logs into the logs channel: %w", err)
 		}
 		if hasStepFailed(ctx, pod, i, t.KubeClient, pa.Namespace) {
 			out <- LogLine{
 				Line: errorColor.Sprintf("\nPipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped.", stageName, ic.Name),
 			}
 			if t.FailIfPodFails {
-				return errors.Errorf("pipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped", stageName, ic.Name)
+				return fmt.Errorf("pipeline failed on stage '%s' : container '%s'. The execution of the pipeline has stopped", stageName, ic.Name)
 			}
 			break
 		}
@@ -411,7 +412,7 @@ func writeStreamLines(reader io.Reader, out chan<- LogLine) error {
 			if err == io.EOF {
 				return nil
 			}
-			return errors.Wrap(err, "failed to read stream")
+			return fmt.Errorf("failed to read stream: %w", err)
 		}
 		out <- LogLine{Line: string(line), ShouldMask: true}
 	}
@@ -452,7 +453,7 @@ func (t *TektonLogger) waitForContainerToStart(ctx context.Context, ns string, p
 		time.Sleep(time.Second)
 		p, err := t.KubeClient.CoreV1().Pods(ns).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
-			return p, errors.Wrapf(err, "failed to load pod %s", pod.Name)
+			return p, fmt.Errorf("failed to load pod %s: %w", pod.Name, err)
 		}
 		if pods.HasContainerStarted(p, idx) {
 			return p, nil
@@ -482,7 +483,7 @@ func (t *TektonLogger) streamPipelinePersistentLogs(logsURL string, out chan<- L
 
 	reader, err := buckets.ReadURL(ctx, logsURL, 30*time.Second, t.CreateBucketHTTPFn())
 	if err != nil {
-		return errors.Wrapf(err, "there was a problem obtaining the log file from the github pages URL %s", logsURL)
+		return fmt.Errorf("there was a problem obtaining the log file from the github pages URL %s: %w", logsURL, err)
 	}
 	return t.streamPipedLogs(reader, out)
 }
@@ -517,7 +518,7 @@ func retrieveLogsFromPod(ctx context.Context, pod *corev1.Pod, container *corev1
 	req := client.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, options)
 	stream, err := req.Stream(ctx)
 	if err != nil {
-		return nil, errors.Wrapf(err, "there was an error creating the logs stream for pod %s", pod.Name)
+		return nil, fmt.Errorf("there was an error creating the logs stream for pod %s: %w", pod.Name, err)
 	}
 	return stream, nil
 }

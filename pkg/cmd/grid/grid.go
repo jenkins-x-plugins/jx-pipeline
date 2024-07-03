@@ -30,7 +30,7 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	informers "github.com/jenkins-x/jx-api/v4/pkg/client/informers/externalversions"
-	"github.com/pkg/errors"
+
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 )
@@ -78,7 +78,7 @@ func NewCmdPipelineGrid() (*cobra.Command, *Options) {
 		Aliases: []string{"table", "tbl"},
 		Long:    cmdLong,
 		Example: cmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -95,21 +95,21 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 	if o.TektonClient == nil {
 		f := kubeclient.NewFactory()
 		cfg, err := f.CreateKubeConfig()
 		if err != nil {
-			return errors.Wrap(err, "failed to get kubernetes config")
+			return fmt.Errorf("failed to get kubernetes config: %w", err)
 		}
 		o.TektonClient, err = tektonclient.NewForConfig(cfg)
 		if err != nil {
-			return errors.Wrap(err, "error building tekton client")
+			return fmt.Errorf("error building tekton client: %w", err)
 		}
 	}
 	if o.Input == nil {
@@ -122,12 +122,12 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	ns, _, err := jxenv.GetDevNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find dev namespace")
+		return fmt.Errorf("failed to find dev namespace: %w", err)
 	}
 	jxClient := o.JXClient
 
@@ -144,14 +144,14 @@ func (o *Options) Run() error {
 	m := newModel(o.Filter, o.viewLogsFor)
 
 	informer := informerFactory.Jenkins().V1().PipelineActivities().Informer()
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			e := obj.(*v1.PipelineActivity)
 			if e != nil {
 				m.onPipelineActivity(e)
 			}
 		},
-		UpdateFunc: func(old, new interface{}) {
+		UpdateFunc: func(_, new interface{}) {
 			e := new.(*v1.PipelineActivity)
 			if e != nil {
 				m.onPipelineActivity(e)
@@ -164,6 +164,9 @@ func (o *Options) Run() error {
 			}
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("failed to add handler for updated pipeline activities: %w", err)
+	}
 	informerFactory.Start(stop)
 	if !cache.WaitForCacheSync(stop, informer.HasSynced) {
 		msg := "timed out waiting for jx caches to sync"
@@ -173,7 +176,7 @@ func (o *Options) Run() error {
 	p := tea.NewProgram(m)
 	if err := p.Start(); err != nil {
 		if err != nil {
-			return errors.Wrapf(err, "failed to start viewer")
+			return fmt.Errorf("failed to start viewer: %w", err)
 		}
 	}
 	return nil
@@ -202,10 +205,10 @@ func (o *Options) viewLogsFor(act *v1.PipelineActivity, paList []v1.PipelineActi
 		err = nil
 	}
 	if err != nil {
-		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
+		return fmt.Errorf("failed to list PipelineRuns in namespace %s: %w", ns, err)
 	}
 	if resources == nil {
-		return errors.Errorf("no PipelineRun resources found for namespace %s", ns)
+		return fmt.Errorf("no PipelineRun resources found for namespace %s", ns)
 	}
 
 	var prList []*tektonapis.PipelineRun
@@ -221,7 +224,7 @@ func (o *Options) viewLogsFor(act *v1.PipelineActivity, paList []v1.PipelineActi
 	out := os.Stdout
 	err = o.TektonLogger.GetLogsForActivity(ctx, out, act, act.Name, prList)
 	if err != nil {
-		return errors.Wrapf(err, "failed to stream logs for pipeline %s", act.Name)
+		return fmt.Errorf("failed to stream logs for pipeline %s: %w", act.Name, err)
 	}
 
 	fmt.Fprint(out, "\n\n")

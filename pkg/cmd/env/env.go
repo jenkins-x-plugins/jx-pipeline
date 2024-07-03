@@ -18,7 +18,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
@@ -85,7 +85,7 @@ func NewCmdPipelineEnv() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"environment"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -109,11 +109,11 @@ func (o *Options) Validate() error {
 
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 
 	if o.TektonClient != nil {
@@ -123,11 +123,11 @@ func (o *Options) Validate() error {
 	f := kubeclient.NewFactory()
 	cfg, err := f.CreateKubeConfig()
 	if err != nil {
-		return errors.Wrap(err, "failed to get kubernetes config")
+		return fmt.Errorf("failed to get kubernetes config: %w", err)
 	}
 	o.TektonClient, err = tektonclient.NewForConfig(cfg)
 	if err != nil {
-		return errors.Wrap(err, "error building tekton client")
+		return fmt.Errorf("error building tekton client: %w", err)
 	}
 
 	if o.TektonLogger == nil {
@@ -149,7 +149,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	ctx := o.GetContext()
@@ -198,11 +198,11 @@ func (o *Options) Run() error {
 
 	name, err := o.Input.PickNameWithDefault(pipelineNames, "Pick the pipeline you wish to view the environment for: ", "", "Please select the pipeline pod you wish to view")
 	if err != nil {
-		return errors.Wrapf(err, "failed to pick a pipeline")
+		return fmt.Errorf("failed to pick a pipeline: %w", err)
 	}
 	pp := m[name]
 	if pp == nil {
-		return errors.Errorf("could not find Pipeline Pod for name: %s", name)
+		return fmt.Errorf("could not find Pipeline Pod for name: %s", name)
 	}
 
 	return o.viewEnvironment(name, pp)
@@ -212,16 +212,16 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 	log.Logger().Debugf("picked pipeline pod %s", pp.PodName)
 
 	if len(pp.PipelineRuns) == 0 {
-		return errors.Errorf("no PipelineRun objects for pipeline: %s pod: %s", name, pp.PodName)
+		return fmt.Errorf("no PipelineRun objects for pipeline: %s pod: %s", name, pp.PodName)
 	}
 	pr := pp.PipelineRuns[0]
 	if pr == nil {
-		return errors.Errorf("no PipelineRun objects for pipeline: %s pod: %s", name, pp.PodName)
+		return fmt.Errorf("no PipelineRun objects for pipeline: %s pod: %s", name, pp.PodName)
 	}
 
 	ps := pr.Spec.PipelineSpec
 	if ps == nil {
-		return errors.Errorf("Pipeline: %s has no PipelineSpec for PipelineRun: %s pod: %s", name, pr.Name, pp.PodName)
+		return fmt.Errorf("Pipeline: %s has no PipelineSpec for PipelineRun: %s pod: %s", name, pr.Name, pp.PodName)
 	}
 
 	var taskNames []string
@@ -237,12 +237,12 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 	}
 	taskName, err := o.Input.PickNameWithDefault(taskNames, "Pick the task you wish to view the environment for: ", "", "Please select the pipeline task you wish to view")
 	if err != nil {
-		return errors.Wrapf(err, "failed to pick a pipeline")
+		return fmt.Errorf("failed to pick a pipeline: %w", err)
 	}
 
 	ts := tasks[taskName]
 	if ts == nil {
-		return errors.Errorf("could not find a TaskRun for PipelineRun %s and Task %s", pr.Name, taskName)
+		return fmt.Errorf("could not find a TaskRun for PipelineRun %s and Task %s", pr.Name, taskName)
 	}
 
 	var stepNames []string
@@ -252,10 +252,10 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 	}
 	stepName, err := o.Input.PickNameWithDefault(stepNames, "Pick the step you wish to view the environment for: ", "", "Please select the step name you wish to view")
 	if err != nil {
-		return errors.Wrapf(err, "failed to pick a pipeline")
+		return fmt.Errorf("failed to pick a pipeline: %w", err)
 	}
 	if stepName == "" {
-		return errors.Errorf("did not choose step in TaskRun %s for PipelineRun %s and Task %s", taskName, pr.Name, taskName)
+		return fmt.Errorf("did not choose step in TaskRun %s for PipelineRun %s and Task %s", taskName, pr.Name, taskName)
 	}
 
 	return o.viewVariables(pp, "step-"+stepName)
@@ -265,14 +265,14 @@ func (o *Options) viewVariables(pp *PipelinePod, stepName string) error {
 	ctx := o.GetContext()
 	pod, err := o.KubeClient.CoreV1().Pods(o.Namespace).Get(ctx, pp.PodName, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to load pod %s in namespace %s", pp.PodName, o.Namespace)
+		return fmt.Errorf("failed to load pod %s in namespace %s: %w", pp.PodName, o.Namespace, err)
 	}
 	if pod.Name == "" {
 		pod.Name = pp.PodName
 	}
 	envVars, err := o.PodEnvVars(pod, stepName)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get environment variables")
+		return fmt.Errorf("failed to get environment variables: %w", err)
 	}
 	return o.renderEnv(envVars)
 }
@@ -285,12 +285,12 @@ func (o *Options) PodEnvVars(pod *corev1.Pod, containerName string) (map[string]
 			envVars := map[string]string{}
 			err := o.addEnvVarValues(envVars, c.Env, c.EnvFrom)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to add env vars")
+				return nil, fmt.Errorf("failed to add env vars: %w", err)
 			}
 			return envVars, nil
 		}
 	}
-	return nil, errors.Errorf("could not find container name %s in pod %s", containerName, pod.Name)
+	return nil, fmt.Errorf("could not find container name %s in pod %s", containerName, pod.Name)
 }
 
 func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from []corev1.EnvFromSource) error {
@@ -311,7 +311,7 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 				}
 				err = addEnvValueFrom(m, envVar, from.ConfigMapKeyRef.Key, data)
 				if err != nil {
-					return errors.Wrapf(err, "failed to add varables from ConfigMap %s", refName)
+					return fmt.Errorf("failed to add varables from ConfigMap %s: %w", refName, err)
 				}
 				continue
 			}
@@ -324,7 +324,7 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 				}
 				err = addEnvValueFrom(m, envVar, from.SecretKeyRef.Key, data)
 				if err != nil {
-					return errors.Wrapf(err, "failed to add varables from Secret %s", refName)
+					return fmt.Errorf("failed to add varables from Secret %s: %w", refName, err)
 				}
 				continue
 			}
@@ -334,7 +334,7 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 		if f.SecretRef != nil {
 			name := f.SecretRef.Name
 			if name == "" {
-				return errors.Errorf("missing secret ref name")
+				return fmt.Errorf("missing secret ref name")
 			}
 			optional := asBool(f.SecretRef.Optional)
 			data, err := o.getSecretData(name, optional)
@@ -343,13 +343,13 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 			}
 			err = addEnvFromSource(m, f.Prefix, data)
 			if err != nil {
-				return errors.Wrapf(err, "failed to add varables from Secret %s", name)
+				return fmt.Errorf("failed to add varables from Secret %s: %w", name, err)
 			}
 
 		} else if f.ConfigMapRef != nil {
 			name := f.SecretRef.Name
 			if name == "" {
-				return errors.Errorf("missing config ref name")
+				return fmt.Errorf("missing config ref name")
 			}
 			optional := asBool(f.SecretRef.Optional)
 			data, err := o.getConfigData(name, optional)
@@ -358,7 +358,7 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 			}
 			err = addEnvFromSource(m, f.Prefix, data)
 			if err != nil {
-				return errors.Wrapf(err, "failed to add varables from ConfigMap %s", name)
+				return fmt.Errorf("failed to add varables from ConfigMap %s: %w", name, err)
 			}
 		}
 	}
@@ -382,9 +382,9 @@ func (o *Options) getSecretData(name string, optional bool) (map[string]string, 
 				log.Logger().Debugf("no Secret called %s in namespace %s so ignoring", name, ns)
 				return nil, nil
 			}
-			return nil, errors.Errorf("no Secret called %s in namespace %s so ignoring", name, ns)
+			return nil, fmt.Errorf("no Secret called %s in namespace %s so ignoring", name, ns)
 		}
-		return nil, errors.Wrapf(err, "failed to find Secret %s in namespace %s so ignoring", name, ns)
+		return nil, fmt.Errorf("failed to find Secret %s in namespace %s so ignoring: %w", name, ns, err)
 	}
 	return secretToMap(r), nil
 }
@@ -399,9 +399,9 @@ func (o *Options) getConfigData(name string, optional bool) (map[string]string, 
 				log.Logger().Debugf("no ConfigMap called %s in namespace %s so ignoring", name, ns)
 				return nil, nil
 			}
-			return nil, errors.Errorf("no ConfigMap called %s in namespace %s so ignoring", name, ns)
+			return nil, fmt.Errorf("no ConfigMap called %s in namespace %s so ignoring", name, ns)
 		}
-		return nil, errors.Wrapf(err, "failed to find ConfigMap %s in namespace %s so ignoring", name, ns)
+		return nil, fmt.Errorf("failed to find ConfigMap %s in namespace %s so ignoring: %w", name, ns, err)
 	}
 	if r == nil {
 		return nil, nil
@@ -417,7 +417,7 @@ func addEnvValueFrom(m map[string]string, name, key string, data map[string]stri
 		return addEnvFromSource(m, "", data)
 	}
 	if key == "" {
-		return errors.Errorf("missing key for valueFrom for name %s", name)
+		return fmt.Errorf("missing key for valueFrom for name %s", name)
 	}
 	m[name] = data[key]
 	return nil
@@ -484,8 +484,8 @@ func (o *Options) logEnvVar(buf *strings.Builder, k, v string) {
 		if buf.Len() > 0 {
 			buf.WriteString(";")
 		}
-		buf.WriteString(fmt.Sprintf("%s=%s", k, v))
+		_, _ = fmt.Fprintf(buf, "%s=%s", k, v)
 	default:
-		buf.WriteString(fmt.Sprintf("export %q=%q\n", k, v))
+		_, _ = fmt.Fprintf(buf, "export %q=%q\n", k, v)
 	}
 }

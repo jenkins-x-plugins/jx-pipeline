@@ -8,7 +8,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
 )
 
 // CreateBucketHTTPFn creates a function to transform a git URL to add the token and possible header function for accessing a git based bucket
@@ -32,7 +31,7 @@ func (t *TektonLogger) CreateBucketHTTPFn() func(string) (string, func(*http.Req
 
 		err = f.FindGitToken()
 		if err != nil {
-			return "", headerFunc, errors.Wrapf(err, "failed to find git token for git URL %s", urlText)
+			return "", headerFunc, fmt.Errorf("failed to find git token for git URL %s: %w", urlText, err)
 		}
 		gitKind := f.GitKind
 		gitToken := f.GitToken
@@ -40,7 +39,7 @@ func (t *TektonLogger) CreateBucketHTTPFn() func(string) (string, func(*http.Req
 		if gitToken != "" {
 			if gitKind == giturl.KindBitBucketServer {
 				if f.GitUsername == "" {
-					return "", headerFunc, errors.Wrapf(err, "no git username configured for git URL %s", urlText)
+					return "", headerFunc, fmt.Errorf("no git username configured for git URL %s: %w", urlText, err)
 				}
 				tokenPrefix = fmt.Sprintf("%s:%s", f.GitUsername, gitToken)
 			} else if gitKind == giturl.KindGitlab {

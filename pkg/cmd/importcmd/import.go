@@ -1,6 +1,7 @@
 package importcmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -21,7 +22,7 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -83,7 +84,7 @@ func NewCmdPipelineImport() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"build", "run"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -119,7 +120,7 @@ func (o *Options) Validate() error {
 		var err error
 		o.KptBinary, err = plugins.GetKptBinary(plugins.KptVersion)
 		if err != nil {
-			return errors.Wrapf(err, "failed to download the kpt binary")
+			return fmt.Errorf("failed to download the kpt binary: %w", err)
 		}
 	}
 	// lazy create
@@ -133,26 +134,26 @@ func (o *Options) Run() error {
 	var fs []os.DirEntry
 	err = o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	lhDir := filepath.Join(o.Dir, ".lighthouse")
 	err = os.MkdirAll(lhDir, files.DefaultDirWritePermissions)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create lighthouse dir %s", lhDir)
+		return fmt.Errorf("failed to create lighthouse dir %s: %w", lhDir, err)
 	}
 
 	if o.CatalogDir == "" {
 		log.Logger().Infof("loading tekton tasks from: %s ...", info(o.CatalogURL))
 		o.CatalogDir, err = gitclient.CloneToDir(o.GitClient, o.CatalogURL, "")
 		if err != nil {
-			return errors.Wrapf(err, "failed to clone tekton catalog %s", o.CatalogURL)
+			return fmt.Errorf("failed to clone tekton catalog %s: %w", o.CatalogURL, err)
 		}
 	}
 	if o.CatalogURL == "" {
 		o.CatalogURL, err = gitdiscovery.FindGitURLFromDir(o.CatalogDir, false)
 		if err != nil {
-			return errors.Wrapf(err, "failed to discover git clone URL from dir %s", o.CatalogDir)
+			return fmt.Errorf("failed to discover git clone URL from dir %s: %w", o.CatalogDir, err)
 		}
 		log.Logger().Infof("loading tekton tasks from catalog %s", info(o.CatalogURL))
 	}
@@ -161,17 +162,17 @@ func (o *Options) Run() error {
 	taskDir := filepath.Join(o.CatalogDir, "task")
 	exists, err := files.DirExists(taskDir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check if the task dir exists %s", taskDir)
+		return fmt.Errorf("failed to check if the task dir exists %s: %w", taskDir, err)
 	}
 	if !exists {
-		return errors.Errorf("the catalog does not include a 'task' directory at %s", o.CatalogDir)
+		return fmt.Errorf("the catalog does not include a 'task' directory at %s", o.CatalogDir)
 	}
 
 	if o.TaskFolder == "" {
 		var names []string
 		fs, err = os.ReadDir(taskDir)
 		if err != nil {
-			return errors.Wrapf(err, "failed to read task dir %s", taskDir)
+			return fmt.Errorf("failed to read task dir %s: %w", taskDir, err)
 		}
 		for _, f := range fs {
 			name := f.Name()
@@ -190,24 +191,24 @@ func (o *Options) Run() error {
 			return err
 		}
 		if o.TaskFolder == "" {
-			return errors.Errorf("no task folder chosen")
+			return fmt.Errorf("no task folder chosen")
 		}
 	}
 
 	versionFolder := filepath.Join(taskDir, o.TaskFolder)
 	exists, err = files.DirExists(versionFolder)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check if the task versions folder exists %s", versionFolder)
+		return fmt.Errorf("failed to check if the task versions folder exists %s: %w", versionFolder, err)
 	}
 	if !exists {
-		return errors.Errorf("could not find the task versions folder: %s", versionFolder)
+		return fmt.Errorf("could not find the task versions folder: %s", versionFolder)
 	}
 
 	if o.TaskVersion == "" {
 		var versions []string
 		fs, err = os.ReadDir(versionFolder)
 		if err != nil {
-			return errors.Wrapf(err, "failed to read task dir %s", versionFolder)
+			return fmt.Errorf("failed to read task dir %s: %w", versionFolder, err)
 		}
 		for _, f := range fs {
 			name := f.Name()
@@ -224,23 +225,23 @@ func (o *Options) Run() error {
 			return err
 		}
 		if o.TaskVersion == "" {
-			return errors.Errorf("no task version chosen")
+			return fmt.Errorf("no task version chosen")
 		}
 	}
 
 	folder := filepath.Join(versionFolder, o.TaskVersion)
 	exists, err = files.DirExists(folder)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check if the task version folder exists %s", folder)
+		return fmt.Errorf("failed to check if the task version folder exists %s: %w", folder, err)
 	}
 	if !exists {
-		return errors.Errorf("could not find the task version folder: %s", folder)
+		return fmt.Errorf("could not find the task version folder: %s", folder)
 	}
 
 	var fileNames []string
 	fs, err = os.ReadDir(folder)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read task dir %s", folder)
+		return fmt.Errorf("failed to read task dir %s: %w", folder, err)
 	}
 	for _, f := range fs {
 		name := f.Name()
@@ -252,7 +253,7 @@ func (o *Options) Run() error {
 	sort.Strings(fileNames)
 
 	if len(fileNames) == 0 {
-		return errors.Errorf("task version folder %s has no *.yaml files", folder)
+		return fmt.Errorf("task version folder %s has no *.yaml files", folder)
 	}
 
 	log.Logger().Infof("importing files %s from %s version %s", info(strings.Join(fileNames, " ")), info(o.TaskFolder), info(o.TaskVersion))
@@ -276,7 +277,7 @@ func (o *Options) Run() error {
 	}
 	_, err = o.CommandRunner(c)
 	if err != nil {
-		return errors.Wrapf(err, "failed to import the tekton resources via kpt: %s", c.CLI())
+		return fmt.Errorf("failed to import the tekton resources via kpt: %s: %w", c.CLI(), err)
 	}
 
 	log.Logger().Infof("tekton files imported to %s", info(path))
@@ -284,13 +285,13 @@ func (o *Options) Run() error {
 	if !o.NoTrigger {
 		err = o.addLighthouseTriggers(fileNames, path)
 		if err != nil {
-			return errors.Wrapf(err, "failed to add lighthouse triggers")
+			return fmt.Errorf("failed to add lighthouse triggers: %w", err)
 		}
 	}
 
 	err = gitclient.Add(o.GitClient, o.Dir, ".lighthouse")
 	if err != nil {
-		return errors.Wrapf(err, "failed to add the .lighthouse files to git")
+		return fmt.Errorf("failed to add the .lighthouse files to git: %w", err)
 	}
 
 	c = &cmdrunner.Command{
@@ -302,7 +303,7 @@ func (o *Options) Run() error {
 	}
 	_, err = o.CommandRunner(c)
 	if err != nil {
-		return errors.Wrapf(err, "failed to run: %s", c.CLI())
+		return fmt.Errorf("failed to run: %s: %w", c.CLI(), err)
 	}
 
 	log.Logger().Infof("please review and commit the git changes")
@@ -326,7 +327,7 @@ func (o *Options) addLighthouseTriggers(fileNames []string, toDir string) error 
 
 		selected, err := o.Input.SelectNames(triggers, "select which lighthouse triggers to enable for task: "+name, true, "do you wish to trigger the Task")
 		if err != nil {
-			return errors.Wrapf(err, "failed to select triggers to enable")
+			return fmt.Errorf("failed to select triggers to enable: %w", err)
 		}
 		if len(selected) == 0 {
 			return nil
@@ -364,7 +365,7 @@ func (o *Options) addLighthouseTriggers(fileNames []string, toDir string) error 
 					},
 				}
 			default:
-				return errors.Errorf("unknown trigger %s", s)
+				return fmt.Errorf("unknown trigger %s", s)
 			}
 		}
 	}
@@ -372,7 +373,7 @@ func (o *Options) addLighthouseTriggers(fileNames []string, toDir string) error 
 		outFile := filepath.Join(toDir, "triggers.yaml")
 		err := yamls.SaveFile(lhTriggers, outFile)
 		if err != nil {
-			return errors.Wrapf(err, "failed to save file %s", outFile)
+			return fmt.Errorf("failed to save file %s: %w", outFile, err)
 		}
 		log.Logger().Infof("created lighthouse triggers file %s", info(outFile))
 	}

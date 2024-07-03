@@ -2,6 +2,7 @@ package testpipelines
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
@@ -10,7 +11,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -22,7 +23,7 @@ func CreateTestPipelineActivity(ctx context.Context, jxClient versioned.Interfac
 	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create activity key")
+		return nil, fmt.Errorf("failed to create activity key: %w", err)
 	}
 	version := "1.0." + build
 	a.Spec.GitOwner = folder
@@ -39,7 +40,7 @@ func CreateTestPipelineActivityWithTime(ctx context.Context, jxClient versioned.
 	key := newPromoteStepActivityKey(folder, repo, branch, build)
 	a, _, err := key.GetOrCreate(jxClient, ns)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create activity key")
+		return nil, fmt.Errorf("failed to create activity key: %w", err)
 	}
 	a.Spec.StartedTimestamp = &t
 	_, err = resources.Update(ctx, a, metav1.UpdateOptions{})

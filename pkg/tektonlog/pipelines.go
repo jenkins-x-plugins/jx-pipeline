@@ -2,8 +2,8 @@ package tektonlog
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,12 +47,12 @@ func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface,
 	var err error
 	pr, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to get PipelineRun %s in namespace %s", prName, ns)
+		return fmt.Errorf("failed to get PipelineRun %s in namespace %s: %w", prName, ns, err)
 	}
 	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
 	_, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to update PipelineRun %s in namespace %s to mark it as cancelled", prName, ns)
+		return fmt.Errorf("failed to update PipelineRun %s in namespace %s to mark it as cancelled: %w", prName, ns, err)
 	}
 	return nil
 }

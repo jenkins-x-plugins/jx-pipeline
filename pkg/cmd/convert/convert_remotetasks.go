@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -61,7 +62,7 @@ func NewCmdPipelineConvertRemoteTasks() (*cobra.Command, *RemoteTasksOptions) {
 		Short:   "Converts the pipelines to use native Tekton syntax",
 		Long:    remoteTasksCmdLong,
 		Example: remoteTasksCmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -79,7 +80,7 @@ func NewCmdPipelineConvertRemoteTasks() (*cobra.Command, *RemoteTasksOptions) {
 func (o *RemoteTasksOptions) Validate() error {
 	err := o.BaseOptions.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate base options")
+		return fmt.Errorf("failed to validate base options: %w", err)
 	}
 
 	if o.CommandRunner == nil {
@@ -91,7 +92,7 @@ func (o *RemoteTasksOptions) Validate() error {
 
 	workspaceQuantity, err := o.getWorkspaceQuantity()
 	if err != nil {
-		return errors.Wrapf(err, "failed to get workspace quantity")
+		return fmt.Errorf("failed to get workspace quantity: %w", err)
 	}
 
 	if o.Processor == nil {
@@ -103,7 +104,7 @@ func (o *RemoteTasksOptions) Validate() error {
 // Run implements this command
 func (o *RemoteTasksOptions) Run() error {
 	if err := o.Validate(); err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	err := filepath.Walk(o.Dir, func(path string, info os.FileInfo, err error) error {
@@ -121,7 +122,7 @@ func (o *RemoteTasksOptions) Run() error {
 func (o *RemoteTasksOptions) ProcessDir(dir string) error {
 	fs, err := os.ReadDir(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read dir %s", dir)
+		return fmt.Errorf("failed to read dir %s: %w", dir, err)
 	}
 
 	for _, f := range fs {
@@ -142,14 +143,14 @@ func (o *RemoteTasksOptions) getWorkspaceQuantity() (resource.Quantity, error) {
 	if o.WorkspaceVolumeSize != "" {
 		volumeSize, err := resource.ParseQuantity(o.WorkspaceVolumeSize)
 		if err != nil {
-			return resource.Quantity{}, errors.Wrapf(err, "failed to parse workspace volume size %s", o.WorkspaceVolumeSize)
+			return resource.Quantity{}, fmt.Errorf("failed to parse workspace volume size %s: %w", o.WorkspaceVolumeSize, err)
 		}
 		return volumeSize, nil
 	}
 	if o.CalculateWorkspaceVolumeSize {
 		volumeSize, err := o.calculateWorkspaceVolumeFromRepo()
 		if err != nil {
-			return resource.Quantity{}, errors.Wrapf(err, "failed to calculate workspace volume size")
+			return resource.Quantity{}, fmt.Errorf("failed to calculate workspace volume size: %w", err)
 		}
 		return volumeSize, nil
 	}

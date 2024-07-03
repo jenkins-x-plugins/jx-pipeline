@@ -54,8 +54,8 @@ func TestRemoteTasksMigrator_ProcessTask(t *testing.T) {
 	}{
 		{
 			name:                 "BaseTask",
-			baseTaskModifier:     func(task *v1beta1.Task) {},
-			expectedTaskModifier: func(task *v1beta1.Task) {},
+			baseTaskModifier:     func(_ *v1beta1.Task) {},
+			expectedTaskModifier: func(_ *v1beta1.Task) {},
 		},
 		{
 			name: "WithExistingUnrelatedEnvs",
@@ -77,7 +77,7 @@ func TestRemoteTasksMigrator_ProcessTask(t *testing.T) {
 					{Name: "BUILD_ID", Value: "$(params.BUILD_ID)"},
 				}
 			},
-			expectedTaskModifier: func(task *v1beta1.Task) {},
+			expectedTaskModifier: func(_ *v1beta1.Task) {},
 		},
 		{
 			name: "WithExistingIncorrectHomeEnv",

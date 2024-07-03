@@ -36,7 +36,7 @@ func NewCmdPipelineConvert() *cobra.Command {
 		Short:   "commands for converting pipelines",
 		Long:    convertCmdLong,
 		Example: convertCmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			err := cmd.Help()
 			if err != nil {
 				log.Logger().Errorf(err.Error())

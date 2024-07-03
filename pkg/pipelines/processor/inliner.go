@@ -1,12 +1,13 @@
 package processor
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
@@ -41,7 +42,7 @@ func (p *inliner) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
 	return p.processTaskSpec(&task.Spec, path, task.Name)
 }
 
-func (p *inliner) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
+func (p *inliner) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
@@ -88,15 +89,15 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	if name == "" {
 		name, err = p.input.PickNameWithDefault(names, "pick the step: ", "", "select the name of the step to override")
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to pick step")
+			return false, fmt.Errorf("failed to pick step: %w", err)
 		}
 	}
 	if name == "" {
-		return false, errors.Errorf("no step name selected")
+		return false, fmt.Errorf("no step name selected")
 	}
 	so := stepOptions[name]
 	if so == nil {
-		return false, errors.Errorf("no step exists for name %s", name)
+		return false, fmt.Errorf("no step exists for name %s", name)
 	}
 
 	step := so.step
@@ -104,22 +105,22 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	// lets inline the values from the step...
 	catalogTaskSpec, err := lighthouses.FindCatalogTaskSpecFromURI(p.resolver, so.uses)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to find the pipeline catalog TaskSpec for %s", path)
+		return false, fmt.Errorf("failed to find the pipeline catalog TaskSpec for %s: %w", path, err)
 	}
 	if catalogTaskSpec == nil {
-		return false, errors.Errorf("could not resolve TaskSpec for uses %s", so.uses)
+		return false, fmt.Errorf("could not resolve TaskSpec for uses %s", so.uses)
 	}
 
 	if !so.task {
 		catalogStep := FindStep(catalogTaskSpec, step.Name)
 		if catalogStep == nil {
-			return false, errors.Wrapf(err, "could not find step: %s in the catalog", step.Name)
+			return false, fmt.Errorf("could not find step: %s in the catalog", step.Name)
 		}
 
 		// lets replace with the catalog step or inline specific properties
 		err = p.inlineStep(step, catalogStep)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to inline properties")
+			return false, fmt.Errorf("failed to inline properties: %w", err)
 		}
 		return true, nil
 	}
@@ -160,7 +161,7 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	}
 	name, err = p.input.PickNameWithDefault(names, "pick the step to inline: ", "", "select the name of the step to override")
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to pick step")
+		return false, fmt.Errorf("failed to pick step: %w", err)
 	}
 
 	if name != "" {
@@ -174,14 +175,14 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 				}
 				err = p.inlineStep(s, catalogStep)
 				if err != nil {
-					return false, errors.Wrapf(err, "failed to inline properties")
+					return false, fmt.Errorf("failed to inline properties: %w", err)
 				}
 
 				found = true
 				break
 			}
 			if !found {
-				return false, errors.Errorf("could not find step %s in resulting task", name)
+				return false, fmt.Errorf("could not find step %s in resulting task", name)
 			}
 		}
 	}
@@ -235,7 +236,7 @@ func (p *inliner) inlineStep(s, catalogStep *v1beta1.Step) error {
 		case "workingDir":
 			s.WorkingDir = catalogStep.WorkingDir
 		default:
-			return errors.Errorf("invalid step property: %s", prop)
+			return fmt.Errorf("invalid step property: %s", prop)
 		}
 	}
 	return nil

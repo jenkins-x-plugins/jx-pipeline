@@ -1,6 +1,7 @@
 package activities
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -20,7 +21,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"golang.org/x/text/cases"
@@ -80,7 +81,7 @@ func NewCmdActivities() (*cobra.Command, *Options) {
 		Aliases: []string{"activity", "act"},
 		Long:    cmdLong,
 		Example: cmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -99,11 +100,11 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 
 	if o.TektonClient != nil {
@@ -113,11 +114,11 @@ func (o *Options) Validate() error {
 	f := kubeclient.NewFactory()
 	cfg, err := f.CreateKubeConfig()
 	if err != nil {
-		return errors.Wrap(err, "failed to get kubernetes config")
+		return fmt.Errorf("failed to get kubernetes config: %w", err)
 	}
 	o.TektonClient, err = tektonclient.NewForConfig(cfg)
 	if err != nil {
-		return errors.Wrap(err, "error building tekton client")
+		return fmt.Errorf("error building tekton client: %w", err)
 	}
 	if o.Out == nil {
 		o.Out = os.Stdout
@@ -129,12 +130,12 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	ns, _, err := jxenv.GetDevNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find dev namespace")
+		return fmt.Errorf("failed to find dev namespace: %w", err)
 	}
 	jxClient := o.JXClient
 
@@ -209,10 +210,10 @@ func (o *Options) WatchActivities(t *table.Table, jxClient versioned.Interface, 
 			AddFunc: func(obj interface{}) {
 				o.onActivity(t, obj, yamlSpecMap)
 			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
+			UpdateFunc: func(_, newObj interface{}) {
 				o.onActivity(t, newObj, yamlSpecMap)
 			},
-			DeleteFunc: func(obj interface{}) {
+			DeleteFunc: func(_ interface{}) {
 			},
 		},
 	)

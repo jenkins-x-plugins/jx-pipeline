@@ -1,9 +1,10 @@
 package lighthouses
 
 import (
+	"fmt"
+
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	lhclient "github.com/jenkins-x/lighthouse-client/pkg/client/clientset/versioned"
-	"github.com/pkg/errors"
 )
 
 // LazyCreateLHClient lazy creates the jx client if its not defined
@@ -14,11 +15,11 @@ func LazyCreateLHClient(client lhclient.Interface) (lhclient.Interface, error) {
 	f := kubeclient.NewFactory()
 	cfg, err := f.CreateKubeConfig()
 	if err != nil {
-		return client, errors.Wrap(err, "failed to get kubernetes config")
+		return client, fmt.Errorf("failed to get kubernetes config: %w", err)
 	}
 	client, err = lhclient.NewForConfig(cfg)
 	if err != nil {
-		return client, errors.Wrap(err, "error building lighthouse clientset")
+		return client, fmt.Errorf("error building lighthouse clientset: %w", err)
 	}
 	return client, nil
 }

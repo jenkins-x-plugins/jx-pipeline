@@ -1,13 +1,14 @@
 package tektonlog
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/giturl"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 )
 
@@ -91,7 +92,7 @@ func (o *BuildPodInfoFilter) Validate() error {
 		}
 		gitInfo, err := giturl.ParseGitURL(u)
 		if err != nil {
-			return errors.Wrapf(err, "could not parse GitURL: %s", u)
+			return fmt.Errorf("could not parse GitURL: %s: %w", u, err)
 		}
 		o.Owner = gitInfo.Organisation
 		o.Repository = gitInfo.Name
