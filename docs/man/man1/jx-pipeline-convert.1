@@ -5,7 +5,7 @@
 
 .SH NAME
 .PP
-jx\-pipeline\-convert \- Converts the pipelines to use the 'image: uses:sourceURI' include mechanism
+jx\-pipeline\-convert \- commands for converting pipelines
 
 
 .SH SYNOPSIS
@@ -15,92 +15,26 @@ jx\-pipeline\-convert \- Converts the pipelines to use the 'image: uses:sourceUR
 
 .SH DESCRIPTION
 .PP
-Converts the pipelines to use the 'image: uses:sourceURI' include mechanism
-
-.PP
-So that pipelines are smaller, simpler and easier to upgrade pipelines with the version stream
+Convert one or more pipelines.
 
 
 .SH OPTIONS
 .PP
-\fB\-b\fP, \fB\-\-batch\-mode\fP[=false]
-    Runs in batch mode without prompting for user input
-
-.PP
-\fB\-c\fP, \fB\-\-catalog\fP[=false]
-    If converting a catalog we look in the packs folder to recursively find all '.lighthouse' folders
-
-.PP
-\fB\-\-catalog\-owner\fP="jenkins\-x"
-    The github owner for the default catalog
-
-.PP
-\fB\-\-catalog\-repo\fP="jx3\-pipeline\-catalog"
-    The github repository name for the default catalog
-
-.PP
-\fB\-d\fP, \fB\-\-dir\fP="."
-    The directory to look for the .lighthouse and/or .git folders
-
-.PP
-\fB\-\-git\-kind\fP=""
-    the kind of git server to connect to
-
-.PP
-\fB\-\-git\-server\fP=""
-    the git server URL to create the scm client
-
-.PP
-\fB\-\-git\-token\fP=""
-    the git token used to operate on the git repository. If not specified it's loaded from the git credentials file
-
-.PP
-\fB\-\-git\-username\fP=""
-    the git username used to operate on the git repository. If not specified it's loaded from the git credentials file
-
-.PP
 \fB\-h\fP, \fB\-\-help\fP[=false]
     help for convert
-
-.PP
-\fB\-\-log\-level\fP=""
-    Sets the logging level. If not specified defaults to $JX\_LOG\_LEVEL
-
-.PP
-\fB\-s\fP, \fB\-\-sha\fP=""
-    The default catalog SHA to use when resolving catalog pipelines to reuse
-
-.PP
-\fB\-\-tasks\-dir\fP="tasks"
-    The directory name to store the original tasks before we convert to uses: notation
-
-.PP
-\fB\-\-use\-kpt\-ref\fP[=true]
-    Keep the kpt ref value in the uses git URI
-
-.PP
-\fB\-\-use\-sha\fP=""
-    The catalog SHA to use in the converted pipelines. If not specified defaults to @versionStream
-
-.PP
-\fB\-\-verbose\fP[=false]
-    Enables verbose output. The environment variable JX\_LOG\_LEVEL has precedence over this flag and allows setting the logging level to any value of: panic, fatal, error, warn, info, debug, trace
 
 
 .SH EXAMPLE
 .PP
-# Convert a repository created using the alpha/beta of v3
-  # to use the nice new uses: syntax
-  jx pipeline convert
-
-.PP
-# Convert a pipeline catalog to the uses syntax and layout
-  jx pipeline convert \-\-catalog
+# Convert a pipeline to use "image:uses:"
+  jx pipeline convert uses
+  # Convert a pipeline to use native Tekton
+  jx pipeline convert remotetasks
 
 
 .SH SEE ALSO
 .PP
-\fBjx\-pipeline(1)\fP
+\fBjx\-pipeline(1)\fP, \fBjx\-pipeline\-convert\-remotetasks(1)\fP, \fBjx\-pipeline\-convert\-uses(1)\fP
 
 
 .SH HISTORY
