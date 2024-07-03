@@ -136,43 +136,12 @@ darwin-arm: ## Build for OSX
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=darwin GOARCH=arm64 $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/darwin-arm64/$(BINARY_NAME) $(MAIN_SRC_FILE)
 	chmod +x build/darwin-arm/$(BINARY_NAME)
 
-.PHONY: release
-release: clean linux test
-
-.PHONY: goreleaser
-goreleaser:
-	step-go-releaser --organisation=$(ORG) --revision=$(REV) --branch=$(BRANCH) --build-date=$(BUILD_DATE) --go-version=$(GO_VERSION) --root-package=$(ROOT_PACKAGE) --version=$(VERSION)
-
 .PHONY: clean
 clean: ## Clean the generated artifacts
 	rm -rf build release dist
 
-get-fmt-deps: ## Install test dependencies
-	$(GO_NOMOD) get golang.org/x/tools/cmd/goimports
-
-.PHONY: fmt
-fmt: importfmt ## Format the code
-	$(eval FORMATTED = $(shell $(GO) fmt ./...))
-	@if [ "$(FORMATTED)" == "" ]; \
-      	then \
-      	    echo "All Go files properly formatted"; \
-      	else \
-      		echo "Fixed formatting for: $(FORMATTED)"; \
-      	fi
-
-.PHONY: importfmt
-importfmt: get-fmt-deps
-	@echo "Formatting the imports..."
-	goimports -w $(GO_DEPENDENCIES)
-
-.PHONY: lint
-lint: ## Lint the code
-	./hack/gofmt.sh
-	./hack/linter.sh
-	./hack/generate.sh
-
 .PHONY: all
-all: fmt build test lint
+all: build test
 
 bin/docs:
 	go build $(LDFLAGS) -v -o bin/docs cmd/docs/*.go
