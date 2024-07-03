@@ -24,16 +24,16 @@ spec:
         - name: build-make-linux
           resources: {}
         # Move to catalog
-        - image: golang:1.22.3
+        - image: golang:1.22.3-alpine3.19
           name: coverage-report
           resources: {}
           script: |
             #!/bin/sh
-            source .jx/variables.sh
+            . .jx/variables.sh
             apk add --update make bash curl coreutils git
             make test-coverage
             curl -s https://codecov.io/bash -o codecov.sh
-            bash codecov.sh -Z -B ${PR_HEAD_REF} -C ${PULL_PULL_SHA} -t ${CODECOV_TOKEN} -R . -f ./build/reports/cover.txt
+            bash codecov.sh -Z -B ${PR_HEAD_REF} -C ${PULL_PULL_SHA} -f ./build/reports/cover.txt
           env:
           - name: CODECOV_TOKEN
             valueFrom:
