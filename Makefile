@@ -143,6 +143,9 @@ clean: ## Clean the generated artifacts
 .PHONY: all
 all: build test
 
+.PHONY: release
+release: clean linux test
+
 bin/docs:
 	go build $(LDFLAGS) -v -o bin/docs cmd/docs/*.go
 
