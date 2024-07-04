@@ -19,7 +19,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
@@ -66,7 +66,7 @@ func NewCmdPipelineGet() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"list", "ls"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -87,18 +87,18 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 
 	if o.TektonClient == nil {
 		f := kubeclient.NewFactory()
 		cfg, err := f.CreateKubeConfig()
 		if err != nil {
-			return errors.Wrap(err, "failed to get kubernetes config")
+			return fmt.Errorf("failed to get kubernetes config: %w", err)
 		}
 		o.TektonClient, err = tektonclient.NewForConfig(cfg)
 		if err != nil {
-			return errors.Wrap(err, "error building tekton client")
+			return fmt.Errorf("error building tekton client: %w", err)
 		}
 	}
 	return nil
@@ -108,7 +108,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	ctx := o.GetContext()
@@ -126,7 +126,7 @@ func (o *Options) Run() error {
 func (o *Options) renderPostsubmits(ctx context.Context) error {
 	cfg, err := triggers.LoadLighthouseConfig(ctx, o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load lighthouse config")
+		return fmt.Errorf("failed to load lighthouse config: %w", err)
 	}
 
 	out := os.Stdout
@@ -147,7 +147,7 @@ func (o *Options) renderPostsubmits(ctx context.Context) error {
 func (o *Options) renderPresubmits(ctx context.Context) error {
 	cfg, err := triggers.LoadLighthouseConfig(ctx, o.KubeClient, o.Namespace, o.LighthouseConfigMap, false)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load lighthouse config")
+		return fmt.Errorf("failed to load lighthouse config: %w", err)
 	}
 
 	out := os.Stdout
@@ -172,7 +172,7 @@ func (o *Options) renderPipelineRuns(ctx context.Context) error {
 	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
 	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
+		return fmt.Errorf("failed to list PipelineRuns in namespace %s: %w", ns, err)
 	}
 
 	if len(prList.Items) == 0 {

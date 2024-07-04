@@ -11,7 +11,7 @@ import (
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cloud"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/httphelpers"
-	"github.com/pkg/errors"
+
 	"gocloud.dev/blob"
 
 	// support azure blobs
@@ -59,7 +59,7 @@ func KubeProviderToBucketScheme(provider string) string {
 func ReadURL(ctx context.Context, urlText string, timeout time.Duration, httpFn func(urlString string) (string, func(*http.Request), error)) (io.ReadCloser, error) {
 	u, err := url.Parse(urlText)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse URL %s", urlText)
+		return nil, fmt.Errorf("failed to parse URL %s: %w", urlText, err)
 	}
 	var headerFunc func(*http.Request)
 	switch u.Scheme {
@@ -72,7 +72,7 @@ func ReadURL(ctx context.Context, urlText string, timeout time.Duration, httpFn 
 		}
 		return ReadHTTPURL(urlText, headerFunc, timeout)
 	default:
-		return ReadBucketURL(ctx, u, timeout)
+		return ReadBucketURL(ctx, u)
 	}
 }
 
@@ -87,7 +87,7 @@ func ReadHTTPURL(u string, headerFunc func(*http.Request), timeout time.Duration
 	headerFunc(req)
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to invoke GET on %s", u)
+		return nil, fmt.Errorf("failed to invoke GET on %s: %w", u, err)
 	}
 	stream := resp.Body
 
@@ -101,43 +101,18 @@ func ReadHTTPURL(u string, headerFunc func(*http.Request), timeout time.Duration
 // ReadBucketURL reads the content of a bucket URL of the for 's3://bucketName/foo/bar/whatnot.txt?param=123'
 // where any of the query arguments are applied to the underlying Bucket URL and the path is extracted and resolved
 // within the bucket
-func ReadBucketURL(ctx context.Context, u *url.URL, timeout time.Duration) (io.ReadCloser, error) {
+func ReadBucketURL(ctx context.Context, u *url.URL) (io.ReadCloser, error) {
 	bucketURL, key := SplitBucketURL(u)
 
 	bucket, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open bucket %s", bucketURL)
+		return nil, fmt.Errorf("failed to open bucket %s: %w", bucketURL, err)
 	}
 	data, err := bucket.NewReader(ctx, key, nil)
 	if err != nil {
-		return data, errors.Wrapf(err, "failed to read key %s in bucket %s", key, bucketURL)
+		return data, fmt.Errorf("failed to read key %s in bucket %s: %w", key, bucketURL, err)
 	}
 	return data, nil
-}
-
-// WriteBucketURL writes the data to a bucket URL of the for 's3://bucketName/foo/bar/whatnot.txt?param=123'
-// with the given timeout
-func WriteBucketURL(ctx context.Context, u *url.URL, data io.Reader, timeout time.Duration) error {
-	bucketURL, key := SplitBucketURL(u)
-	return WriteBucket(ctx, bucketURL, key, data, timeout)
-}
-
-// WriteBucket writes the data to a bucket URL and key of the for 's3://bucketName' and key 'foo/bar/whatnot.txt'
-// with the given timeout
-func WriteBucket(ctx context.Context, bucketURL, key string, reader io.Reader, timeout time.Duration) (err error) {
-	bucket, err := blob.OpenBucket(ctx, bucketURL)
-	if err != nil {
-		return errors.Wrapf(err, "failed to open bucket %s", bucketURL)
-	}
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return errors.Wrapf(err, "failed to read data for key %s in bucket %s", key, bucketURL)
-	}
-	err = bucket.WriteAll(ctx, key, data, nil)
-	if err != nil {
-		return errors.Wrapf(err, "failed to write key %s in bucket %s", key, bucketURL)
-	}
-	return nil
 }
 
 // SplitBucketURL splits the full bucket URL into the URL to open the bucket and the file name to refer to

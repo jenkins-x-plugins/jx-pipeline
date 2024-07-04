@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 )
 
@@ -77,7 +78,7 @@ func NewCmdPipelineConvertUses() (*cobra.Command, *UsesOptions) {
 		Short:   "Converts the pipelines to use the 'image: uses:sourceURI' include mechanism",
 		Long:    usesCmdLong,
 		Example: usesCmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -98,13 +99,13 @@ func NewCmdPipelineConvertUses() (*cobra.Command, *UsesOptions) {
 func (o *UsesOptions) Validate() error {
 	err := o.BaseOptions.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate base options")
+		return fmt.Errorf("failed to validate base options: %w", err)
 	}
 	if o.Resolver == nil {
 		if o.Catalog {
 			o.Resolver, err = o.ResolverOptions.CreateResolver()
 			if err != nil {
-				return errors.Wrapf(err, "failed to create a UsesResolver")
+				return fmt.Errorf("failed to create a UsesResolver: %w", err)
 			}
 		}
 	}
@@ -122,7 +123,7 @@ func (o *UsesOptions) Run() error {
 	var err error
 	err = o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	migratorOwner := o.CatalogOwner
@@ -155,7 +156,7 @@ func (o *UsesOptions) Run() error {
 	dir := filepath.Join(rootDir, ".lighthouse")
 	exists, err := files.DirExists(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check for dir %s", dir)
+		return fmt.Errorf("failed to check for dir %s: %w", dir, err)
 	}
 	if exists {
 		err = o.ProcessDir(dir)
@@ -171,7 +172,7 @@ func (o *UsesOptions) Run() error {
 	path := filepath.Join(rootDir, "jenkins-x.yml")
 	exists, err = files.FileExists(path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check for file %s", path)
+		return fmt.Errorf("failed to check for file %s: %w", path, err)
 	}
 	if !exists {
 		log.Logger().Infof("no .lighthouse directories found")
@@ -195,7 +196,7 @@ func (o *UsesOptions) Run() error {
 	}
 	_, err = o.CommandRunner(c)
 	if err != nil {
-		return errors.Wrapf(err, "failed to run %s", c.CLI())
+		return fmt.Errorf("failed to run %s: %w", c.CLI(), err)
 	}
 	return nil
 }
@@ -203,7 +204,7 @@ func (o *UsesOptions) Run() error {
 func (o *UsesOptions) ProcessDir(dir string) error {
 	fs, err := os.ReadDir(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read dir %s", dir)
+		return fmt.Errorf("failed to read dir %s: %w", dir, err)
 	}
 	for _, f := range fs {
 		name := f.Name()
@@ -215,7 +216,7 @@ func (o *UsesOptions) ProcessDir(dir string) error {
 		triggersFile := filepath.Join(triggerDir, "triggers.yaml")
 		exists, err := files.FileExists(triggersFile)
 		if err != nil {
-			return errors.Wrapf(err, "failed to check if file exists %s", triggersFile)
+			return fmt.Errorf("failed to check if file exists %s: %w", triggersFile, err)
 		}
 		if !exists {
 			continue
@@ -224,14 +225,14 @@ func (o *UsesOptions) ProcessDir(dir string) error {
 		triggers := &triggerconfig.Config{}
 		err = yamls.LoadFile(triggersFile, triggers)
 		if err != nil {
-			return errors.Wrapf(err, "failed to load lighthouse triggers: %s", triggersFile)
+			return fmt.Errorf("failed to load lighthouse triggers: %s: %w", triggersFile, err)
 		}
 
 		o.TriggerCount++
 		if !o.Catalog {
 			o.Resolver, err = o.createNonCatalogResolver(triggerDir)
 			if err != nil {
-				return errors.Wrapf(err, "failed to create resolver for non catalog in dir %s", triggerDir)
+				return fmt.Errorf("failed to create resolver for non catalog in dir %s: %w", triggerDir, err)
 			}
 			if o.Resolver == nil {
 				log.Logger().Infof("no Kptfile found in dir %s so cannot convert", info(triggerDir))
@@ -240,7 +241,7 @@ func (o *UsesOptions) ProcessDir(dir string) error {
 		}
 		err = o.processTriggerFile(triggers, triggerDir)
 		if err != nil {
-			return errors.Wrapf(err, "failed to convert pipelines")
+			return fmt.Errorf("failed to convert pipelines: %w", err)
 		}
 	}
 	return nil
@@ -253,12 +254,12 @@ func (o *UsesOptions) processTriggerFile(repoConfig *triggerconfig.Config, dir s
 		if r.SourcePath != "" {
 			err := o.updateCatalogTask(r.SourcePath)
 			if err != nil {
-				return errors.Wrapf(err, "failed to find catalog pipeline for %s", r.SourcePath)
+				return fmt.Errorf("failed to find catalog pipeline for %s: %w", r.SourcePath, err)
 			}
 			path := filepath.Join(dir, r.SourcePath)
 			flag, err := processor.ProcessFile(o.Processor, path)
 			if err != nil {
-				return errors.Wrapf(err, "failed to convert %s", r.SourcePath)
+				return fmt.Errorf("failed to convert %s: %w", r.SourcePath, err)
 			}
 			if flag {
 				modified = true
@@ -273,12 +274,12 @@ func (o *UsesOptions) processTriggerFile(repoConfig *triggerconfig.Config, dir s
 		if r.SourcePath != "" {
 			err := o.updateCatalogTask(r.SourcePath)
 			if err != nil {
-				return errors.Wrapf(err, "failed to find catalog pipeline for %s", r.SourcePath)
+				return fmt.Errorf("failed to find catalog pipeline for %s: %w", r.SourcePath, err)
 			}
 			path := filepath.Join(dir, r.SourcePath)
 			flag, err := processor.ProcessFile(o.Processor, path)
 			if err != nil {
-				return errors.Wrapf(err, "failed to convert %s", r.SourcePath)
+				return fmt.Errorf("failed to convert %s: %w", r.SourcePath, err)
 			}
 			if flag {
 				modified = true
@@ -293,16 +294,16 @@ func (o *UsesOptions) processTriggerFile(repoConfig *triggerconfig.Config, dir s
 		path := filepath.Join(dir, "Kptfile")
 		exists, err := files.FileExists(path)
 		if err != nil {
-			return errors.Wrapf(err, "failed to check if file exists %s", path)
+			return fmt.Errorf("failed to check if file exists %s: %w", path, err)
 		}
 		if exists {
 			err = gitclient.Remove(o.GitClient, dir, "Kptfile")
 			if err != nil {
-				return errors.Wrapf(err, "failed to remove %s from git", path)
+				return fmt.Errorf("failed to remove %s from git: %w", path, err)
 			}
 			err = os.RemoveAll(path)
 			if err != nil {
-				return errors.Wrapf(err, "failed to remove file %s", path)
+				return fmt.Errorf("failed to remove file %s: %w", path, err)
 			}
 		}
 	}
@@ -313,7 +314,7 @@ func (o *UsesOptions) createNonCatalogResolver(triggerDir string) (*inrepo.UsesR
 	path := filepath.Join(triggerDir, "Kptfile")
 	exists, err := files.FileExists(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to check for file %s", path)
+		return nil, fmt.Errorf("failed to check for file %s: %w", path, err)
 	}
 	if !exists {
 		return nil, nil
@@ -323,18 +324,18 @@ func (o *UsesOptions) createNonCatalogResolver(triggerDir string) (*inrepo.UsesR
 	kf := &kptfile.KptFile{}
 	err = yamls.LoadFile(path, kf)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to load the kptfile %s", path)
+		return nil, fmt.Errorf("failed to load the kptfile %s: %w", path, err)
 	}
 
 	// replace owner / repo / tag etc
 	git := kf.Upstream.Git
 	repoURL := git.Repo
 	if repoURL == "" {
-		return nil, errors.Errorf("missing upstream.git.repo in %s", path)
+		return nil, fmt.Errorf("missing upstream.git.repo in %s", path)
 	}
 	gitInfo, err := giturl.ParseGitURL(repoURL)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse git URL %s from %s", repoURL, path)
+		return nil, fmt.Errorf("failed to parse git URL %s from %s: %w", repoURL, path, err)
 	}
 
 	if gitInfo != nil {
@@ -346,7 +347,7 @@ func (o *UsesOptions) createNonCatalogResolver(triggerDir string) (*inrepo.UsesR
 
 	resolver, err := o.ResolverOptions.CreateResolver()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create the resolver")
+		return nil, fmt.Errorf("failed to create the resolver: %w", err)
 	}
 
 	// optionally keep the kpt ref

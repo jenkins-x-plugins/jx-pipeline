@@ -1,6 +1,6 @@
-FROM centos:7
+FROM alpine:3.20
 
-RUN yum install -y git
+RUN apk add --update git
 
 ENTRYPOINT ["jx-pipeline"]
 

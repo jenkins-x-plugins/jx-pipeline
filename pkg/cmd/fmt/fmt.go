@@ -1,6 +1,7 @@
 package fmt
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
-	"github.com/pkg/errors"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -75,7 +76,7 @@ func NewCmdPipelineFormat() (*cobra.Command, *Options) {
 		Short:   "Formats the local pipeline files",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -96,11 +97,11 @@ func (o *Options) Validate() error {
 	if o.CatalogSHA == "" {
 		dir, err := gitclient.CloneToDir(o.GitClient, pipelineCatalogGitURL, "")
 		if err != nil {
-			return errors.Wrapf(err, "failed to clone %s", pipelineCatalogGitURL)
+			return fmt.Errorf("failed to clone %s: %w", pipelineCatalogGitURL, err)
 		}
 		o.CatalogSHA, err = gitclient.GetLatestCommitSha(o.GitClient, dir)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get latest commit sha from clone of %s in dir %s", pipelineCatalogGitURL, dir)
+			return fmt.Errorf("failed to get latest commit sha from clone of %s in dir %s: %w", pipelineCatalogGitURL, dir, err)
 		}
 	}
 	if o.GitCloneURL == "" {
@@ -116,10 +117,10 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 	dir := o.Dir
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, _ error) error {
 		if info == nil || info.IsDir() {
 			return nil
 		}
@@ -129,7 +130,7 @@ func (o *Options) Run() error {
 		return o.processFile(path)
 	})
 	if err != nil {
-		return errors.Wrapf(err, "failed to process YAML files in dir %s", dir)
+		return fmt.Errorf("failed to process YAML files in dir %s: %w", dir, err)
 	}
 	return nil
 }
@@ -137,7 +138,7 @@ func (o *Options) Run() error {
 func (o *Options) processFile(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load file %s", path)
+		return fmt.Errorf("failed to load file %s: %w", path, err)
 	}
 
 	kindPrefix := "kind:"
@@ -159,7 +160,7 @@ func (o *Options) processFile(path string) error {
 		pipeline := &v1beta1.Pipeline{}
 		err := yaml.Unmarshal(data, pipeline)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal Pipeline YAML %s", message)
+			return fmt.Errorf("failed to unmarshal Pipeline YAML %s: %w", message, err)
 		}
 		return o.processPipeline(pipeline, path)
 
@@ -167,7 +168,7 @@ func (o *Options) processFile(path string) error {
 		prs := &v1beta1.PipelineRun{}
 		err := yaml.Unmarshal(data, prs)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal PipelineRun YAML %s", message)
+			return fmt.Errorf("failed to unmarshal PipelineRun YAML %s: %w", message, err)
 		}
 		return o.processPipelineRun(prs, path)
 
@@ -175,7 +176,7 @@ func (o *Options) processFile(path string) error {
 		task := &v1beta1.Task{}
 		err := yaml.Unmarshal(data, task)
 		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal Task YAML %s", message)
+			return fmt.Errorf("failed to unmarshal Task YAML %s: %w", message, err)
 		}
 		return o.processTask(task, path)
 
@@ -201,12 +202,12 @@ func (o *Options) processPipelineRun(prs *v1beta1.PipelineRun, path string) erro
 	if ps.PipelineSpec != nil {
 		err := o.processPipelineSpec(ps.PipelineSpec)
 		if err != nil {
-			return errors.Wrapf(err, "failed to ")
+			return fmt.Errorf("failed to : %w", err)
 		}
 	}
 	err := yamls.SaveFile(prs, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to save file %s", path)
+		return fmt.Errorf("failed to save file %s: %w", path, err)
 	}
 	return nil
 }
@@ -240,16 +241,16 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec) error { //noli
 func (o *Options) processPipeline(pipeline *v1beta1.Pipeline, path string) error {
 	err := o.processPipelineSpec(&pipeline.Spec)
 	if err != nil {
-		return errors.Wrapf(err, "failed to ")
+		return fmt.Errorf("failed to : %w", err)
 	}
 	err = yamls.SaveFile(pipeline, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to save file %s", path)
+		return fmt.Errorf("failed to save file %s: %w", path, err)
 	}
 	return nil
 }
 
-func (o *Options) processTask(task *v1beta1.Task, path string) error {
+func (o *Options) processTask(task *v1beta1.Task, path string) error { //nolint:revive
 	return nil
 }
 

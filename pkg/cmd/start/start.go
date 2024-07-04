@@ -2,6 +2,7 @@ package start
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -44,7 +45,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/launcher"
 	"github.com/jenkins-x/lighthouse-client/pkg/plugins"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -131,7 +132,7 @@ func NewCmdPipelineStart() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"build", "run"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -162,15 +163,15 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 	o.LHClient, err = lighthouses.LazyCreateLHClient(o.LHClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the lighthouse client")
+		return fmt.Errorf("failed to create the lighthouse client: %w", err)
 	}
 
 	if o.Input == nil {
@@ -193,7 +194,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	if o.File != "" {
@@ -204,7 +205,7 @@ func (o *Options) Run() error {
 	ctx := o.GetContext()
 	names, cfg, err := o.getFilteredTriggerNames(ctx, o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get trigger names")
+		return fmt.Errorf("failed to get trigger names: %w", err)
 	}
 
 	if len(args) == 0 {
@@ -244,7 +245,7 @@ func (o *Options) getFilteredTriggerNames(ctx context.Context, kubeClient kubern
 	for {
 		cfg, err := triggers.LoadLighthouseConfig(ctx, kubeClient, ns, name, o.Wait)
 		if err != nil {
-			return nil, cfg, errors.Wrapf(err, "failed to load lighthouse config")
+			return nil, cfg, fmt.Errorf("failed to load lighthouse config: %w", err)
 		}
 		names := o.pipelineNames(cfg)
 		names = stringhelpers.StringsContaining(names, o.Filter)
@@ -254,7 +255,7 @@ func (o *Options) getFilteredTriggerNames(ctx context.Context, kubeClient kubern
 		}
 
 		if time.Now().After(end) {
-			return nil, cfg, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s matching filter: '%s' within %s", name, ns, o.Filter, o.WaitDuration.String())
+			return nil, cfg, fmt.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s matching filter: '%s' within %s", name, ns, o.Filter, o.WaitDuration.String())
 		}
 
 		if !logWaiting {
@@ -270,13 +271,13 @@ func (o *Options) processFile(path string) error {
 	if o.Resolver == nil {
 		o.Resolver, err = o.ResolverOptions.CreateResolver()
 		if err != nil {
-			return errors.Wrapf(err, "failed to create a UsesResolver")
+			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}
 	}
 
 	pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load %s", path)
+		return fmt.Errorf("failed to load %s: %w", path, err)
 	}
 	ns := o.Namespace
 	if o.Context == "" {
@@ -301,17 +302,17 @@ func (o *Options) processFile(path string) error {
 	if o.Branch == "" {
 		o.Branch, err = gitclient.Branch(o.GitClient, dir)
 		if err != nil {
-			return errors.Wrapf(err, "failed to detect the git branch")
+			return fmt.Errorf("failed to detect the git branch: %w", err)
 		}
 	}
 	sha, err := gitclient.GetLatestCommitSha(o.GitClient, dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get the current git commit sha")
+		return fmt.Errorf("failed to get the current git commit sha: %w", err)
 	}
 
 	gitInfo, err := gitdiscovery.FindGitInfoFromDir(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to discover git url")
+		return fmt.Errorf("failed to discover git url: %w", err)
 	}
 	gitURL := gitInfo.URL
 	gitCloneURL := gitInfo.HttpsURL()
@@ -351,7 +352,7 @@ func (o *Options) processFile(path string) error {
 	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
 	lhjob, err = launchClient.Launch(lhjob)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create lighthousejob %s in namespace %s", lhjob.Name, ns)
+		return fmt.Errorf("failed to create lighthousejob %s in namespace %s: %w", lhjob.Name, ns, err)
 	}
 
 	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
@@ -386,10 +387,10 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	sr, err := sourcerepos.FindSourceRepositoryWithoutProvider(ctx,
 		o.JXClient, ns, owner, repo)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find the SourceRepository %s", fullName)
+		return fmt.Errorf("failed to find the SourceRepository %s: %w", fullName, err)
 	}
 	if sr == nil {
-		return errors.Errorf("could not find a SourceRepository with owner %s name %s in namespace %s", owner, repo, ns)
+		return fmt.Errorf("could not find a SourceRepository with owner %s name %s in namespace %s", owner, repo, ns)
 	}
 
 	gitServerURL := sr.Spec.Provider
@@ -398,7 +399,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 
 		gitInfo, err = giturl.ParseGitURL(sr.Spec.HTTPCloneURL)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse git clone URL %s", sr.Spec.HTTPCloneURL)
+			return fmt.Errorf("failed to parse git clone URL %s: %w", sr.Spec.HTTPCloneURL, err)
 		}
 		gitServerURL = gitInfo.HostURL()
 	}
@@ -421,16 +422,16 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	if scmClient == nil {
 		scmClient, err = f.Create()
 		if err != nil {
-			return errors.Wrapf(err, "failed to create an ScmClient for %s", fullName)
+			return fmt.Errorf("failed to create an ScmClient for %s: %w", fullName, err)
 		}
 	}
 
 	commit, _, err := scmClient.Git.FindCommit(ctx, fullName, branch)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find commit on repo %s for branch %s", fullName, branch)
+		return fmt.Errorf("failed to find commit on repo %s for branch %s: %w", fullName, branch, err)
 	}
 	if commit == nil {
-		return errors.Errorf("no commit on repo %s for branch %s", fullName, branch)
+		return fmt.Errorf("no commit on repo %s for branch %s", fullName, branch)
 	}
 	//nolint:govet
 	if cfg.InRepoConfigEnabled(fullName) {
@@ -440,32 +441,32 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 		}
 
-		configureOpts := func(opts *gitv2.ClientFactoryOpts) {}
+		configureOpts := func(_ *gitv2.ClientFactoryOpts) {}
 		gitFactory, err := gitv2.NewClientFactory(configureOpts)
 		if err != nil {
-			return errors.Wrapf(err, "failed to create git factory")
+			return fmt.Errorf("failed to create git factory: %w", err)
 		}
 		fb := filebrowser.NewFileBrowserFromGitClient(gitFactory)
 
 		fileBrowsers, err := filebrowser.NewFileBrowsers(gitServerURL, fb)
 		if err != nil {
-			return errors.Wrapf(err, "failed to create file browsers")
+			return fmt.Errorf("failed to create file browsers: %w", err)
 		}
 		cache := inrepo.NewResolverCache()
 		cfg, _, err = inrepo.Generate(fileBrowsers, filebrowser.NewFetchCache(), cache, cfg, pluginCfg, owner, repo, "")
 		if err != nil {
-			return errors.Wrapf(err, "failed to calculate in repo configuration")
+			return fmt.Errorf("failed to calculate in repo configuration: %w", err)
 		}
 	}
 
 	contextName, base, err := o.pickTrigger(cfg, fullName)
 	if err != nil {
-		return errors.Wrapf(err, "failed to pick trigger to start")
+		return fmt.Errorf("failed to pick trigger to start: %w", err)
 	}
 	pipelineRunParams := o.combineWithCustomParameters(base.PipelineRunParams)
 	err = base.LoadPipeline(logger)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load base pipeline")
+		return fmt.Errorf("failed to load base pipeline: %w", err)
 	}
 	lhjob := &v1alpha1.LighthouseJob{
 		Spec: v1alpha1.LighthouseJobSpec{
@@ -502,7 +503,7 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
 	lhjob, err = launchClient.Launch(lhjob)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create lighthousejob in namespace %s", ns)
+		return fmt.Errorf("failed to create lighthousejob in namespace %s: %w", ns, err)
 	}
 
 	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
@@ -545,6 +546,7 @@ func (o *Options) addCustomEnvsToStepTemplate(spec *v1beta1.PipelineSpec) {
 // pipelineNames returns the pipeline names to trigger
 func (o *Options) pipelineNames(cfg *config.Config) []string {
 	var answer []string
+	// TODO: Support the other job types as well. Probably through a --job-type option
 	for k := range cfg.Postsubmits {
 		answer = append(answer, k)
 	}
@@ -568,7 +570,7 @@ func (o *Options) pickTrigger(cfg *config.Config, fullName string) (string, job.
 	if strings.HasPrefix(kind, "pull") || strings.HasPrefix(kind, "pre") {
 		triggers := cfg.Presubmits[fullName]
 		if len(triggers) == 0 {
-			return "", job.Base{}, errors.Errorf("could not find presubmit for repository %s", fullName)
+			return "", job.Base{}, fmt.Errorf("could not find presubmit for repository %s", fullName)
 		}
 		if o.Context == "" {
 			trigger := triggers[0]
@@ -583,11 +585,11 @@ func (o *Options) pickTrigger(cfg *config.Config, fullName string) (string, job.
 			}
 			names = append(names, name)
 		}
-		return "", job.Base{}, errors.Errorf("no presubmit for context %s found. Have contexts %s", o.Context, strings.Join(names, " "))
+		return "", job.Base{}, fmt.Errorf("no presubmit for context %s found. Have contexts %s", o.Context, strings.Join(names, " "))
 	}
 	triggers := cfg.Postsubmits[fullName]
 	if len(triggers) == 0 {
-		return "", job.Base{}, errors.Errorf("could not find postsubmit for repository %s", fullName)
+		return "", job.Base{}, fmt.Errorf("could not find postsubmit for repository %s", fullName)
 	}
 	if o.Context == "" {
 		trigger := triggers[0]
@@ -601,5 +603,5 @@ func (o *Options) pickTrigger(cfg *config.Config, fullName string) (string, job.
 		}
 		names = append(names, name)
 	}
-	return "", job.Base{}, errors.Errorf("no postsubmit for context %s found. Have contexts %s", o.Context, strings.Join(names, " "))
+	return "", job.Base{}, fmt.Errorf("no postsubmit for context %s found. Have contexts %s", o.Context, strings.Join(names, " "))
 }

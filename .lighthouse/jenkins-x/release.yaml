@@ -24,22 +24,16 @@ spec:
           resources: {}
         - name: jx-variables
           resources: {}
-        - image: golang:1.19-alpine3.16
+        - image: golang:1.22.3-alpine3.19
           name: coverage-report
           resources: {}
           script: |
             #!/bin/sh
-            source .jx/variables.sh
-            apk add --update make bash curl gnupg coreutils git
+            . .jx/variables.sh
+            apk add --update make bash curl coreutils git
             make test-coverage
-            curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
-            curl -Os https://uploader.codecov.io/latest/alpine/codecov
-            curl -Os https://uploader.codecov.io/latest/alpine/codecov.SHA256SUM
-            curl -Os https://uploader.codecov.io/latest/alpine/codecov.SHA256SUM.sig
-            gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
-            sha256sum -c codecov.SHA256SUM
-            chmod +x codecov
-            ./codecov -Z -B ${PULL_BASE_REF} -C ${PULL_BASE_SHA} -t ${CODECOV_TOKEN} -R . -f ./build/reports/cover.txt
+            curl -s https://codecov.io/bash -o codecov.sh
+            bash codecov.sh -Z -B ${PULL_BASE_REF} -C ${PULL_BASE_SHA} -f ./build/reports/cover.txt
           env:
           - name: CODECOV_TOKEN
             valueFrom:

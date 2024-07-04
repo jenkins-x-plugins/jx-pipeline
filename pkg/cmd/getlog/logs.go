@@ -1,6 +1,8 @@
 package getlog
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -17,7 +19,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 
@@ -90,7 +92,7 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"logs"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -117,7 +119,7 @@ func (o *Options) Validate() error {
 
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.Namespace, _, err = jxenv.GetDevNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
@@ -125,21 +127,21 @@ func (o *Options) Validate() error {
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 
 	if o.BuildFilter.Repository == "" && o.BuildFilter.Environment != "" {
 		env, err := jxenv.GetEnvironment(o.JXClient, o.Namespace, o.BuildFilter.Environment)
 		if err != nil {
-			return errors.Wrapf(err, "failed to load Environment %s in namespace %s", o.BuildFilter.Environment, o.Namespace)
+			return fmt.Errorf("failed to load Environment %s in namespace %s: %w", o.BuildFilter.Environment, o.Namespace, err)
 		}
 		gitURL := env.Spec.Source.URL
 		if gitURL == "" {
-			return errors.Errorf("no git URL for Environment %s in namespace %s", o.BuildFilter.Environment, o.Namespace)
+			return fmt.Errorf("no git URL for Environment %s in namespace %s", o.BuildFilter.Environment, o.Namespace)
 		}
 		gitInfo, err := giturl.ParseGitURL(gitURL)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse git URL %s from Environment %s in namespace %s", gitURL, o.BuildFilter.Environment, o.Namespace)
+			return fmt.Errorf("failed to parse git URL %s from Environment %s in namespace %s: %w", gitURL, o.BuildFilter.Environment, o.Namespace, err)
 		}
 		o.BuildFilter.Repository = gitInfo.Name
 		o.BuildFilter.Owner = gitInfo.Organisation
@@ -152,11 +154,11 @@ func (o *Options) Validate() error {
 		f := kubeclient.NewFactory()
 		cfg, err := f.CreateKubeConfig()
 		if err != nil {
-			return errors.Wrap(err, "failed to get kubernetes config")
+			return fmt.Errorf("failed to get kubernetes config: %w", err)
 		}
 		o.TektonClient, err = tektonclient.NewForConfig(cfg)
 		if err != nil {
-			return errors.Wrap(err, "error building tekton client")
+			return fmt.Errorf("error building tekton client: %w", err)
 		}
 	}
 	return nil
@@ -166,7 +168,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	return o.getPipelineLog(o.KubeClient, o.TektonClient, o.JXClient, o.Namespace)
@@ -177,7 +179,7 @@ func (o *Options) getPipelineLog(kubeClient kubernetes.Interface, tektonClient t
 	if o.CurrentFolder {
 		err := o.ScmDiscover.Validate()
 		if err != nil {
-			return errors.Wrapf(err, "failed to discover current git repository in dir %s", o.ScmDiscover.Dir)
+			return fmt.Errorf("failed to discover current git repository in dir %s: %w", o.ScmDiscover.Dir, err)
 		}
 		o.BuildFilter.Repository = o.ScmDiscover.Repository
 		o.BuildFilter.Owner = o.ScmDiscover.Owner

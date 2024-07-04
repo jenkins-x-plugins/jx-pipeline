@@ -1,6 +1,7 @@
 package breakpoint
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -23,7 +24,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -70,7 +71,7 @@ func NewCmdPipelineBreakpoint() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"bp", "breakpoint"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -88,15 +89,15 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 	o.LHClient, err = lighthouses.LazyCreateLHClient(o.LHClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the lighthouse client")
+		return fmt.Errorf("failed to create the lighthouse client: %w", err)
 	}
 
 	if o.Input == nil {
@@ -112,19 +113,19 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	ns, _, err := jxenv.GetDevNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find dev namespace")
+		return fmt.Errorf("failed to find dev namespace: %w", err)
 	}
 	jxClient := o.JXClient
 
 	ctx := o.GetContext()
 	bpList, err := o.LHClient.LighthouseV1alpha1().LighthouseBreakpoints(ns).List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrapf(err, "could not list LighthouseBreakpoint resources")
+		return fmt.Errorf("could not list LighthouseBreakpoint resources: %w", err)
 	}
 	for i := range bpList.Items {
 		b := &bpList.Items[i]
@@ -152,14 +153,14 @@ func (o *Options) Run() error {
 
 	name, err := o.Input.PickNameWithDefault(names, "Pick the pipeline: ", "", "Please select a pipeline to add/edit/remove the breakpoint")
 	if err != nil {
-		return errors.Wrapf(err, "failed to select pipeline")
+		return fmt.Errorf("failed to select pipeline: %w", err)
 	}
 	if name == "" {
-		return errors.Errorf("no pipeline selected")
+		return fmt.Errorf("no pipeline selected")
 	}
 	pa := m[name]
 	if pa == nil {
-		return errors.Wrapf(err, "no PipelineActivity for: %s select pipeline", name)
+		return fmt.Errorf("no PipelineActivity for: %s select pipeline", name)
 	}
 
 	log.Logger().Infof("selected pipeline: %s", info(name))
@@ -171,14 +172,14 @@ func (o *Options) Run() error {
 			// lets confirm the deletion of the breakpoint?
 			confirm, inputErr := o.Input.Confirm("would you like to remove Breakpoint "+bp.Name, false, "confirm if you would like to delete the LighthouseBreakpoint resource")
 			if inputErr != nil {
-				return errors.Wrapf(inputErr, "failed to confirm deletion")
+				return fmt.Errorf("failed to confirm deletion: %w", inputErr)
 			}
 			if !confirm {
 				return nil
 			}
 			err = o.LHClient.LighthouseV1alpha1().LighthouseBreakpoints(ns).Delete(ctx, bp.Name, metav1.DeleteOptions{})
 			if err != nil {
-				return errors.Wrapf(err, "failed to delete the LighthouseBreakpoint %s", bp.Name)
+				return fmt.Errorf("failed to delete the LighthouseBreakpoint %s: %w", bp.Name, err)
 			}
 			log.Logger().Infof("deleted the LighthouseBreakpoint %s", info(bp.Name))
 			return nil
@@ -204,7 +205,7 @@ func (o *Options) Run() error {
 	}
 	_, err = o.LHClient.LighthouseV1alpha1().LighthouseBreakpoints(ns).Create(ctx, bp, metav1.CreateOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the LighthouseBreakpoint %#v", bp)
+		return fmt.Errorf("failed to create the LighthouseBreakpoint %#v: %w", bp, err)
 	}
 	log.Logger().Infof("created the LighthouseBreakpoint %s", info(bp.Name))
 	return nil

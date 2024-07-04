@@ -2,12 +2,13 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -131,7 +132,7 @@ func NewRemoteTasksMigrator(overrideSHA string, workspaceVolumeQuantity resource
 	}
 }
 
-func (p *RemoteTasksMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
+func (p *RemoteTasksMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
@@ -141,7 +142,7 @@ func (p *RemoteTasksMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path 
 	log.Logger().Infof("Processing pipeline run %s", path)
 	if taskCount := len(prs.Spec.PipelineSpec.Tasks); taskCount != 1 {
 		// All jx pipelines should only have one task
-		return false, errors.Errorf("pipeline run %s has %d tasks. Expecting 1", path, taskCount)
+		return false, fmt.Errorf("pipeline run %s has %d tasks. Expecting 1", path, taskCount)
 	}
 
 	stepTemplate := prs.Spec.PipelineSpec.Tasks[0].TaskSpec.StepTemplate
@@ -154,7 +155,7 @@ func (p *RemoteTasksMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path 
 
 	prsParent, err := p.gitResolver.NewRefFromUsesImage(stepTemplate.Image, "")
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to create new ref from uses image %s", stepTemplate.Image)
+		return false, fmt.Errorf("failed to create new ref from uses image %s: %w", stepTemplate.Image, err)
 	}
 	if prsParent != nil {
 		// If the step template image is a uses image then we can assume that the pipeline run is a child pipeline run,
@@ -198,7 +199,7 @@ func (p *RemoteTasksMigrator) migrateToNewPipelineRun(prs *v1beta1.PipelineRun) 
 							AccessModes: []v1.PersistentVolumeAccessMode{
 								v1.ReadWriteOnce,
 							},
-							Resources: v1.ResourceRequirements{
+							Resources: v1.VolumeResourceRequirements{
 								Requests: v1.ResourceList{
 									v1.ResourceStorage: p.workspaceVolumeQuantity,
 								},
@@ -247,7 +248,7 @@ func (p *RemoteTasksMigrator) migrateToTasks(prs *v1beta1.PipelineRun, path stri
 	for idx := range steps {
 		newTask, err := p.NewTaskFromStepAndPipelineRun(&steps[idx], prs, false)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to create task from step[%d] \"%s\"", idx, steps[idx].Name)
+			return false, fmt.Errorf("failed to create task from step[%d] \"%s\": %w", idx, steps[idx].Name, err)
 		}
 
 		if err := yamls.SaveFile(newTask, filepath.Join(subDir, newTask.Name+".yaml")); err != nil {
@@ -373,7 +374,7 @@ func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *v1beta1.Step, 
 
 	p.populateTaskValuesFromPipelineRun(&newTask, prs, isEmbeddedTask)
 	if err := newTask.DeepCopy().Validate(context.Background()); err != nil {
-		return v1beta1.Task{}, errors.Wrap(err, "failed to validate new task")
+		return v1beta1.Task{}, fmt.Errorf("failed to validate new task: %w", err)
 	}
 	return newTask, nil
 }
@@ -385,11 +386,11 @@ func (p *RemoteTasksMigrator) ProcessTask(task *v1beta1.Task, path string) (bool
 	p.appendDefaultValues(task)
 	err := task.DeepCopy().Validate(context.Background())
 	if err != nil {
-		return false, errors.Wrap(err, "failed to validate task")
+		return false, fmt.Errorf("failed to validate task: %w", err)
 	}
 	return true, nil
 }
 
-func (p *RemoteTasksMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
+func (p *RemoteTasksMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }

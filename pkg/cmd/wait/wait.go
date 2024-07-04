@@ -2,6 +2,7 @@ package wait
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/lighthouse-client/pkg/config"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +65,7 @@ func NewCmdPipelineWait() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"build", "run"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -86,11 +87,11 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create jx client")
+		return fmt.Errorf("failed to create jx client: %w", err)
 	}
 
 	if o.Owner == "" {
@@ -106,7 +107,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	fullName := scm.Join(o.Owner, o.Repository)
@@ -114,15 +115,15 @@ func (o *Options) Run() error {
 	ctx := o.GetContext()
 	exists, err := o.waitForRepositoryToBeSetup(ctx, o.KubeClient, o.Namespace, o.Owner, o.Repository)
 	if err != nil {
-		return errors.Wrapf(err, "failed to wait for repository to be setup in lighthouse")
+		return fmt.Errorf("failed to wait for repository to be setup in lighthouse: %w", err)
 	}
 	if !exists {
-		return errors.Errorf("repository %s is not yet setup in lighthouse", fullName)
+		return fmt.Errorf("repository %s is not yet setup in lighthouse", fullName)
 	}
 
 	err = o.waitForWebHookToBeSetup(ctx, o.JXClient, o.Namespace, o.Owner, o.Repository)
 	if err != nil {
-		return errors.Wrapf(err, "failed to wait for repository to have its webhook enabled")
+		return fmt.Errorf("failed to wait for repository to have its webhook enabled: %w", err)
 	}
 
 	log.Logger().Infof("the repository %s is now setup in lighthouse and has its webhook enabled", info(fullName))
@@ -138,7 +139,7 @@ func (o *Options) waitForRepositoryToBeSetup(ctx context.Context, kubeClient kub
 	for {
 		cfg, err := triggers.LoadLighthouseConfig(ctx, kubeClient, ns, name, true)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to load lighthouse config")
+			return false, fmt.Errorf("failed to load lighthouse config: %w", err)
 		}
 		flag := o.containsRepositoryTrigger(cfg, owner, repo)
 		if flag {
@@ -149,7 +150,7 @@ func (o *Options) waitForRepositoryToBeSetup(ctx context.Context, kubeClient kub
 			log.Logger().Info("")
 			log.Logger().Warn("It looks like the boot job failed to setup this project.")
 			log.Logger().Infof("You can view the log via: %s", info("jx admin log"))
-			return false, errors.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
+			return false, fmt.Errorf("failed to find trigger in the lighthouse configuration in ConfigMap %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
 		}
 
 		if !logWaiting {
@@ -177,7 +178,7 @@ func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Inte
 		sr, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				return errors.Wrapf(err, "failed to find SourceRepository %s in namespace %s", name, ns)
+				return fmt.Errorf("failed to find SourceRepository %s in namespace %s: %w", name, ns, err)
 			}
 		} else {
 			if !found {
@@ -215,7 +216,7 @@ func (o *Options) waitForWebHookToBeSetup(ctx context.Context, jxClient jxc.Inte
 			log.Logger().Infof("You can view the log via: %s", info("jx admin log"))
 			log.Logger().Info("")
 
-			return errors.Errorf("failed to find sourceRepository %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
+			return fmt.Errorf("failed to find sourceRepository %s in namespace %s for repository: %s within %s", name, ns, fullName, o.WaitDuration.String())
 		}
 
 		if !logWaiting {

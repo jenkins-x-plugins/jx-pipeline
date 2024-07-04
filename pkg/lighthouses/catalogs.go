@@ -1,6 +1,7 @@
 package lighthouses
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
@@ -18,7 +19,7 @@ func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile, defaultSHA s
 	repo := resolver.RepoName
 	sha, err := getCatalogSHA(owner, repo, defaultSHA)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find SHA for catalog repository %s/%s", owner, repo)
+		return nil, fmt.Errorf("failed to find SHA for catalog repository %s/%s: %w", owner, repo, err)
 	}
 
 	kptPath := filepath.Join(resolver.Dir, sourceFile)
@@ -41,24 +42,24 @@ func FindCatalogTaskSpecFromURI(resolver *inrepo.UsesResolver, gitURI string) (*
 			log.Logger().Infof("could not find file in catalog %s", gitURI)
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "failed to load %s", gitURI)
+		return nil, fmt.Errorf("failed to load %s: %w", gitURI, err)
 	}
 
 	pr, err := inrepo.LoadTektonResourceAsPipelineRun(resolver, data)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal catalog YAML file %s", gitURI)
+		return nil, fmt.Errorf("failed to unmarshal catalog YAML file %s: %w", gitURI, err)
 	}
 
 	catalogTaskSpec, err := GetMandatoryTaskSpec(pr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find catalog task at %s", gitURI)
+		return nil, fmt.Errorf("failed to find catalog task at %s: %w", gitURI, err)
 	}
 	return catalogTaskSpec, nil
 }
 
 // getCatalogSHA gets the default SHA
-func getCatalogSHA(owner, repo, defaultSHA string) (string, error) {
-	// we could some day find the sha from the version stream
+func getCatalogSHA(owner, repo, defaultSHA string) (string, error) { //nolint:revive
+	// TODO: we could some day find the sha from the version stream
 	// though using head is a good default really
 	return defaultSHA, nil
 }
@@ -67,7 +68,7 @@ func getCatalogSHA(owner, repo, defaultSHA string) (string, error) {
 func GetMandatoryTaskSpec(pr *v1beta1.PipelineRun) (*v1beta1.TaskSpec, error) {
 	ps := pr.Spec.PipelineSpec
 	if ps == nil {
-		return nil, errors.Errorf("no spec.pipelineSpec")
+		return nil, fmt.Errorf("no spec.pipelineSpec")
 	}
 	for i := range ps.Tasks {
 		pt := &ps.Tasks[i]
@@ -75,5 +76,5 @@ func GetMandatoryTaskSpec(pr *v1beta1.PipelineRun) (*v1beta1.TaskSpec, error) {
 			return &pt.TaskSpec.TaskSpec, nil
 		}
 	}
-	return nil, errors.Errorf("no spec.tasks.taskSpec found")
+	return nil, fmt.Errorf("no spec.tasks.taskSpec found")
 }

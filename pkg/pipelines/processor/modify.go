@@ -28,7 +28,7 @@ func (p *modifier) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
 	return p.processTaskSpec(&task.Spec, path, task.Name)
 }
 
-func (p *modifier) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) {
+func (p *modifier) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
@@ -36,7 +36,7 @@ func (p *modifier) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (b
 	return ProcessPipelineSpec(ps, path, p.processTaskSpec)
 }
 
-func (p *modifier) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
+func (p *modifier) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) { //nolint:revive
 	if ts.StepTemplate == nil {
 		ts.StepTemplate = &v1beta1.StepTemplate{}
 	}

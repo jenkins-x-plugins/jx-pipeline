@@ -13,7 +13,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -50,7 +50,7 @@ func FindSourceRepositoryWithoutProvider(ctx context.Context, jxClient versioned
 
 // FindSourceRepository returns a SourceRepository for the given namespace, owner, repo name, and (optional) provider name.
 // If no SourceRepository is found, return nil.
-func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns, owner, name, providerName string) (*v1.SourceRepository, error) {
+func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns, owner, name, providerName string) (*v1.SourceRepository, error) { //nolint:revive
 	// Look up by resource name is retained for compatibility with SourceRepositorys created before they were always created with labels
 	resourceName := naming.ToValidName(owner + "-" + name)
 	repo, err := jxClient.JenkinsV1().SourceRepositories(ns).Get(ctx, resourceName, metav1.GetOptions{})
@@ -60,7 +60,7 @@ func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns,
 
 			repos, reposErr := jxClient.JenkinsV1().SourceRepositories(ns).List(ctx, metav1.ListOptions{})
 			if reposErr != nil {
-				return nil, errors.Wrapf(reposErr, "listing SourceRepository resources in namespace %s", ns)
+				return nil, fmt.Errorf("listing SourceRepository resources in namespace %s: %w", ns, reposErr)
 			}
 
 			for i := range repos.Items {
@@ -71,7 +71,7 @@ func FindSourceRepository(ctx context.Context, jxClient versioned.Interface, ns,
 			}
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "getting SourceRepository %s in namespace %s", resourceName, ns)
+		return nil, fmt.Errorf("getting SourceRepository %s in namespace %s: %w", resourceName, ns, err)
 	}
 	return repo, nil
 }
@@ -87,7 +87,7 @@ func GetOrCreateSourceRepositoryCallback(ctx context.Context, jxClient versioned
 
 	foundSr, err := FindSourceRepository(ctx, jxClient, ns, organisation, name, providerName)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find existing SourceRepository")
+		return nil, fmt.Errorf("failed to find existing SourceRepository: %w", err)
 	}
 
 	// If we did not find an existing SourceRepository for this org/repo, create one
@@ -126,11 +126,11 @@ func GetOrCreateSourceRepositoryCallback(ctx context.Context, jxClient versioned
 	// Otherwise, update the SourceRepository and return it.
 	answer, err := repositories.Update(ctx, srCopy, metav1.UpdateOptions{})
 	if err != nil {
-		return answer, errors.Wrapf(err, "failed to update SourceRepository %s", resourceName)
+		return answer, fmt.Errorf("failed to update SourceRepository %s: %w", resourceName, err)
 	}
 	answer, err = repositories.Get(ctx, foundSr.Name, metav1.GetOptions{})
 	if err != nil {
-		return answer, errors.Wrapf(err, "failed to get SourceRepository %s", resourceName)
+		return answer, fmt.Errorf("failed to get SourceRepository %s: %w", resourceName, err)
 	}
 
 	return answer, nil
@@ -196,7 +196,7 @@ func createSourceRepositoryCallback(ctx context.Context, client versioned.Interf
 	sr.Sanitize()
 	answer, err := client.JenkinsV1().SourceRepositories(namespace).Create(ctx, sr, metav1.CreateOptions{})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create new SourceRepository for organisation %s and repository %s", organisation, name)
+		return nil, fmt.Errorf("failed to create new SourceRepository for organisation %s and repository %s: %w", organisation, name, err)
 	}
 
 	return answer, nil

@@ -1,6 +1,7 @@
 package set
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,7 +9,6 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines/processor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
-	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 
@@ -47,7 +47,7 @@ func NewCmdPipelineSet() (*cobra.Command, *Options) {
 		Short:   "Sets a property on the given Pipeline / PipelineRun / Task files",
 		Long:    cmdLong,
 		Example: cmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -63,7 +63,7 @@ func NewCmdPipelineSet() (*cobra.Command, *Options) {
 func (o *Options) Validate() error {
 	err := o.BaseOptions.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate base options")
+		return fmt.Errorf("failed to validate base options: %w", err)
 	}
 
 	if o.templateEnvMap == nil {
@@ -85,10 +85,10 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
-	err = filepath.Walk(o.Dir, func(path string, f os.FileInfo, err error) error {
+	err = filepath.Walk(o.Dir, func(path string, f os.FileInfo, _ error) error {
 		if f == nil || f.IsDir() || !strings.HasSuffix(path, ".yaml") {
 			return nil
 		}
@@ -98,7 +98,7 @@ func (o *Options) Run() error {
 		return o.modifyPipeline(path)
 	})
 	if err != nil {
-		return errors.Wrapf(err, "failed to process files in dir %s", o.Dir)
+		return fmt.Errorf("failed to process files in dir %s: %w", o.Dir, err)
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func (o *Options) modifyPipeline(path string) error {
 	p := processor.NewModifier(o.templateEnvMap)
 	_, err := processor.ProcessFile(p, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to process file %s", path)
+		return fmt.Errorf("failed to process file %s: %w", path, err)
 	}
 	return nil
 }

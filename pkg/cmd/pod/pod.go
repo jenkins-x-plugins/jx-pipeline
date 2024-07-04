@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/table"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
-	"github.com/pkg/errors"
+
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 
@@ -69,7 +70,7 @@ func NewCmdGetBuildPods() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"pod"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -91,11 +92,11 @@ func (o *Options) Validate() error {
 
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 
 	if o.TektonClient != nil {
@@ -105,11 +106,11 @@ func (o *Options) Validate() error {
 	f := kubeclient.NewFactory()
 	cfg, err := f.CreateKubeConfig()
 	if err != nil {
-		return errors.Wrap(err, "failed to get kubernetes config")
+		return fmt.Errorf("failed to get kubernetes config: %w", err)
 	}
 	o.TektonClient, err = tektonclient.NewForConfig(cfg)
 	if err != nil {
-		return errors.Wrap(err, "error building tekton client")
+		return fmt.Errorf("error building tekton client: %w", err)
 	}
 
 	if o.TektonLogger == nil {
@@ -127,7 +128,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	ctx := o.GetContext()

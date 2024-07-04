@@ -27,7 +27,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/stringhelpers"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
@@ -86,7 +86,7 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"kill"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			o.Args = args
 			err := o.Run()
 			helper.CheckErr(err)
@@ -108,11 +108,11 @@ func (o *Options) Validate() error {
 	var err error
 	o.KubeClient, o.Namespace, err = kube.LazyCreateKubeClientAndNamespace(o.KubeClient, o.Namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create kube client")
+		return fmt.Errorf("failed to create kube client: %w", err)
 	}
 	o.JXClient, err = jxclient.LazyCreateJXClient(o.JXClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create the jx client")
+		return fmt.Errorf("failed to create the jx client: %w", err)
 	}
 
 	if o.TektonClient != nil {
@@ -122,11 +122,11 @@ func (o *Options) Validate() error {
 	f := kubeclient.NewFactory()
 	cfg, err := f.CreateKubeConfig()
 	if err != nil {
-		return errors.Wrap(err, "failed to get kubernetes config")
+		return fmt.Errorf("failed to get kubernetes config: %w", err)
 	}
 	o.TektonClient, err = tektonclient.NewForConfig(cfg)
 	if err != nil {
-		return errors.Wrap(err, "error building tekton client")
+		return fmt.Errorf("error building tekton client: %w", err)
 	}
 
 	if o.Input == nil {
@@ -140,7 +140,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	return o.cancelPipelineRun()
@@ -154,12 +154,12 @@ func (o *Options) cancelPipelineRun() error {
 	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
 	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrapf(err, "failed to list PipelineRuns in namespace %s", ns)
+		return fmt.Errorf("failed to list PipelineRuns in namespace %s: %w", ns, err)
 	}
 
 	paList, err := jxClient.JenkinsV1().PipelineActivities(ns).List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrapf(err, "failed to list PipelineActivity resources in namespace %s", ns)
+		return fmt.Errorf("failed to list PipelineActivity resources in namespace %s: %w", ns, err)
 	}
 	if paList == nil {
 		paList = &v1.PipelineActivityList{}
@@ -167,7 +167,7 @@ func (o *Options) cancelPipelineRun() error {
 	activityResolver := pipelines.NewActivityResolver(paList.Items)
 
 	if len(prList.Items) == 0 {
-		return errors.Wrapf(err, "no PipelineRuns were found in namespace %s", ns)
+		return fmt.Errorf("no PipelineRuns were found in namespace %s", ns)
 	}
 	var allNames []string
 	m := map[string]*pipelineapi.PipelineRun{}
@@ -271,12 +271,12 @@ func (o *Options) cancelPipelineRun() error {
 
 	pr := m[name]
 	if pr == nil {
-		return errors.Errorf("could not find PipelineRun %s", name)
+		return fmt.Errorf("could not find PipelineRun %s", name)
 	}
 	prName := pr.Name
 	err = tektonlog.CancelPipelineRun(ctx, tektonClient, ns, pr)
 	if err != nil {
-		return errors.Wrapf(err, "failed to cancel pipeline %s in namespace %s", prName, ns)
+		return fmt.Errorf("failed to cancel pipeline %s in namespace %s: %w", prName, ns, err)
 	}
 	log.Logger().Infof("cancelled PipelineRun %s", termcolor.ColorInfo(prName))
 

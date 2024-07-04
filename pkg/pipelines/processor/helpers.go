@@ -10,7 +10,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/pkg/errors"
+
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"sigs.k8s.io/yaml"
 )
@@ -22,10 +22,10 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	var err error
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to load file %s", path)
+		return false, fmt.Errorf("failed to load file %s: %w", path, err)
 	}
 	if len(data) == 0 {
-		return false, errors.Errorf("empty file: %s", path)
+		return false, fmt.Errorf("empty file: %s", path)
 	}
 
 	message := fmt.Sprintf("for file %s", path)
@@ -52,7 +52,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		resource = pipeline
 		err = yaml.Unmarshal(data, pipeline)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to unmarshal Pipeline YAML %s", message)
+			return false, fmt.Errorf("failed to unmarshal Pipeline YAML %s: %w", message, err)
 		}
 		modified, err = processor.ProcessPipeline(pipeline, path)
 
@@ -61,7 +61,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		resource = prs
 		err = yaml.Unmarshal(data, prs)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to unmarshal PipelineRun YAML %s", message)
+			return false, fmt.Errorf("failed to unmarshal PipelineRun YAML %s: %w", message, err)
 		}
 		modified, err = processor.ProcessPipelineRun(prs, path)
 
@@ -70,7 +70,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		resource = task
 		err = yaml.Unmarshal(data, task)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to unmarshal Task YAML %s", message)
+			return false, fmt.Errorf("failed to unmarshal Task YAML %s: %w", message, err)
 		}
 		modified, err = processor.ProcessTask(task, path)
 
@@ -79,7 +79,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		resource = tr
 		err = yaml.Unmarshal(data, tr)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to unmarshal TaskRun YAML %s", message)
+			return false, fmt.Errorf("failed to unmarshal TaskRun YAML %s: %w", message, err)
 		}
 		modified, err = processor.ProcessTaskRun(tr, path)
 
@@ -89,7 +89,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 	}
 
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to process %s", message)
+		return false, fmt.Errorf("failed to process %s: %w", message, err)
 	}
 	if !modified {
 		return false, nil
@@ -97,7 +97,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 
 	err = yamls.SaveFile(resource, path)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to save file %s", path)
+		return false, fmt.Errorf("failed to save file %s: %w", path, err)
 	}
 	log.Logger().Infof("saved file %s", info(path))
 	return modified, nil
@@ -119,7 +119,7 @@ func ProcessPipelineSpec(ps *tektonv1beta1.PipelineSpec, path string, fn func(ts
 
 		flag, err := fn(ts, path, name)
 		if err != nil {
-			return false, errors.Wrapf(err, "failed to process task spec")
+			return false, fmt.Errorf("failed to process task spec: %w", err)
 		}
 		if flag {
 			modified = true

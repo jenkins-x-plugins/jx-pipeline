@@ -1,6 +1,7 @@
 package effective
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,7 +29,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 )
 
@@ -94,7 +95,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 		Long:    cmdLong,
 		Example: cmdExample,
 		Aliases: []string{"dump"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			err := o.Run()
 			helper.CheckErr(err)
 		},
@@ -119,7 +120,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 func (o *Options) Validate() error {
 	err := o.BaseOptions.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate base options")
+		return fmt.Errorf("failed to validate base options: %w", err)
 	}
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
@@ -127,7 +128,7 @@ func (o *Options) Validate() error {
 	if o.Resolver == nil {
 		o.Resolver, err = o.ResolverOptions.CreateResolver()
 		if err != nil {
-			return errors.Wrapf(err, "failed to create a UsesResolver")
+			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}
 	}
 	if o.CommandRunner == nil {
@@ -143,7 +144,7 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	err := o.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to validate options")
+		return fmt.Errorf("failed to validate options: %w", err)
 	}
 
 	if o.File != "" {
@@ -177,7 +178,7 @@ func (o *Options) Run() error {
 func (o *Options) ProcessDir(dir string) error {
 	fs, err := os.ReadDir(dir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read dir %s", dir)
+		return fmt.Errorf("failed to read dir %s: %w", dir, err)
 	}
 	for _, f := range fs {
 		name := f.Name()
@@ -189,7 +190,7 @@ func (o *Options) ProcessDir(dir string) error {
 		triggersFile := filepath.Join(triggerDir, "triggers.yaml")
 		exists, err := files.FileExists(triggersFile)
 		if err != nil {
-			return errors.Wrapf(err, "failed to check if file exists %s", triggersFile)
+			return fmt.Errorf("failed to check if file exists %s: %w", triggersFile, err)
 		}
 		if !exists {
 			continue
@@ -197,7 +198,7 @@ func (o *Options) ProcessDir(dir string) error {
 		triggers := &triggerconfig.Config{}
 		err = yamls.LoadFile(triggersFile, triggers)
 		if err != nil {
-			return errors.Wrapf(err, "failed to load %s", triggersFile)
+			return fmt.Errorf("failed to load %s: %w", triggersFile, err)
 		}
 		trigger := &Trigger{
 			Path:   triggersFile,
@@ -208,7 +209,7 @@ func (o *Options) ProcessDir(dir string) error {
 
 		err = o.loadTriggerPipelines(trigger, triggerDir)
 		if err != nil {
-			return errors.Wrapf(err, "failed to load pipelines for trigger: %s", triggersFile)
+			return fmt.Errorf("failed to load pipelines for trigger: %s: %w", triggersFile, err)
 		}
 	}
 	return nil
@@ -247,7 +248,7 @@ func (o *Options) processFile() error {
 	path := o.File
 	pr, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load %s", path)
+		return fmt.Errorf("failed to load %s: %w", path, err)
 	}
 
 	name := filepath.Base(path)
@@ -268,10 +269,10 @@ func (o *Options) processTriggers() error {
 	if name == "" {
 		name, err = o.Input.PickNameWithDefault(names, "pick the trigger config: ", "", "select the set of triggers to process")
 		if err != nil {
-			return errors.Wrapf(err, "failed to pick trigger file")
+			return fmt.Errorf("failed to pick trigger file: %w", err)
 		}
 		if name == "" {
-			return errors.Errorf("no trigger file selected")
+			return fmt.Errorf("no trigger file selected")
 		}
 	}
 	trigger := m[name]
@@ -283,20 +284,20 @@ func (o *Options) processTriggers() error {
 	if pipelineName == "" {
 		pipelineName, err = o.Input.PickNameWithDefault(trigger.Names, "pick the pipeline: ", "", "select the pipeline to view")
 		if err != nil {
-			return errors.Wrapf(err, "failed to pick trigger file")
+			return fmt.Errorf("failed to pick trigger file: %w", err)
 		}
 		if pipelineName == "" {
-			return errors.Errorf("no trigger file selected")
+			return fmt.Errorf("no trigger file selected")
 		}
 	}
 
 	path := trigger.Paths[pipelineName]
 	if path == "" {
-		return errors.Wrapf(err, "missing trigger path for pipeline name %s", pipelineName)
+		return fmt.Errorf("missing trigger path for pipeline name %s", pipelineName)
 	}
 	pipeline, err := lighthouses.LoadEffectivePipelineRun(o.Resolver, path)
 	if err != nil {
-		return errors.Wrapf(err, "failed to load %s", path)
+		return fmt.Errorf("failed to load %s: %w", path, err)
 	}
 
 	return o.displayPipeline(trigger.Path, pipelineName, pipeline)
@@ -306,7 +307,7 @@ func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.Pip
 	if o.AddDefaults {
 		err := o.addPipelineParameterDefaults(path, pipeline)
 		if err != nil {
-			return errors.Wrapf(err, "failed to ")
+			return fmt.Errorf("failed to : %w", err)
 		}
 	}
 
@@ -323,7 +324,7 @@ func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.Pip
 		tmpFileName := fileName + "-" + strings.ReplaceAll(name, string(os.PathSeparator), "-") + "-*.yaml"
 		tmpFile, err := os.CreateTemp("", tmpFileName)
 		if err != nil {
-			return errors.Wrapf(err, "failed to create temp file")
+			return fmt.Errorf("failed to create temp file: %w", err)
 		}
 		o.OutFile = tmpFile.Name()
 	}
@@ -331,7 +332,7 @@ func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.Pip
 	if o.OutFile != "" {
 		err := yamls.SaveFile(pipeline, o.OutFile)
 		if err != nil {
-			return errors.Wrapf(err, "failed to save file %s", o.OutFile)
+			return fmt.Errorf("failed to save file %s: %w", o.OutFile, err)
 		}
 		log.Logger().Infof("saved file %s", info(o.OutFile))
 
@@ -343,7 +344,7 @@ func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.Pip
 
 	data, err := yaml.Marshal(pipeline)
 	if err != nil {
-		return errors.Wrapf(err, "failed to marshal pipeline for %s", name)
+		return fmt.Errorf("failed to marshal pipeline for %s: %w", name, err)
 	}
 
 	log.Logger().Infof("pipeline %s is:", info(path))
@@ -358,7 +359,7 @@ func (o *Options) openInEditor(path, editor string) error {
 		var err error
 		line, err = findFirstStepLine(path)
 		if err != nil {
-			return errors.Wrapf(err, "failed to ")
+			return fmt.Errorf("failed to : %w", err)
 		}
 		if line == "" {
 			// lets guess an approximate place after all the parameters
@@ -383,7 +384,7 @@ func (o *Options) openInEditor(path, editor string) error {
 	}
 	_, err := o.CommandRunner(c)
 	if err != nil {
-		return errors.Wrapf(err, "failed to open editor via command: %s", c.CLI())
+		return fmt.Errorf("failed to open editor via command: %s: %w", c.CLI(), err)
 	}
 	return nil
 }
@@ -413,7 +414,7 @@ func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1be
 	dscm.IgnoreMissingToken = true
 	err := dscm.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to discover repository details")
+		return fmt.Errorf("failed to discover repository details: %w", err)
 	}
 
 	if dscm.Branch == "" {
@@ -442,10 +443,10 @@ func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1be
 	if dscm.GitURL == nil {
 		dscm.GitURL, err = giturl.ParseGitURL(dscm.SourceURL)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse git url %s", dscm.SourceURL)
+			return fmt.Errorf("failed to parse git url %s: %w", dscm.SourceURL, err)
 		}
 		if dscm.GitURL == nil {
-			return errors.Errorf("failed to parse the git URL")
+			return fmt.Errorf("failed to parse the git URL")
 		}
 	}
 
@@ -524,7 +525,7 @@ func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1be
 func findFirstStepLine(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to load pipeline file %s", path)
+		return "", fmt.Errorf("failed to load pipeline file %s: %w", path, err)
 	}
 	lines := strings.Split(string(data), "\n")
 	for i, line := range lines {

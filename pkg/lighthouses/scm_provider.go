@@ -2,9 +2,8 @@ package lighthouses
 
 import (
 	"context"
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/jenkins-x/go-scm/scm"
 )
@@ -52,7 +51,7 @@ func (c *ScmProvider) GetMainAndCurrentBranchRefs(owner, repo, eventRef string) 
 	fullName := scm.Join(owner, repo)
 	repository, _, err := c.ScmClient.Repositories.Find(c.Ctx, fullName)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find repository %s", fullName)
+		return nil, fmt.Errorf("failed to find repository %s: %w", fullName, err)
 	}
 	mainBranch := repository.Branch
 	if mainBranch == "" {
