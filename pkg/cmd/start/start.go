@@ -402,6 +402,11 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			return fmt.Errorf("failed to parse git clone URL %s: %w", sr.Spec.HTTPCloneURL, err)
 		}
 		gitServerURL = gitInfo.HostURL()
+	} else {
+		gitInfo, err = giturl.ParseGitURL(gitServerURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse git server URL %s: %w", gitServerURL, err)
+		}
 	}
 
 	gitKind := sr.Spec.ProviderKind
@@ -441,7 +446,21 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 			},
 		}
 
-		configureOpts := func(_ *gitv2.ClientFactoryOpts) {}
+		configureOpts := func(opts *gitv2.ClientFactoryOpts) {
+			opts.Token = func() []byte {
+				return []byte(f.GitToken)
+			}
+			opts.GitUser = func() (name, email string, err error) {
+				name = f.GitUsername
+				return
+			}
+			opts.Username = func() (login string, err error) {
+				login = f.GitUsername
+				return
+			}
+			opts.Host = gitInfo.Host
+			opts.Scheme = gitInfo.Scheme
+		}
 		gitFactory, err := gitv2.NewClientFactory(configureOpts)
 		if err != nil {
 			return fmt.Errorf("failed to create git factory: %w", err)
