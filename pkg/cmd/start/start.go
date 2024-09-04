@@ -403,10 +403,8 @@ func (o *Options) createLighthouseJob(jobName string, cfg *config.Config) error 
 		}
 		gitServerURL = gitInfo.HostURL()
 	} else {
-		gitInfo, err = giturl.ParseGitURL(gitServerURL)
-		if err != nil {
-			return fmt.Errorf("failed to parse git server URL %s: %w", gitServerURL, err)
-		}
+		// if failed to parse we ignore and try use default values with github...
+		gitInfo, _ = giturl.ParseGitURL(gitServerURL)
 	}
 
 	gitKind := sr.Spec.ProviderKind
