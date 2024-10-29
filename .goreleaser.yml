@@ -33,44 +33,11 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
-  - id: jx-pipeline-effective
-    # Path to main.go file or main package.
-    # Default is `.`.
-    main: ./cmd/effective/main.go
-    # Binary name.
-    # Can be a path (e.g. `bin/app`) to wrap the binary in a directory.
-    # Default is the name of the project directory.
-    binary: jx-pipeline-effective
-    # Custom ldflags templates.
-    # Default is `-s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser`.
-    ldflags:
-      - -X "github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/version.Version={{.Env.VERSION}}" -X "{{.Env.ROOTPACKAGE}}/pkg/cmd/version.Version={{.Env.VERSION}}" -X "{{.Env.ROOTPACKAGE}}/pkg/cmd/version.Revision={{.Env.REV}}" -X "{{.Env.ROOTPACKAGE}}/pkg/cmd/version.Branch={{.Env.BRANCH}}" -X "{{.Env.ROOTPACKAGE}}/pkg/cmd/version.BuildDate={{.Env.BUILDDATE}}" -X "{{.Env.ROOTPACKAGE}}/pkg/cmd/version.GoVersion={{.Env.GOVERSION}}"
-    # GOOS list to build for.
-    # For more info refer to: https://golang.org/doc/install/source#environment
-    # Defaults are darwin and linux.
-    goos:
-      - windows
-      - darwin
-      - linux
-    # GOARCH to build for.
-    # For more info refer to: https://golang.org/doc/install/source#environment
-    # Defaults are 386 and amd64.
-    goarch:
-      - amd64
-      - arm
-      - arm64
 archives:
   - id: jx-pipeline
     builds:
       - jx-pipeline
     name_template: "jx-pipeline-{{ .Os }}-{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
-  - id: jx-pipeline-effective
-    builds:
-      - jx-pipeline-effective
-    name_template: "jx-pipeline-effective-{{ .Os }}-{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
@@ -83,8 +50,7 @@ checksum:
   # Default is sha256.
   algorithm: sha256
 changelog:
-  # set it to true if you wish to skip the changelog generation
-  skip: true
+  disable: true
 release:
   # If set to true, will not auto-publish the release.
   # Default is false.
