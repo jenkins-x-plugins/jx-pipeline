@@ -369,7 +369,7 @@ func (t *TektonLogger) getContainerLogsFromPod(ctx context.Context, pod *corev1.
 		pod, err = t.waitForContainerToStart(ctx, pa.Namespace, pod, i, stageName, out)
 		out <- LogLine{
 			Line: fmt.Sprintf("\nShowing logs for build %v stage %s and container %s",
-				infoColor.Sprintf(buildName), infoColor.Sprintf(stageName), infoColor.Sprintf(ic.Name)),
+				infoColor.Sprint(buildName), infoColor.Sprint(stageName), infoColor.Sprint(ic.Name)),
 		}
 		if err != nil {
 			return fmt.Errorf("there was a problem writing a single line into the logs writer: %w", err)
@@ -447,7 +447,7 @@ func (t *TektonLogger) waitForContainerToStart(ctx context.Context, ns string, p
 	c := color.New(color.FgGreen)
 	c.EnableColor()
 	out <- LogLine{
-		Line: fmt.Sprintf("\nwaiting for stage %s : container %s to start...\n", c.Sprintf(stageName), c.Sprintf(containerName)),
+		Line: fmt.Sprintf("\nwaiting for stage %s : container %s to start...\n", c.Sprint(stageName), c.Sprint(containerName)),
 	}
 	for {
 		time.Sleep(time.Second)
