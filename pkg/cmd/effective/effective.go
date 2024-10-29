@@ -348,7 +348,7 @@ func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.Pip
 	}
 
 	log.Logger().Infof("pipeline %s is:", info(path))
-	log.Logger().Infof(string(data))
+	log.Logger().Info(string(data))
 	return nil
 }
 

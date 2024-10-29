@@ -474,7 +474,7 @@ func (o *Options) renderEnv(envVars map[string]string) error {
 		}
 		o.logEnvVar(buf, k, v)
 	}
-	log.Logger().Infof(termcolor.ColorStatus(buf.String()))
+	log.Logger().Info(termcolor.ColorStatus(buf.String()))
 	return nil
 }
 
