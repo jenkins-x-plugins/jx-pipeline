@@ -199,7 +199,9 @@ func (o *Options) Run() error {
 		Spec: v1alpha1.LighthouseBreakpointSpec{
 			Filter: *f,
 			Debug: v1beta1.TaskRunDebug{
-				Breakpoint: o.BreakpointNames,
+				Breakpoints: &v1beta1.TaskBreakpoints{
+					BeforeSteps: o.BreakpointNames,
+				},
 			},
 		},
 	}
@@ -220,7 +222,7 @@ func (o *Options) ToLabel(a *v1.PipelineActivity) string {
 
 	debug := f.ResolveDebug(o.Breakpoints)
 	if debug != nil {
-		label += " => breakpoint: " + strings.Join(debug.Breakpoint, ", ")
+		label += " => breakpoint: " + strings.Join(debug.Breakpoints.BeforeSteps, ", ")
 	}
 	return label
 }
