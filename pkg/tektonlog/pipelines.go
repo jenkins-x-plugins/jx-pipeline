@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,7 +18,7 @@ func (s PipelineType) String() string {
 }
 
 // PipelineRunIsNotPending returns true if the PipelineRun has completed or has running steps.
-func PipelineRunIsNotPending(pr *pipelineapi.PipelineRun) bool {
+func PipelineRunIsNotPending(pr *pipelinev1.PipelineRun) bool {
 	if pr.Status.CompletionTime != nil {
 		return true
 	}
@@ -37,20 +37,20 @@ func PipelineRunIsNotPending(pr *pipelineapi.PipelineRun) bool {
 }
 
 // PipelineRunIsComplete returns true if the PipelineRun has completed or has running steps.
-func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
+func PipelineRunIsComplete(pr *pipelinev1.PipelineRun) bool {
 	return pr.Status.CompletionTime != nil
 }
 
 // CancelPipelineRun cancels a Pipeline
-func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
+func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface, ns string, pr *pipelinev1.PipelineRun) error {
 	prName := pr.Name
 	var err error
-	pr, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
+	pr, err = tektonClient.TektonV1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get PipelineRun %s in namespace %s: %w", prName, ns, err)
 	}
-	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
-	_, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
+	pr.Spec.Status = pipelinev1.PipelineRunSpecStatusCancelled
+	_, err = tektonClient.TektonV1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update PipelineRun %s in namespace %s to mark it as cancelled: %w", prName, ns, err)
 	}

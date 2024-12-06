@@ -17,7 +17,8 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -131,35 +132,35 @@ func TestPipelineStart(t *testing.T) {
 						Base: job.Base{
 							Name:  "release",
 							Agent: job.TektonPipelineAgent,
-							PipelineRunSpec: &v1beta1.PipelineRunSpec{
-								PipelineSpec: &v1beta1.PipelineSpec{
-									Tasks: v1beta1.PipelineTaskList{v1beta1.PipelineTask{
+							PipelineRunSpec: &pipelinev1.PipelineRunSpec{
+								PipelineSpec: &pipelinev1.PipelineSpec{
+									Tasks: pipelinev1.PipelineTaskList{pipelinev1.PipelineTask{
 										Name:    "test-task",
 										TaskRef: nil,
-										TaskSpec: &v1beta1.EmbeddedTask{
+										TaskSpec: &pipelinev1.EmbeddedTask{
 											TypeMeta: runtime.TypeMeta{},
 											Spec:     runtime.RawExtension{},
-											Metadata: v1beta1.PipelineTaskMetadata{},
-											TaskSpec: v1beta1.TaskSpec{StepTemplate: &v1beta1.StepTemplate{}},
+											Metadata: pipelinev1.PipelineTaskMetadata{},
+											TaskSpec: pipelinev1.TaskSpec{StepTemplate: &pipelinev1.StepTemplate{}},
 										},
 									}},
 								},
-								PipelineRef: &v1beta1.PipelineRef{
+								PipelineRef: &pipelinev1.PipelineRef{
 									Name:       "my-pipeline",
-									APIVersion: "v1beta1",
+									APIVersion: "v1",
 								},
-								Params: []v1beta1.Param{
+								Params: []pipelinev1.Param{
 									{
 										Name: "myparam",
-										Value: v1beta1.ArrayOrString{
-											Type:      v1beta1.ParamTypeString,
+										Value: pipelinev1.ArrayOrString{
+											Type:      pipelinev1.ParamTypeString,
 											StringVal: "none",
 										},
 									},
 									{
 										Name: "anotherParam",
-										Value: v1beta1.ArrayOrString{
-											Type:      v1beta1.ParamTypeString,
+										Value: pipelinev1.ArrayOrString{
+											Type:      pipelinev1.ParamTypeString,
 											StringVal: "empty",
 										},
 									},
@@ -185,10 +186,10 @@ func TestPipelineStart(t *testing.T) {
 						Base: job.Base{
 							Name:  "lint",
 							Agent: job.TektonPipelineAgent,
-							PipelineRunSpec: &v1beta1.PipelineRunSpec{
-								PipelineRef: &v1beta1.PipelineRef{
+							PipelineRunSpec: &pipelinev1.PipelineRunSpec{
+								PipelineRef: &pipelinev1.PipelineRef{
 									Name:       "my-pipeline",
-									APIVersion: "v1beta1",
+									APIVersion: "v1",
 								},
 							},
 							PipelineRunParams: []job.PipelineRunParam{
@@ -206,10 +207,10 @@ func TestPipelineStart(t *testing.T) {
 						Base: job.Base{
 							Name:  "tests",
 							Agent: job.TektonPipelineAgent,
-							PipelineRunSpec: &v1beta1.PipelineRunSpec{
-								PipelineRef: &v1beta1.PipelineRef{
+							PipelineRunSpec: &pipelinev1.PipelineRunSpec{
+								PipelineRef: &pipelinev1.PipelineRef{
 									Name:       "my-pipeline",
-									APIVersion: "v1beta1",
+									APIVersion: "v1",
 								},
 							},
 							PipelineRunParams: []job.PipelineRunParam{

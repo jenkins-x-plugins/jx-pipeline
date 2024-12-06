@@ -21,7 +21,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 
-	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	tektonapis pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -93,7 +93,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 		paNameMap[p.Name] = p
 	}
 
-	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(ctx, metav1.ListOptions{})
+	tektonPRs, _ := t.TektonClient.TektonV1().PipelineRuns(t.Namespace).List(ctx, metav1.ListOptions{})
 	log.Logger().Debugf("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
 
 	prMap := make(map[string][]*tektonapis.PipelineRun)
@@ -289,7 +289,7 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 	var stageTimes []stageTime
 	for _, pr := range pipelineRuns {
 		// we need fresh pipeline to be able consume newly executed tasks/pods
-		refreshedPr, err := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
+		refreshedPr, err := t.TektonClient.TektonV1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -301,7 +301,7 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 			}
 		} else if refreshedPr.Spec.PipelineRef != nil && refreshedPr.Spec.PipelineRef.Name != "" {
 			// if the tasks definition is not available in the PipelineRun, let's retrieve it from the Pipeline itself
-			pipeline, err := t.TektonClient.TektonV1beta1().Pipelines(t.Namespace).Get(ctx, refreshedPr.Spec.PipelineRef.Name, metav1.GetOptions{})
+			pipeline, err := t.TektonClient.TektonV1().Pipelines(t.Namespace).Get(ctx, refreshedPr.Spec.PipelineRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}

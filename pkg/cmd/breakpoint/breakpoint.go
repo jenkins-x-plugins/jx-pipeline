@@ -17,7 +17,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/apis/lighthouse"
 	"github.com/jenkins-x/lighthouse-client/pkg/apis/lighthouse/v1alpha1"
 	lhclient "github.com/jenkins-x/lighthouse-client/pkg/client/clientset/versioned"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
@@ -198,8 +198,8 @@ func (o *Options) Run() error {
 		},
 		Spec: v1alpha1.LighthouseBreakpointSpec{
 			Filter: *f,
-			Debug: v1beta1.TaskRunDebug{
-				Breakpoints: &v1beta1.TaskBreakpoints{
+			Debug: pipelinev1.TaskRunDebug{
+				Breakpoints: &pipelinev1.TaskBreakpoints{
 					BeforeSteps: o.BreakpointNames,
 				},
 			},

@@ -32,7 +32,7 @@ import (
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
@@ -151,7 +151,7 @@ func (o *Options) cancelPipelineRun() error {
 	jxClient := o.JXClient
 	tektonClient := o.TektonClient
 	ns := o.Namespace
-	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
+	pipelineRuns := tektonClient.TektonV1().PipelineRuns(ns)
 	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to list PipelineRuns in namespace %s: %w", ns, err)
@@ -170,7 +170,7 @@ func (o *Options) cancelPipelineRun() error {
 		return fmt.Errorf("no PipelineRuns were found in namespace %s", ns)
 	}
 	var allNames []string
-	m := map[string]*pipelineapi.PipelineRun{}
+	m := map[string]*pipelinev1.PipelineRun{}
 	if prList != nil {
 		for k := range prList.Items {
 			pr := &prList.Items[k]

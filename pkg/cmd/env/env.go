@@ -18,8 +18,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +49,7 @@ type Options struct {
 type PipelinePod struct {
 	PodName      string
 	ActivitySpec *v1.PipelineActivitySpec
-	PipelineRuns []*v1beta1.PipelineRun
+	PipelineRuns []*pipelinev1.PipelineRun
 }
 
 var (
@@ -225,7 +224,7 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 	}
 
 	var taskNames []string
-	tasks := map[string]*v1beta1.TaskSpec{}
+	tasks := map[string]*pipelinev1.TaskSpec{}
 	for i := range ps.Tasks {
 		pt := &ps.Tasks[i]
 		if pt.TaskSpec == nil {

@@ -6,40 +6,40 @@ import (
 	"path/filepath"
 	"testing"
 
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/pipelines/processor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
-	baseTask = &v1beta1.Task{
+	baseTask = &pipelinev1.Task{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-task",
 		},
-		Spec: v1beta1.TaskSpec{
-			StepTemplate: &v1beta1.StepTemplate{},
-			Steps: []v1beta1.Step{
+		Spec: pipelinev1.TaskSpec{
+			StepTemplate: &pipelinev1.StepTemplate{},
+			Steps: []pipelinev1.Step{
 				{Image: "test-image"},
 			},
 		},
 	}
 
-	baseExpectedTask = &v1beta1.Task{
+	baseExpectedTask = &pipelinev1.Task{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-task",
 		},
-		Spec: v1beta1.TaskSpec{
+		Spec: pipelinev1.TaskSpec{
 			Params: processor.LighthouseTaskParams,
-			StepTemplate: &v1beta1.StepTemplate{
+			StepTemplate: &pipelinev1.StepTemplate{
 				Env:     append(processor.LighthouseEnvs, processor.HomeEnv),
 				EnvFrom: processor.DefaultEnvFroms,
 			},
-			Steps: []v1beta1.Step{
+			Steps: []pipelinev1.Step{
 				{Image: "test-image"},
 			},
 		},
@@ -49,22 +49,22 @@ var (
 func TestRemoteTasksMigrator_ProcessTask(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		baseTaskModifier     func(task *v1beta1.Task)
-		expectedTaskModifier func(task *v1beta1.Task)
+		baseTaskModifier     func(task *pipelinev1.Task)
+		expectedTaskModifier func(task *pipelinev1.Task)
 	}{
 		{
 			name:                 "BaseTask",
-			baseTaskModifier:     func(_ *v1beta1.Task) {},
-			expectedTaskModifier: func(_ *v1beta1.Task) {},
+			baseTaskModifier:     func(_ *pipelinev1.Task) {},
+			expectedTaskModifier: func(_ *pipelinev1.Task) {},
 		},
 		{
 			name: "WithExistingUnrelatedEnvs",
-			baseTaskModifier: func(task *v1beta1.Task) {
+			baseTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = []v1.EnvVar{
 					{Name: "UNRELATED_ENV", Value: "unrelated-value"},
 				}
 			},
-			expectedTaskModifier: func(task *v1beta1.Task) {
+			expectedTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = append([]v1.EnvVar{
 					{Name: "UNRELATED_ENV", Value: "unrelated-value"},
 				}, task.Spec.StepTemplate.Env...)
@@ -72,21 +72,21 @@ func TestRemoteTasksMigrator_ProcessTask(t *testing.T) {
 		},
 		{
 			name: "WithExistingRelatedEnvs",
-			baseTaskModifier: func(task *v1beta1.Task) {
+			baseTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = []v1.EnvVar{
 					{Name: "BUILD_ID", Value: "$(params.BUILD_ID)"},
 				}
 			},
-			expectedTaskModifier: func(_ *v1beta1.Task) {},
+			expectedTaskModifier: func(_ *pipelinev1.Task) {},
 		},
 		{
 			name: "WithExistingIncorrectHomeEnv",
-			baseTaskModifier: func(task *v1beta1.Task) {
+			baseTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = []v1.EnvVar{
 					{Name: "HOME", Value: "/tekton/workspace"},
 				}
 			},
-			expectedTaskModifier: func(task *v1beta1.Task) {
+			expectedTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = append([]v1.EnvVar{
 					{Name: "HOME", Value: "/workspace"},
 				}, processor.LighthouseEnvs...)
@@ -94,12 +94,12 @@ func TestRemoteTasksMigrator_ProcessTask(t *testing.T) {
 		},
 		{
 			name: "WithExistingIncorrectHomeEnv",
-			baseTaskModifier: func(task *v1beta1.Task) {
+			baseTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = []v1.EnvVar{
 					{Name: "HOME", Value: "/tekton/workspace"},
 				}
 			},
-			expectedTaskModifier: func(task *v1beta1.Task) {
+			expectedTaskModifier: func(task *pipelinev1.Task) {
 				task.Spec.StepTemplate.Env = append([]v1.EnvVar{
 					{Name: "HOME", Value: "/workspace"},
 				}, processor.LighthouseEnvs...)
@@ -130,7 +130,7 @@ func TestRemoteTasksMigrator_ProcessPipelineRun_ParentPipelineRun(t *testing.T) 
 	migrator := processor.RemoteTasksMigrator{}
 	prsPath := "./remotetasks_data/parent_pipelinerun.yaml"
 
-	var prs *v1beta1.PipelineRun
+	var prs *pipelinev1.PipelineRun
 	err := yamls.LoadFile(prsPath, &prs)
 	assert.NoError(t, err)
 
@@ -150,12 +150,12 @@ func TestRemoteTasksMigrator_ProcessPipelineRun_ParentPipelineRun(t *testing.T) 
 
 	for _, entry := range entries {
 		actualTaskPath := filepath.Join(tasksDir, entry.Name())
-		var actualTask *v1beta1.Task
+		var actualTask *pipelinev1.Task
 		err := yamls.LoadFile(actualTaskPath, &actualTask)
 		assert.NoError(t, err)
 
 		expectedTaskPath := fmt.Sprint("./remotetasks_data/parent_pipelinerun_expected/", entry.Name())
-		var expectedTask *v1beta1.Task
+		var expectedTask *pipelinev1.Task
 		err = yamls.LoadFile(expectedTaskPath, &expectedTask)
 		assert.NoError(t, err)
 
@@ -169,7 +169,7 @@ func TestRemoteTasksMigrator_ProcessPipelineRun_ChildPipelineRun(t *testing.T) {
 	inputPRSPath := "./remotetasks_data/child_pipelinerun.yaml"
 	expectedPRSPath := "./remotetasks_data/child_pipelinerun_expected.yaml"
 
-	var prs *v1beta1.PipelineRun
+	var prs *pipelinev1.PipelineRun
 	err := yamls.LoadFile(inputPRSPath, &prs)
 	assert.NoError(t, err)
 
@@ -178,7 +178,7 @@ func TestRemoteTasksMigrator_ProcessPipelineRun_ChildPipelineRun(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, isModified)
 
-	var expected *v1beta1.PipelineRun
+	var expected *pipelinev1.PipelineRun
 	err = yamls.LoadFile(expectedPRSPath, &expected)
 	assert.NoError(t, err)
 
