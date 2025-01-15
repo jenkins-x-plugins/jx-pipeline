@@ -3,6 +3,7 @@ package buckets
 import (
 	"context"
 	"fmt"
+
 	"io"
 	"net/http"
 	"net/url"
@@ -113,6 +114,31 @@ func ReadBucketURL(ctx context.Context, u *url.URL) (io.ReadCloser, error) {
 		return data, fmt.Errorf("failed to read key %s in bucket %s: %w", key, bucketURL, err)
 	}
 	return data, nil
+}
+
+// WriteBucketURL writes the data to a bucket URL of the for 's3://bucketName/foo/bar/whatnot.txt?param=123'
+// with the given timeout
+func WriteBucketURL(ctx context.Context, u *url.URL, data io.Reader) error {
+	bucketURL, key := SplitBucketURL(u)
+	return WriteBucket(ctx, bucketURL, key, data)
+}
+
+// WriteBucket writes the data to a bucket URL and key of the for 's3://bucketName' and key 'foo/bar/whatnot.txt'
+// with the given timeout
+func WriteBucket(ctx context.Context, bucketURL, key string, reader io.Reader) (err error) {
+	bucket, err := blob.OpenBucket(ctx, bucketURL)
+	if err != nil {
+		return fmt.Errorf("failed to open bucket %s: %w", bucketURL, err)
+	}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return fmt.Errorf("failed to read data for key %s in bucket %s: %w", key, bucketURL, err)
+	}
+	err = bucket.WriteAll(ctx, key, data, nil)
+	if err != nil {
+		return fmt.Errorf("failed to write key %s in bucket %s: %w", key, bucketURL, err)
+	}
+	return nil
 }
 
 // SplitBucketURL splits the full bucket URL into the URL to open the bucket and the file name to refer to
