@@ -9,7 +9,7 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 )
 
 // ToPipelineActivityName creates an activity name from a pipeline run
-func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivity) string {
+func ToPipelineActivityName(pr *pipelinev1.PipelineRun, paList []v1.PipelineActivity) string {
 	labels := pr.Labels
 	if labels == nil {
 		return ""
@@ -80,7 +80,7 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	return naming.ToValidName(prefix + build)
 }
 
-func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
+func ToPipelineActivity(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
 	annotations := pr.Annotations
 	labels := pr.Labels
 	if pa.APIVersion == "" {
@@ -170,9 +170,9 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 						status = v1.ActivityStatusTypeSucceeded
 					} else if !terminated.FinishedAt.IsZero() {
 						switch terminated.Reason {
-						case v1beta1.TaskRunReasonTimedOut.String():
+						case pipelinev1.TaskRunReasonTimedOut.String():
 							status = v1.ActivityStatusTypeTimedOut
-						case v1beta1.TaskRunReasonCancelled.String():
+						case pipelinev1.TaskRunReasonCancelled.String():
 							status = v1.ActivityStatusTypeCancelled
 						default:
 							status = v1.ActivityStatusTypeFailed
@@ -227,11 +227,11 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 						// This is ok as a pipeline that has succeeded will have steps and status set to true
 						status := v1.ActivityStatusTypeFailed
 						switch m.Reason {
-						case v1beta1.TaskRunReasonTimedOut.String():
+						case pipelinev1.TaskRunReasonTimedOut.String():
 							status = v1.ActivityStatusTypeTimedOut
-						case v1beta1.TaskRunReasonFailed.String():
+						case pipelinev1.TaskRunReasonFailed.String():
 							status = v1.ActivityStatusTypeFailed
-						case v1beta1.TaskRunReasonCancelled.String():
+						case pipelinev1.TaskRunReasonCancelled.String():
 							status = v1.ActivityStatusTypeCancelled
 						}
 						stage = createStep(stageName, v.Status.StartTime, status)
@@ -352,7 +352,7 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 // addConditionsMessage reads the pr and gets the message for each condition then add it to the pa as Spec.Message
 // It also edit the message so that it says PipelineActivity instead of PipelineRun
 // It also replaces the pr.name with pa.name
-func addConditionsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+func addConditionsMessage(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity) {
 	for k := range pr.Status.Conditions {
 		msg := pr.Status.Conditions[k].GetMessage()
 
@@ -370,7 +370,7 @@ func addConditionsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
 
 // addConditionsMessage reads the pr and gets the message for each taskrun then add it to the pa as Spec.Steps[k].Stage.Message
 // It replace TaskRun with Stage
-func addTaskRunsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+func addTaskRunsMessage(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity) {
 	k1 := 0
 	for k := range pr.Status.TaskRuns {
 		msg := ""

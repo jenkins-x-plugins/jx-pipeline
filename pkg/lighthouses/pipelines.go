@@ -6,12 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 // LoadEffectivePipelineRun loads the effective pipeline run
-func LoadEffectivePipelineRun(resolver *inrepo.UsesResolver, path string) (*tektonv1beta1.PipelineRun, error) {
+func LoadEffectivePipelineRun(resolver *inrepo.UsesResolver, path string) (*pipelinev1.PipelineRun, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file %s: %w", path, err)
