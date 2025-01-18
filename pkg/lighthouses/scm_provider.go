@@ -36,7 +36,7 @@ func (c *ScmProvider) GetFile(owner, repo, filepath, commit string) ([]byte, err
 // ListFiles returns the files from git
 func (c *ScmProvider) ListFiles(owner, repo, filepath, commit string) ([]*scm.FileEntry, error) {
 	fullName := scm.Join(owner, repo)
-	answer, _, err := c.ScmClient.Contents.List(c.Ctx, fullName, filepath, commit)
+	answer, _, err := c.ScmClient.Contents.List(c.Ctx, fullName, filepath, commit, &scm.ListOptions{})
 	return answer, err
 }
 
