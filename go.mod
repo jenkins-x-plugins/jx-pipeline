@@ -8,20 +8,20 @@ require (
 	github.com/fatih/color v1.17.0
 	github.com/gerow/pager v0.0.0-20190420205801-6d4a2327822f
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/jenkins-x-plugins/jx-gitops v0.21.0
-	github.com/jenkins-x/go-scm v1.14.43
-	github.com/jenkins-x/jx-api/v4 v4.7.6
-	github.com/jenkins-x/jx-helpers/v3 v3.8.0
+	github.com/jenkins-x-plugins/jx-gitops v0.23.11
+	github.com/jenkins-x/go-scm v1.14.53
+	github.com/jenkins-x/jx-api/v4 v4.7.9
+	github.com/jenkins-x/jx-helpers/v3 v3.9.0
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.8
 	github.com/jenkins-x/jx-logging/v3 v3.0.17
-	github.com/jenkins-x/lighthouse-client v0.0.1239
+	github.com/jenkins-x/lighthouse-client v0.0.1437
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/tektoncd/pipeline v0.41.0
 	gocloud.dev v0.37.0
-	golang.org/x/text v0.16.0
+	golang.org/x/text v0.21.0
 	k8s.io/api v0.30.2
 	k8s.io/apimachinery v0.30.3
 	k8s.io/client-go v0.30.2
@@ -39,6 +39,7 @@ require (
 	code.gitea.io/sdk/gitea v0.16.0 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
+	fortio.org/safecast v1.0.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.7 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.12.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0 // indirect
@@ -165,12 +166,12 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
@@ -193,4 +194,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
 
-go 1.22.3
+go 1.23.0
