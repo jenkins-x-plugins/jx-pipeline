@@ -202,11 +202,10 @@ func (o *Options) WatchActivities(t *table.Table, jxClient versioned.Interface, 
 
 	listWatch := cache.NewListWatchFromClient(jxClient.JenkinsV1().RESTClient(), "pipelineactivities", ns, fields.Everything())
 	kube.SortListWatchByName(listWatch)
-	_, controller := cache.NewInformer(
-		listWatch,
-		activity,
-		time.Minute*10,
-		cache.ResourceEventHandlerFuncs{
+	_, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: listWatch,
+		ObjectType:    activity,
+		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				o.onActivity(t, obj, yamlSpecMap)
 			},
@@ -216,7 +215,8 @@ func (o *Options) WatchActivities(t *table.Table, jxClient versioned.Interface, 
 			DeleteFunc: func(_ interface{}) {
 			},
 		},
-	)
+		ResyncPeriod: time.Minute * 10,
+	})
 
 	stop := signals.SetupSignalHandler()
 	go controller.Run(stop)

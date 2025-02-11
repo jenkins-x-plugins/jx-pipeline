@@ -74,9 +74,6 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 		name = naming.ToValidName(prefix + build)
 		return name
 	}
-	if build == "" {
-		return ""
-	}
 	return naming.ToValidName(prefix + build)
 }
 
