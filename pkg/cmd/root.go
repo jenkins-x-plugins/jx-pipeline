@@ -19,7 +19,7 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/stop"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/version"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/wait"
-	"github.com/jenkins-x-plugins/jx-pipeline/pkg/rootcmd"
+	"github.com/jenkins-x-plugins/jx-pipeline/pkg/common"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
@@ -28,7 +28,9 @@ import (
 // Main creates the new command
 func Main() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   rootcmd.TopLevelCommand,
+		Annotations: map[string]string{
+			cobra.CommandDisplayNameAnnotation: common.TopLevelCommand,
+		},
 		Short: "commands for working with Jenkins X Pipelines",
 		Run: func(cmd *cobra.Command, _ []string) {
 			err := cmd.Help()

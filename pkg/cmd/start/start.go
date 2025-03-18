@@ -352,7 +352,8 @@ func (o *Options) processFile(path string) error {
 	launchClient := launcher.NewLauncher(o.LHClient, o.Namespace)
 	lhjob, err = launchClient.Launch(lhjob)
 	if err != nil {
-		return fmt.Errorf("failed to create lighthousejob %s in namespace %s: %w", lhjob.Name, ns, err)
+		return fmt.Errorf("failed to create lighthousejob for context %s of repo %s/%s in namespace %s: %w",
+			jobName, owner, repo, ns, err)
 	}
 
 	log.Logger().Infof("created lighthousejob %s in namespace %s", info(lhjob.Name), info(ns))
