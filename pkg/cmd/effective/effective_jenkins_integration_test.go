@@ -8,11 +8,11 @@ import (
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/effective"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +54,7 @@ func TestPipelineEffectiveJenkinsClientWithEnvVar(t *testing.T) {
 
 	assert.FileExists(t, actual, "should have generated file")
 
-	pr := &v1beta1.PipelineRun{}
+	pr := &pipelinev1.PipelineRun{}
 	err = yamls.LoadFile(actual, pr)
 	require.NoError(t, err, "failed to parse PipelineRun from %s", actual)
 
@@ -102,7 +102,7 @@ func TestPipelineEffectiveJenkinsClientDiscoverGit(t *testing.T) {
 
 	assert.FileExists(t, actual, "should have generated file")
 
-	pr := &v1beta1.PipelineRun{}
+	pr := &pipelinev1.PipelineRun{}
 	err = yamls.LoadFile(actual, pr)
 	require.NoError(t, err, "failed to parse PipelineRun from %s", actual)
 

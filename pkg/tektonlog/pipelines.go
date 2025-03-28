@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -45,12 +45,12 @@ func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
 func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
 	prName := pr.Name
 	var err error
-	pr, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
+	pr, err = tektonClient.TektonV1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get PipelineRun %s in namespace %s: %w", prName, ns, err)
 	}
 	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
-	_, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
+	_, err = tektonClient.TektonV1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update PipelineRun %s in namespace %s to mark it as cancelled: %w", prName, ns, err)
 	}

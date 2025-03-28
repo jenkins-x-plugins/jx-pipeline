@@ -2,7 +2,7 @@ package pipelines
 
 import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 // ActivityResolver a helper object to map PipelineRun objects to PipelineActivity resources
@@ -25,7 +25,7 @@ func NewActivityResolver(activities []v1.PipelineActivity) *ActivityResolver {
 }
 
 // ToPipelineActivity converts the given PipelineRun to a PipelineActivity
-func (r *ActivityResolver) ToPipelineActivity(pr *v1beta1.PipelineRun) *v1.PipelineActivity {
+func (r *ActivityResolver) ToPipelineActivity(pr *pipelinev1.PipelineRun) *v1.PipelineActivity {
 	paName := ToPipelineActivityName(pr, r.activities)
 	if paName == "" {
 		return nil

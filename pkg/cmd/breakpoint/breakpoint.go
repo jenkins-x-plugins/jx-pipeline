@@ -17,7 +17,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/apis/lighthouse"
 	"github.com/jenkins-x/lighthouse-client/pkg/apis/lighthouse/v1alpha1"
 	lhclient "github.com/jenkins-x/lighthouse-client/pkg/client/clientset/versioned"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
@@ -198,8 +198,8 @@ func (o *Options) Run() error {
 		},
 		Spec: v1alpha1.LighthouseBreakpointSpec{
 			Filter: *f,
-			Debug: v1beta1.TaskRunDebug{
-				Breakpoint: o.BreakpointNames,
+			Debug: pipelinev1.TaskRunDebug{
+				Breakpoints: &pipelinev1.TaskBreakpoints{BeforeSteps: o.BreakpointNames},
 			},
 		},
 	}
@@ -220,7 +220,7 @@ func (o *Options) ToLabel(a *v1.PipelineActivity) string {
 
 	debug := f.ResolveDebug(o.Breakpoints)
 	if debug != nil {
-		label += " => breakpoint: " + strings.Join(debug.Breakpoint, ", ")
+		label += " => breakpoint: " + strings.Join(debug.Breakpoints.BeforeSteps, ", ")
 	}
 	return label
 }
