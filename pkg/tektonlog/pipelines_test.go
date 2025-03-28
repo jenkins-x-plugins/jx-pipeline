@@ -8,7 +8,6 @@ import (
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,7 +18,7 @@ const (
 
 func TestPipelineRunIsNotPendingCompletedRun(t *testing.T) {
 	now := metav1.Now()
-	pr := &v1beta1.PipelineRun{
+	pr := &pipelinev1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
@@ -30,26 +29,26 @@ func TestPipelineRunIsNotPendingCompletedRun(t *testing.T) {
 				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1beta1.PipelineRunSpec{
-			Params: []v1beta1.Param{
+		Spec: pipelinev1.PipelineRunSpec{
+			Params: []pipelinev1.Param{
 				{
 					Name: "version",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "v1",
 					},
 				},
 				{
 					Name: "build_id",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "1",
 					},
 				},
 			},
 		},
-		Status: v1beta1.PipelineRunStatus{
-			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
 				CompletionTime: &now,
 			},
 		},
@@ -59,11 +58,11 @@ func TestPipelineRunIsNotPendingCompletedRun(t *testing.T) {
 }
 
 func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {
-	taskRunStatusMap := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
-	taskRunStatusMap["faketaskrun"] = &v1beta1.PipelineRunTaskRunStatus{
-		Status: &v1beta1.TaskRunStatus{
-			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				Steps: []v1beta1.StepState{{
+	taskRunStatusMap := make(map[string]*pipelinev1.PipelineRunTaskRunStatus)
+	taskRunStatusMap["faketaskrun"] = &pipelinev1.PipelineRunTaskRunStatus{
+		Status: &pipelinev1.TaskRunStatus{
+			TaskRunStatusFields: pipelinev1.TaskRunStatusFields{
+				Steps: []pipelinev1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Running: &corev1.ContainerStateRunning{},
 					},
@@ -72,7 +71,7 @@ func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {
 		},
 	}
 
-	pr := &v1beta1.PipelineRun{
+	pr := &pipelinev1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
@@ -83,25 +82,25 @@ func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {
 				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1beta1.PipelineRunSpec{
-			Params: []v1beta1.Param{
+		Spec: pipelinev1.PipelineRunSpec{
+			Params: []pipelinev1.Param{
 				{
 					Name: "version",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "v1",
 					}},
 				{
 					Name: "build_id",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "1",
 					},
 				},
 			},
 		},
-		Status: v1beta1.PipelineRunStatus{
-			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
 				TaskRuns: taskRunStatusMap,
 			},
 		},
@@ -111,11 +110,11 @@ func TestPipelineRunIsNotPendingRunningSteps(t *testing.T) {
 }
 
 func TestPipelineRunIsNotPendingWaitingSteps(t *testing.T) {
-	taskRunStatusMap := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
-	taskRunStatusMap["faketaskrun"] = &v1beta1.PipelineRunTaskRunStatus{
-		Status: &v1beta1.TaskRunStatus{
-			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				Steps: []v1beta1.StepState{{
+	taskRunStatusMap := make(map[string]*pipelinev1.PipelineRunTaskRunStatus)
+	taskRunStatusMap["faketaskrun"] = &pipelinev1.PipelineRunTaskRunStatus{
+		Status: &pipelinev1.TaskRunStatus{
+			TaskRunStatusFields: pipelinev1.TaskRunStatusFields{
+				Steps: []pipelinev1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Waiting: &corev1.ContainerStateWaiting{
 							Message: "Pending",
@@ -126,7 +125,7 @@ func TestPipelineRunIsNotPendingWaitingSteps(t *testing.T) {
 		},
 	}
 
-	pr := &v1beta1.PipelineRun{
+	pr := &pipelinev1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
@@ -137,25 +136,25 @@ func TestPipelineRunIsNotPendingWaitingSteps(t *testing.T) {
 				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1beta1.PipelineRunSpec{
-			Params: []v1beta1.Param{
+		Spec: pipelinev1.PipelineRunSpec{
+			Params: []pipelinev1.Param{
 				{
 					Name: "version",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "v1",
 					}},
 				{
 					Name: "build_id",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "1",
 					},
 				},
 			},
 		},
-		Status: v1beta1.PipelineRunStatus{
-			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
 				TaskRuns: taskRunStatusMap,
 			},
 		},
@@ -165,11 +164,11 @@ func TestPipelineRunIsNotPendingWaitingSteps(t *testing.T) {
 }
 
 func TestPipelineRunIsNotPendingWaitingStepsInPodInitializing(t *testing.T) {
-	taskRunStatusMap := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
-	taskRunStatusMap["faketaskrun"] = &v1beta1.PipelineRunTaskRunStatus{
-		Status: &v1beta1.TaskRunStatus{
-			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				Steps: []v1beta1.StepState{{
+	taskRunStatusMap := make(map[string]*pipelinev1.PipelineRunTaskRunStatus)
+	taskRunStatusMap["faketaskrun"] = &pipelinev1.PipelineRunTaskRunStatus{
+		Status: &pipelinev1.TaskRunStatus{
+			TaskRunStatusFields: pipelinev1.TaskRunStatusFields{
+				Steps: []pipelinev1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Waiting: &corev1.ContainerStateWaiting{
 							Reason: "PodInitializing",
@@ -180,7 +179,7 @@ func TestPipelineRunIsNotPendingWaitingStepsInPodInitializing(t *testing.T) {
 		},
 	}
 
-	pr := &v1beta1.PipelineRun{
+	pr := &pipelinev1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
@@ -191,25 +190,25 @@ func TestPipelineRunIsNotPendingWaitingStepsInPodInitializing(t *testing.T) {
 				tektonlog.LabelContext: "fakecontext",
 			},
 		},
-		Spec: v1beta1.PipelineRunSpec{
-			Params: []v1beta1.Param{
+		Spec: pipelinev1.PipelineRunSpec{
+			Params: []pipelinev1.Param{
 				{
 					Name: "version",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "v1",
 					}},
 				{
 					Name: "build_id",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ArrayOrString{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "1",
 					},
 				},
 			},
 		},
-		Status: v1beta1.PipelineRunStatus{
-			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
 				TaskRuns: taskRunStatusMap,
 			},
 		},

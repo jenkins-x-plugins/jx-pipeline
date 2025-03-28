@@ -12,8 +12,8 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
@@ -157,7 +157,7 @@ func (o *Options) processFile(path string) error {
 	message := "processing file %s" + path
 	switch kind {
 	case "Pipeline":
-		pipeline := &v1beta1.Pipeline{}
+		pipeline := &pipelinev1.Pipeline{}
 		err := yaml.Unmarshal(data, pipeline)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal Pipeline YAML %s: %w", message, err)
@@ -165,7 +165,7 @@ func (o *Options) processFile(path string) error {
 		return o.processPipeline(pipeline, path)
 
 	case "PipelineRun":
-		prs := &v1beta1.PipelineRun{}
+		prs := &pipelinev1.PipelineRun{}
 		err := yaml.Unmarshal(data, prs)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal PipelineRun YAML %s: %w", message, err)
@@ -173,7 +173,7 @@ func (o *Options) processFile(path string) error {
 		return o.processPipelineRun(prs, path)
 
 	case "Task":
-		task := &v1beta1.Task{}
+		task := &pipelinev1.Task{}
 		err := yaml.Unmarshal(data, task)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal Task YAML %s: %w", message, err)
@@ -185,7 +185,7 @@ func (o *Options) processFile(path string) error {
 	}
 }
 
-func (o *Options) processPipelineRun(prs *v1beta1.PipelineRun, path string) error {
+func (o *Options) processPipelineRun(prs *pipelinev1.PipelineRun, path string) error {
 	ps := &prs.Spec
 	_, name := filepath.Split(path)
 	prs.Name = strings.TrimSuffix(name, ".yaml")
@@ -212,7 +212,7 @@ func (o *Options) processPipelineRun(prs *v1beta1.PipelineRun, path string) erro
 	return nil
 }
 
-func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec) error { //nolint:unparam
+func (o *Options) processPipelineSpec(spec *pipelinev1.PipelineSpec) error { //nolint:unparam
 	spec.Params = RemoveDefaultParamSpecs(spec.Params)
 	for i := range spec.Tasks {
 		task := &spec.Tasks[i]
@@ -220,7 +220,7 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec) error { //noli
 		ts := task.TaskSpec
 		if ts != nil {
 			ts.Params = RemoveDefaultParamSpecs(ts.Params)
-			var steps []v1beta1.Step
+			var steps []pipelinev1.Step
 			for j := range ts.Steps {
 				s := ts.Steps[j]
 				if !removeStepNames[s.Name] {
@@ -238,7 +238,7 @@ func (o *Options) processPipelineSpec(spec *v1beta1.PipelineSpec) error { //noli
 	return nil
 }
 
-func (o *Options) processPipeline(pipeline *v1beta1.Pipeline, path string) error {
+func (o *Options) processPipeline(pipeline *pipelinev1.Pipeline, path string) error {
 	err := o.processPipelineSpec(&pipeline.Spec)
 	if err != nil {
 		return fmt.Errorf("failed to : %w", err)
@@ -250,11 +250,11 @@ func (o *Options) processPipeline(pipeline *v1beta1.Pipeline, path string) error
 	return nil
 }
 
-func (o *Options) processTask(task *v1beta1.Task, path string) error { //nolint:revive
+func (o *Options) processTask(task *pipelinev1.Task, path string) error { //nolint:revive
 	return nil
 }
 
-func (o *Options) convertToScriptStep(s *v1beta1.Step) v1beta1.Step {
+func (o *Options) convertToScriptStep(s *pipelinev1.Step) pipelinev1.Step {
 	if len(s.Command) == 0 || len(s.Args) == 0 {
 		return *s
 	}
@@ -286,8 +286,8 @@ func (o *Options) convertToScriptStep(s *v1beta1.Step) v1beta1.Step {
 }
 
 // RemoveDefaultParamSpecs removes default parameters
-func RemoveDefaultParamSpecs(from []v1beta1.ParamSpec) []v1beta1.ParamSpec {
-	var params []v1beta1.ParamSpec
+func RemoveDefaultParamSpecs(from []pipelinev1.ParamSpec) []pipelinev1.ParamSpec {
+	var params []pipelinev1.ParamSpec
 	for _, p := range from {
 		if !defaultParameterNames[p.Name] {
 			params = append(params, p)
@@ -297,8 +297,8 @@ func RemoveDefaultParamSpecs(from []v1beta1.ParamSpec) []v1beta1.ParamSpec {
 }
 
 // RemoveDefaultParams removes default params
-func RemoveDefaultParams(from []v1beta1.Param) []v1beta1.Param {
-	var params []v1beta1.Param
+func RemoveDefaultParams(from []pipelinev1.Param) []pipelinev1.Param {
+	var params []pipelinev1.Param
 	for _, p := range from {
 		if !defaultParameterNames[p.Name] {
 			params = append(params, p)

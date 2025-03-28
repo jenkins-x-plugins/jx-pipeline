@@ -13,14 +13,14 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type UsesMigrator struct {
-	CatalogTaskSpec *v1beta1.TaskSpec
+	CatalogTaskSpec *pipelinev1.TaskSpec
 	Dir             string
 	Owner           string
 	Repository      string
@@ -44,23 +44,23 @@ func NewUsesMigrator(dir, tasksFolder, owner, repository, useSHA string, catalog
 	}
 }
 
-func (p *UsesMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
+func (p *UsesMigrator) ProcessPipeline(pipeline *pipelinev1.Pipeline, path string) (bool, error) {
 	return p.processPipelineSpec(&pipeline.Spec, &pipeline.ObjectMeta, path, pipeline)
 }
 
-func (p *UsesMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
+func (p *UsesMigrator) ProcessPipelineRun(prs *pipelinev1.PipelineRun, path string) (bool, error) {
 	return p.processPipelineSpec(prs.Spec.PipelineSpec, &prs.ObjectMeta, path, prs)
 }
 
-func (p *UsesMigrator) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
+func (p *UsesMigrator) ProcessTask(task *pipelinev1.Task, path string) (bool, error) {
 	return p.processTaskSpec(&task.Spec, &task.ObjectMeta, path)
 }
 
-func (p *UsesMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
+func (p *UsesMigrator) ProcessTaskRun(tr *pipelinev1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
-func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
+func (p *UsesMigrator) processPipelineSpec(ps *pipelinev1.PipelineSpec, metadata *metav1.ObjectMeta, path string, resource interface{}) (bool, error) {
 	hasRealImage, err := ProcessPipelineSpec(ps, path, hasRealImage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for real times: %w", err)
@@ -89,13 +89,13 @@ func (p *UsesMigrator) processPipelineSpec(ps *v1beta1.PipelineSpec, metadata *m
 		// lets use the original metadata for the migration of prepend/append steps
 		metadata = &originalMetadata
 	}
-	fn := func(ts *v1beta1.TaskSpec, path, _ string) (bool, error) {
+	fn := func(ts *pipelinev1.TaskSpec, path, _ string) (bool, error) {
 		return p.processTaskSpec(ts, metadata, path)
 	}
 	return ProcessPipelineSpec(ps, path, fn)
 }
 
-func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.ObjectMeta, path string) (bool, error) {
+func (p *UsesMigrator) processTaskSpec(ts *pipelinev1.TaskSpec, metadata *metav1.ObjectMeta, path string) (bool, error) {
 	usesPath, err := p.usesPath(path)
 	if err != nil {
 		return false, fmt.Errorf("failed to get uses: path: %w", err)
@@ -117,7 +117,7 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		if uses != image {
 			continue
 		}
-		var catalogStep *v1beta1.Step
+		var catalogStep *pipelinev1.Step
 		if !p.catalog {
 			catalogStep = FindStep(p.CatalogTaskSpec, step.Name)
 			if catalogStep == nil {
@@ -137,7 +137,7 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		usesImage := fmt.Sprintf("uses:%s/%s/%s@%s", p.Owner, p.Repository, usesPath, sha)
 
 		if ts.StepTemplate == nil {
-			ts.StepTemplate = &v1beta1.StepTemplate{}
+			ts.StepTemplate = &pipelinev1.StepTemplate{}
 		}
 		if ts.StepTemplate.Image == "" {
 			ts.StepTemplate.Image = usesImage
@@ -147,7 +147,7 @@ func (p *UsesMigrator) processTaskSpec(ts *v1beta1.TaskSpec, metadata *metav1.Ob
 		}
 
 		// lets translate to the uses string
-		replaceStep := v1beta1.Step{
+		replaceStep := pipelinev1.Step{
 			Name:  step.Name,
 			Image: usesImage,
 		}
@@ -174,7 +174,7 @@ func ImageWithoutVersionTag(image string) string {
 }
 
 // FindStep returns the named step or nil
-func FindStep(spec *v1beta1.TaskSpec, name string) *v1beta1.Step {
+func FindStep(spec *pipelinev1.TaskSpec, name string) *pipelinev1.Step {
 	if spec == nil {
 		return nil
 	}
@@ -187,12 +187,12 @@ func FindStep(spec *v1beta1.TaskSpec, name string) *v1beta1.Step {
 	return nil
 }
 
-func replaceStepAnnotations(ann map[string]string, ts *v1beta1.TaskSpec) bool {
+func replaceStepAnnotations(ann map[string]string, ts *pipelinev1.TaskSpec) bool {
 	modified := false
 	value := ConvertLegacyStepAnnotationURLToUsesImage(ann, inrepo.PrependStepURL)
 	if value != "" {
 		modified = true
-		newSteps := []v1beta1.Step{
+		newSteps := []pipelinev1.Step{
 			{
 				Image: value,
 			},
@@ -202,7 +202,7 @@ func replaceStepAnnotations(ann map[string]string, ts *v1beta1.TaskSpec) bool {
 	value = ConvertLegacyStepAnnotationURLToUsesImage(ann, inrepo.AppendStepURL)
 	if value != "" {
 		modified = true
-		ts.Steps = append(ts.Steps, v1beta1.Step{
+		ts.Steps = append(ts.Steps, pipelinev1.Step{
 			Image: value,
 		})
 	}
@@ -298,7 +298,7 @@ func (p *UsesMigrator) saveOriginalResource(path string, resource interface{}) e
 // ToDo: changing resultStep to pointer breaks the tests, fix logic to use pointer
 // addLocalOverrides lets compare the step in the current pipeline catalog to the local step and any differences lets
 // keep in the result step
-func (p *UsesMigrator) addLocalOverrides(resultStep v1beta1.Step, localStep, catalogStep *v1beta1.Step) error { //nolint
+func (p *UsesMigrator) addLocalOverrides(resultStep pipelinev1.Step, localStep, catalogStep *pipelinev1.Step) error { //nolint
 	if localStep.Script != catalogStep.Script {
 		resultStep.Script = localStep.Script
 	}
@@ -373,7 +373,7 @@ func overrideVolumeMounts(overrides, from []corev1.VolumeMount) []corev1.VolumeM
 	return answer
 }
 
-func hasRealImage(ts *v1beta1.TaskSpec, path, name string) (bool, error) { //nolint:revive
+func hasRealImage(ts *pipelinev1.TaskSpec, path, name string) (bool, error) { //nolint:revive
 	hasRealImage := false
 	for i := range ts.Steps {
 		step := &ts.Steps[i]

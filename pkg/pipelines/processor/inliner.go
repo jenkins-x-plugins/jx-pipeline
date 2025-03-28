@@ -7,8 +7,7 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 type inliner struct {
@@ -30,28 +29,28 @@ func NewInliner(input input.Interface, resolver *inrepo.UsesResolver, defaultSHA
 	}
 }
 
-func (p *inliner) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
+func (p *inliner) ProcessPipeline(pipeline *pipelinev1.Pipeline, path string) (bool, error) {
 	return p.processPipelineSpec(&pipeline.Spec, path)
 }
 
-func (p *inliner) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
+func (p *inliner) ProcessPipelineRun(prs *pipelinev1.PipelineRun, path string) (bool, error) {
 	return p.processPipelineSpec(prs.Spec.PipelineSpec, path)
 }
 
-func (p *inliner) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
+func (p *inliner) ProcessTask(task *pipelinev1.Task, path string) (bool, error) {
 	return p.processTaskSpec(&task.Spec, path, task.Name)
 }
 
-func (p *inliner) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
+func (p *inliner) ProcessTaskRun(tr *pipelinev1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
-func (p *inliner) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (bool, error) {
+func (p *inliner) processPipelineSpec(ps *pipelinev1.PipelineSpec, path string) (bool, error) {
 	return ProcessPipelineSpec(ps, path, p.processTaskSpec)
 }
 
 // nolint
-func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) {
+func (p *inliner) processTaskSpec(ts *pipelinev1.TaskSpec, path, name string) (bool, error) {
 	templateImage := ""
 	if ts.StepTemplate != nil {
 		templateImage = ts.StepTemplate.Image
@@ -129,10 +128,10 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	steps := ts.Steps[0:so.index]
 	for k := range catalogTaskSpec.Steps {
 		s := catalogTaskSpec.Steps[k]
-		newStep := v1beta1.Step{}
+		newStep := pipelinev1.Step{}
 		newStep.Name = s.Name
 		if ts.StepTemplate == nil {
-			ts.StepTemplate = &v1beta1.StepTemplate{}
+			ts.StepTemplate = &pipelinev1.StepTemplate{}
 		}
 		if ts.StepTemplate.Image == "" {
 			ts.StepTemplate.Image = so.image
@@ -149,7 +148,7 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 
 	// now lets pick one of the tasks to inline
 	names = nil
-	catalogSteps := map[string]*v1beta1.Step{}
+	catalogSteps := map[string]*pipelinev1.Step{}
 	for i := range catalogTaskSpec.Steps {
 		s := &catalogTaskSpec.Steps[i]
 		n := s.Name
@@ -189,7 +188,7 @@ func (p *inliner) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool
 	return true, nil
 }
 
-func (p *inliner) inlineStep(s, catalogStep *v1beta1.Step) error {
+func (p *inliner) inlineStep(s, catalogStep *pipelinev1.Step) error {
 	if len(p.inlineProperties) == 0 {
 		*s = *catalogStep
 		return nil
@@ -216,7 +215,7 @@ func (p *inliner) inlineStep(s, catalogStep *v1beta1.Step) error {
 		case "imagePullPolicy":
 			s.ImagePullPolicy = catalogStep.ImagePullPolicy
 		case "resources":
-			s.Resources = catalogStep.Resources
+			s.ComputeResources = catalogStep.ComputeResources
 		case "script":
 			s.Script = catalogStep.Script
 		case "securityContext":
@@ -243,7 +242,7 @@ func (p *inliner) inlineStep(s, catalogStep *v1beta1.Step) error {
 }
 
 type stepOption struct {
-	step  *v1beta1.Step
+	step  *pipelinev1.Step
 	uses  string
 	image string
 	index int
