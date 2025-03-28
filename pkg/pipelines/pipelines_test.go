@@ -9,7 +9,7 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/stretchr/testify/require"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,7 +38,7 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 	require.FileExists(t, prFile)
 
 	// loading a prfile
-	pr := &v1beta1.PipelineRun{}
+	pr := &pipelinev1.PipelineRun{}
 	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to unmarshal %s", prFile)
 
@@ -70,7 +70,7 @@ func TestMergePipelineActivity(t *testing.T) {
 	require.FileExists(t, expectedFile)
 
 	// loading the pr
-	pr := &v1beta1.PipelineRun{}
+	pr := &pipelinev1.PipelineRun{}
 	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to load %s", prFile)
 
@@ -90,8 +90,8 @@ func TestMergePipelineActivity(t *testing.T) {
 	require.Equal(t, expectedPa, pa)
 }
 
-func generatePipelineRunWithLabels(branch, org, repo, buildNum string) *v1beta1.PipelineRun {
-	return &v1beta1.PipelineRun{
+func generatePipelineRunWithLabels(branch, org, repo, buildNum string) *pipelinev1.PipelineRun {
+	return &pipelinev1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-1",
 			Labels: map[string]string{
@@ -167,7 +167,7 @@ var paList = []v1.PipelineActivity{
 
 var BuildNumberTestCases = []struct {
 	description          string
-	pipelineRun          *v1beta1.PipelineRun
+	pipelineRun          *pipelinev1.PipelineRun
 	paList               []v1.PipelineActivity
 	expectedActivityName string
 }{
@@ -261,7 +261,7 @@ func TestPipelineActivityStatus(t *testing.T) {
 		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
 		require.FileExists(t, prFile)
 
-		pr := &v1beta1.PipelineRun{}
+		pr := &pipelinev1.PipelineRun{}
 		err := yamls.LoadFile(prFile, pr)
 		require.NoError(t, err, "failed to load %s", prFile)
 
@@ -310,7 +310,7 @@ func TestPipelineActivityMessage(t *testing.T) {
 		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
 		require.FileExists(t, prFile)
 
-		pr := &v1beta1.PipelineRun{}
+		pr := &pipelinev1.PipelineRun{}
 		err := yamls.LoadFile(prFile, pr)
 		require.NoError(t, err, "failed to load %s", prFile)
 

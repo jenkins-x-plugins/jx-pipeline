@@ -7,14 +7,12 @@ import (
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
-
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 // FindCatalogTaskSpec finds the pipeline catalog TaskSpec
-func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile, defaultSHA string) (*v1beta1.TaskSpec, error) {
+func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile, defaultSHA string) (*pipelinev1.TaskSpec, error) {
 	owner := resolver.OwnerName
 	repo := resolver.RepoName
 	sha, err := getCatalogSHA(owner, repo, defaultSHA)
@@ -35,7 +33,7 @@ func FindCatalogTaskSpec(resolver *inrepo.UsesResolver, sourceFile, defaultSHA s
 }
 
 // FindCatalogTaskSpecFromURI finds the catalog task spec from the given URI
-func FindCatalogTaskSpecFromURI(resolver *inrepo.UsesResolver, gitURI string) (*v1beta1.TaskSpec, error) {
+func FindCatalogTaskSpecFromURI(resolver *inrepo.UsesResolver, gitURI string) (*pipelinev1.TaskSpec, error) {
 	data, err := resolver.GetData(gitURI, false)
 	if err != nil {
 		if scmhelpers.IsScmNotFound(err) || strings.Contains(err.Error(), "failed to find file ") {
@@ -65,7 +63,7 @@ func getCatalogSHA(owner, repo, defaultSHA string) (string, error) { //nolint:re
 }
 
 // GetMandatoryTaskSpec returns the mandatory first task spec in the given PipelineRun
-func GetMandatoryTaskSpec(pr *v1beta1.PipelineRun) (*v1beta1.TaskSpec, error) {
+func GetMandatoryTaskSpec(pr *pipelinev1.PipelineRun) (*pipelinev1.TaskSpec, error) {
 	ps := pr.Spec.PipelineSpec
 	if ps == nil {
 		return nil, fmt.Errorf("no spec.pipelineSpec")

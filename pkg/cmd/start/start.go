@@ -8,15 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	v1 "k8s.io/api/core/v1"
-
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/gitdiscovery"
 	gitv2 "github.com/jenkins-x/lighthouse-client/pkg/git/v2"
+	"github.com/sirupsen/logrus"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 
@@ -46,6 +44,7 @@ import (
 	"github.com/jenkins-x/lighthouse-client/pkg/plugins"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -549,7 +548,7 @@ func (o *Options) combineWithCustomParameters(params []job.PipelineRunParam) []j
 	return params
 }
 
-func (o *Options) addCustomEnvsToStepTemplate(spec *v1beta1.PipelineSpec) {
+func (o *Options) addCustomEnvsToStepTemplate(spec *pipelinev1.PipelineSpec) {
 	for name, value := range o.CustomEnvs {
 		for i := range spec.Tasks {
 			stepTemplate := spec.Tasks[i].TaskSpec.StepTemplate
