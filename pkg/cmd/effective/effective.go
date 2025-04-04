@@ -11,6 +11,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/lighthouse-client/pkg/util"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
@@ -18,7 +19,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/input/inputfactory"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
@@ -303,7 +303,7 @@ func (o *Options) processTriggers() error {
 	return o.displayPipeline(trigger.Path, pipelineName, pipeline)
 }
 
-func (o *Options) displayPipeline(path, name string, pipeline *tektonv1beta1.PipelineRun) error {
+func (o *Options) displayPipeline(path, name string, pipeline *pipelinev1.PipelineRun) error {
 	if o.AddDefaults {
 		err := o.addPipelineParameterDefaults(path, pipeline)
 		if err != nil {
@@ -389,7 +389,7 @@ func (o *Options) openInEditor(path, editor string) error {
 	return nil
 }
 
-func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1beta1.PipelineRun) error {
+func (o *Options) addPipelineParameterDefaults(path string, pipeline *pipelinev1.PipelineRun) error {
 	ps := &pipeline.Spec
 
 	dscm := &o.DiscoverScm
@@ -453,7 +453,7 @@ func (o *Options) addPipelineParameterDefaults(path string, pipeline *tektonv1be
 	for i := range ps.Params {
 		pa := &ps.Params[i]
 		if string(pa.Value.Type) == "" {
-			pa.Value.Type = tektonv1beta1.ParamTypeString
+			pa.Value.Type = pipelinev1.ParamTypeString
 		}
 		if pa.Value.StringVal == "" {
 			switch pa.Name {

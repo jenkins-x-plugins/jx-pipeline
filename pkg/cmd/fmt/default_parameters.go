@@ -1,13 +1,11 @@
 package fmt
 
-import (
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-)
+import pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
 var (
 	// defaultParameterSpecs the default Lighthouse Pipeline Parameters which can be injected by the
 	// lighthouse tekton engine
-	defaultParameterSpecs = []v1beta1.ParamSpec{
+	defaultParameterSpecs = []pipelinev1.ParamSpec{
 		{
 			Description: "the unique build number",
 			Name:        "BUILD_ID",

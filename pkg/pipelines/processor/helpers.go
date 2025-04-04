@@ -10,8 +10,8 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -48,7 +48,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 
 	switch kind {
 	case "Pipeline":
-		pipeline := &tektonv1beta1.Pipeline{}
+		pipeline := &pipelinev1.Pipeline{}
 		resource = pipeline
 		err = yaml.Unmarshal(data, pipeline)
 		if err != nil {
@@ -57,7 +57,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		modified, err = processor.ProcessPipeline(pipeline, path)
 
 	case "PipelineRun":
-		prs := &tektonv1beta1.PipelineRun{}
+		prs := &pipelinev1.PipelineRun{}
 		resource = prs
 		err = yaml.Unmarshal(data, prs)
 		if err != nil {
@@ -66,7 +66,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		modified, err = processor.ProcessPipelineRun(prs, path)
 
 	case "Task":
-		task := &tektonv1beta1.Task{}
+		task := &pipelinev1.Task{}
 		resource = task
 		err = yaml.Unmarshal(data, task)
 		if err != nil {
@@ -75,7 +75,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 		modified, err = processor.ProcessTask(task, path)
 
 	case "TaskRun":
-		tr := &tektonv1beta1.TaskRun{}
+		tr := &pipelinev1.TaskRun{}
 		resource = tr
 		err = yaml.Unmarshal(data, tr)
 		if err != nil {
@@ -104,7 +104,7 @@ func ProcessFile(processor Interface, path string) (bool, error) {
 }
 
 // ProcessPipelineSpec default function for processing a pipeline spec which may be nil
-func ProcessPipelineSpec(ps *tektonv1beta1.PipelineSpec, path string, fn func(ts *tektonv1beta1.TaskSpec, path, name string) (bool, error)) (bool, error) {
+func ProcessPipelineSpec(ps *pipelinev1.PipelineSpec, path string, fn func(ts *pipelinev1.TaskSpec, path, name string) (bool, error)) (bool, error) {
 	if ps == nil {
 		return false, nil
 	}
@@ -128,7 +128,7 @@ func ProcessPipelineSpec(ps *tektonv1beta1.PipelineSpec, path string, fn func(ts
 	return modified, nil
 }
 
-func AppendParamsIfNotPresent(existing, toAdd []tektonv1beta1.ParamSpec) []tektonv1beta1.ParamSpec {
+func AppendParamsIfNotPresent(existing, toAdd []pipelinev1.ParamSpec) []pipelinev1.ParamSpec {
 	for _, param := range toAdd {
 		if !containsParam(existing, param.Name) {
 			existing = append(existing, param)
@@ -137,7 +137,7 @@ func AppendParamsIfNotPresent(existing, toAdd []tektonv1beta1.ParamSpec) []tekto
 	return existing
 }
 
-func containsParam(existing []tektonv1beta1.ParamSpec, name string) bool {
+func containsParam(existing []pipelinev1.ParamSpec, name string) bool {
 	for _, param := range existing {
 		if param.Name == name {
 			return true
@@ -192,7 +192,7 @@ func containsEnvFrom(existing []v1.EnvFromSource, prefix string) bool {
 	return false
 }
 
-func ParamsToEnvVars(params []tektonv1beta1.ParamSpec) []v1.EnvVar {
+func ParamsToEnvVars(params []pipelinev1.ParamSpec) []v1.EnvVar {
 	envVars := make([]v1.EnvVar, len(params))
 	for idx, param := range params {
 		envVars[idx] = v1.EnvVar{

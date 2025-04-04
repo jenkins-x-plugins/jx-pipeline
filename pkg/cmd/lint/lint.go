@@ -7,21 +7,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"knative.dev/pkg/apis"
-	"sigs.k8s.io/yaml"
-
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/lighthouses"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/files"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/linter"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/jenkins-x/lighthouse-client/pkg/config/job"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"knative.dev/pkg/apis"
+	"sigs.k8s.io/yaml"
 
 	"github.com/spf13/cobra"
 )
@@ -183,7 +182,7 @@ func (o *Options) ProcessFile(path string) error {
 	return nil
 }
 
-func ValidatePipelineRun(ctx context.Context, pr *v1beta1.PipelineRun) *apis.FieldError {
+func ValidatePipelineRun(ctx context.Context, pr *pipelinev1.PipelineRun) *apis.FieldError {
 	err := pr.Validate(ctx)
 	if err != nil {
 		return err
@@ -204,7 +203,7 @@ func ValidatePipelineRun(ctx context.Context, pr *v1beta1.PipelineRun) *apis.Fie
 	return err
 }
 
-func ValidateTaskRunVolumesExist(ts *v1beta1.TaskSpec) (errs *apis.FieldError) {
+func ValidateTaskRunVolumesExist(ts *pipelinev1.TaskSpec) (errs *apis.FieldError) {
 	volumeNames := map[string]bool{}
 	for k := range ts.Volumes {
 		volumeNames[ts.Volumes[k].Name] = true
