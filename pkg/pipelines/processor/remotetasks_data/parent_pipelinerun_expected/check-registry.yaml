@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   creationTimestamp: null
@@ -81,12 +81,12 @@ spec:
         name: jx-boot-job-env-vars
         optional: true
     name: ""
-    resources: {}
+    computeResources: {}
     workingDir: /workspace/source
   steps:
   - image: ghcr.io/jenkins-x/jx-registry:0.1.10
     name: check-registry
-    resources: {}
+    computeResources: {}
   workspaces:
   - description: The workspace used to store the cloned git repository and the generated
       files

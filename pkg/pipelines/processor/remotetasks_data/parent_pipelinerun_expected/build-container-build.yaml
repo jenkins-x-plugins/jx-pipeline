@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   creationTimestamp: null
@@ -81,12 +81,12 @@ spec:
         name: jx-boot-job-env-vars
         optional: true
     name: ""
-    resources: {}
+    computeResources: {}
     workingDir: /workspace/source
   steps:
   - image: gcr.io/kaniko-project/executor:v1.9.1-debug
     name: build-container-build
-    resources: {}
+    computeResources: {}
     script: |
       #!/busybox/sh
       source .jx/variables.sh

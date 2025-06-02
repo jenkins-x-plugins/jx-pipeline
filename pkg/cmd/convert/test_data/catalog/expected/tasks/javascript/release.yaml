@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
@@ -7,59 +7,57 @@ spec:
   pipelineSpec:
     tasks:
     - name: from-build-pack
-      resources: {}
       taskSpec:
         metadata: {}
         spec: null
         stepTemplate:
-          env:
-          - name: NPM_CONFIG_USERCONFIG
-            value: /tekton/home/npm/.npmrc
-          name: ""
-          resources:
+          computeResources:
             requests:
               cpu: 400m
               memory: 512Mi
+          env:
+          - name: NPM_CONFIG_USERCONFIG
+            value: /tekton/home/npm/.npmrc
           volumeMounts:
           - mountPath: /tekton/home/npm
             name: npmrc
           workingDir: /workspace/source
         steps:
-        - image: gcr.io/jenkinsxio/jx-release-version:1.0.42
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-release-version:1.0.42
           name: next-version
-          resources: {}
           script: |
             #!/usr/bin/env bash
             jx-release-version > VERSION
-        - image: gcr.io/jenkinsxio/jx-boot:3.1.156
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-boot:3.1.156
           name: jx-variables
-          resources: {}
           script: |
             #!/usr/bin/env sh
             jx gitops variables
-        - image: node:12-slim
+        - computeResources: {}
+          image: node:12-slim
           name: build-npm-install
-          resources: {}
           script: |
             #!/bin/sh
             npm install
-        - image: node:12-slim
+        - computeResources: {}
+          image: node:12-slim
           name: build-npm-test
-          resources: {}
           script: |
             #!/bin/sh
             CI=true DISPLAY=:99 npm test
-        - image: gcr.io/kaniko-project/executor:debug-v1.3.0
+        - computeResources: {}
+          image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-container-build
-          resources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
             cp /tekton/creds-secrets/tekton-container-registry-auth/.dockerconfigjson /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
-        - image: gcr.io/jenkinsxio/jx-changelog:0.0.25
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-changelog:0.0.25
           name: promote-changelog
-          resources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
@@ -75,15 +73,15 @@ spec:
             git push origin v$VERSION
 
             jx changelog create --version v${VERSION}
-        - image: gcr.io/jenkinsxio/jx-boot:3.1.156
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-boot:3.1.156
           name: promote-helm-release
-          resources: {}
           script: |
             #!/usr/bin/env sh
             jx gitops helm release
-        - image: gcr.io/jenkinsxio/jx-promote:0.0.179
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-promote:0.0.179
           name: promote-jx-promote
-          resources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
@@ -93,7 +91,8 @@ spec:
           secret:
             optional: true
             secretName: npmrc
-  podTemplate: {}
-  serviceAccountName: tekton-bot
-  timeout: 240h0m0s
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 240h0m0s
 status: {}

@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
@@ -42,12 +42,12 @@ spec:
         spec: null
         stepTemplate:
           name: ""
-          resources: {}
+          computeResources: {}
           workingDir: /workspace/source
         steps:
         - image: golang:1.19
           name: hello-world
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             echo "hello world"
@@ -118,8 +118,10 @@ spec:
         workspace: pipeline-ws
     workspaces:
     - name: pipeline-ws
-  serviceAccountName: tekton-bot
-  timeout: 1h0m0s
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 1h0m0s
   workspaces:
   - name: pipeline-ws
     volumeClaimTemplate:
@@ -128,8 +130,7 @@ spec:
       spec:
         accessModes:
         - ReadWriteOnce
-        resources:
+        computeResources:
           requests:
             storage: 1Gi
       status: {}
-status: {}

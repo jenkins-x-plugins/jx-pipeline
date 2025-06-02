@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   creationTimestamp: null
@@ -81,12 +81,12 @@ spec:
         name: jx-boot-job-env-vars
         optional: true
     name: ""
-    resources: {}
+    computeResources: {}
     workingDir: /workspace/source
   steps:
   - image: ghcr.io/jenkins-x-plugins/jx-preview:0.1.0
     name: promote-jx-preview
-    resources: {}
+    computeResources: {}
     script: |
       #!/usr/bin/env sh
       source .jx/variables.sh

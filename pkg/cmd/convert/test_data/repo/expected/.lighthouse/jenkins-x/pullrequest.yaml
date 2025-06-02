@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
@@ -7,31 +7,30 @@ spec:
   pipelineSpec:
     tasks:
     - name: from-build-pack
-      resources: {}
       taskSpec:
         metadata: {}
         spec: null
         stepTemplate:
-          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-plugin/pullrequest.yaml@versionStream
-          name: ""
-          resources:
+          computeResources:
             requests:
               cpu: 400m
               memory: 600Mi
+          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-plugin/pullrequest.yaml@versionStream
           workingDir: /workspace/source
         steps:
-        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
+        - computeResources: {}
+          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
-          resources: {}
-        - name: jx-variables
-          resources: {}
-        - name: build-make-linux
-          resources: {}
-        - name: build-make-test
-          resources: {}
-        - name: build-container-build
-          resources: {}
-  podTemplate: {}
-  serviceAccountName: tekton-bot
-  timeout: 240h0m0s
+        - computeResources: {}
+          name: jx-variables
+        - computeResources: {}
+          name: build-make-linux
+        - computeResources: {}
+          name: build-make-test
+        - computeResources: {}
+          name: build-container-build
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 240h0m0s
 status: {}
