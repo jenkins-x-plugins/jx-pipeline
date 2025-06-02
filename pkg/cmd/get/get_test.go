@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 package get_test
 
 import (
@@ -9,11 +6,11 @@ import (
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/get"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
-	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
-	"k8s.io/client-go/kubernetes/fake"
-
 	"github.com/stretchr/testify/assert"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const testDevNameSpace = "jx-test"
@@ -34,14 +31,14 @@ func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *pipe
 			Params: []pipelinev1.Param{
 				{
 					Name: "version",
-					Value: pipelinev1.ArrayOrString{
+					Value: pipelinev1.ParamValue{
 						Type:      pipelinev1.ParamTypeString,
 						StringVal: "v1",
 					},
 				},
 				{
 					Name: "build_id",
-					Value: pipelinev1.ArrayOrString{
+					Value: pipelinev1.ParamValue{
 						Type:      pipelinev1.ParamTypeString,
 						StringVal: "1",
 					},
