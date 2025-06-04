@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: jenkins-x-repo-pr-2075-jenkinsx-4rslp-pullrequest-cuda-t-tmstg
+status:
+  completionTime: "2022-03-28T19:39:10Z"
+  conditions:
+  - lastTransitionTime: "2022-03-28T19:39:10Z"
+    message: TaskRun "jenkins-x-repo-pr-2075-jenkinsx-4rslp-pullrequest-cuda-t-tmstg"
+      was cancelled
+    reason: TaskRunCancelled
+    status: "False"
+    type: Succeeded
+  podName: jenkins-x-repo-pr-2075-jenkinsx-4rslp-pullrequest-cuda-t-mfq59
+  startTime: "2022-03-28T19:35:37Z"
