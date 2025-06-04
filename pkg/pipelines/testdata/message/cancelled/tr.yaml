@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: s-x-plugins-jx-project-pr-464-pr-m2z8c-from-build-pack-m5gk2
+status:
+  completionTime: "2022-06-13T21:35:25Z"
+  conditions:
+    - lastTransitionTime: "2022-06-13T21:35:25Z"
+      message:
+        TaskRun "s-x-plugins-jx-project-pr-464-pr-m2z8c-from-build-pack-m5gk2"
+        was cancelled
+      reason: TaskRunCancelled
+      status: "False"
+      type: Succeeded
+  podName: s-x-plugins-jx-project-pr-464-pr-m2z8c-from-build-pack-m5-ksczr
+  startTime: "2022-06-13T20:59:06Z"
