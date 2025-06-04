@@ -130,7 +130,7 @@ spec:
       spec:
         accessModes:
         - ReadWriteOnce
-        computeResources:
+        resources:
           requests:
             storage: 1Gi
       status: {}
