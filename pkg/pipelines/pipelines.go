@@ -155,9 +155,6 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 		stageName := strings.ReplaceAll(cleanedUpTaskName, "-", " ")
 		stageNames[stageName] = true
 		var stage *v1.PipelineActivityStep
-		if &taskrun.Status == nil {
-			continue
-		}
 		if podName == "" {
 			podName = taskrun.Status.PodName
 		}
