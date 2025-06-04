@@ -306,6 +306,7 @@ func TestPipelineActivityStatus(t *testing.T) {
 
 		tektonfakeClient := tektonfake.NewSimpleClientset()
 		_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
+		require.NoError(t, err, "failed to get tekton client")
 
 		pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
 		require.Equal(t, v.expectedStatus, pa.Spec.Status.String())
@@ -358,6 +359,7 @@ func TestPipelineActivityMessage(t *testing.T) {
 
 		tr := &pipelinev1.TaskRun{}
 		err = yamls.LoadFile(trFile, tr)
+		require.NoError(t, err, "failed to load %s", trFile)
 
 		pa := &v1.PipelineActivity{}
 
