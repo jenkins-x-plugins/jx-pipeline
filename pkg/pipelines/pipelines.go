@@ -160,7 +160,8 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 		}
 
 		previousStepTerminated := false
-		for _, step := range taskrun.Status.Steps {
+		for i := range taskrun.Status.Steps {
+			step := &taskrun.Status.Steps[i]
 			name := step.Name
 			var started *metav1.Time
 			var completed *metav1.Time
@@ -197,7 +198,7 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 				}
 			}
 
-			step := v1.CoreActivityStep{
+			coreActivityStep := v1.CoreActivityStep{
 				Name:               Humanize(name),
 				Description:        "",
 				Status:             status,
@@ -219,7 +220,7 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 					},
 				}
 			}
-			stage.Stage.Steps = append(stage.Stage.Steps, step)
+			stage.Stage.Steps = append(stage.Stage.Steps, coreActivityStep)
 		}
 		if len(taskrun.Status.Steps) == 0 {
 			for _, m := range taskrun.Status.Conditions {
@@ -373,7 +374,8 @@ func addConditionsMessage(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity) {
 // It replace TaskRun with Stage
 func addTaskRunsMessage(taskruns []pipelinev1.TaskRun, pa *v1.PipelineActivity) {
 	k1 := 0
-	for _, taskrun := range taskruns {
+	for i := range taskruns {
+		taskrun := taskruns[i]
 		msg := ""
 		for k2 := range taskrun.Status.Conditions {
 			msg = taskrun.Status.Conditions[k2].Message

@@ -151,8 +151,8 @@ func (o *Options) Run() error {
 				m.onPipelineActivity(e)
 			}
 		},
-		UpdateFunc: func(_, new interface{}) {
-			e := new.(*v1.PipelineActivity)
+		UpdateFunc: func(_, obj interface{}) {
+			e := obj.(*v1.PipelineActivity)
 			if e != nil {
 				m.onPipelineActivity(e)
 			}
