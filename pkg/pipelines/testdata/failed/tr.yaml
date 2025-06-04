@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: test-repo-pr-321-pr-dng5w-test-pr-p47l7
+status:
+  completionTime: "2022-03-18T00:11:08Z"
+  conditions:
+  - lastTransitionTime: "2022-03-18T00:11:08Z"
+    message: 'The node was low on resource: ephemeral-storage. Container step-build-container
+      was using 17208516Ki, which exceeds its request of 0. '
+    reason: Failed
+    status: "False"
+    type: Succeeded
+  podName: test-repo-pr-321-pr-dng5w-test-pr-p47l7-pod-4fq92
+  startTime: "2022-03-17T23:58:39Z"
