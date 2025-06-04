@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: atgupta24-quickstart-004-pr-1-pr-qtgrn-from-build-pack-1-gf6ks
+status:
+  completionTime: "2022-06-29T18:11:22Z"
+  conditions:
+    - lastTransitionTime: "2022-06-29T18:11:22Z"
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: "True"
+      type: Succeeded
+  podName: atgupta24-quickstart-004-pr-1-pr-qtgrn-from-build-pack-1--6twgh
+  startTime: "2022-06-29T18:11:03Z"
+  steps:
+    - container: step-git-clone
+      imageID: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init@sha256:8bfb6edbd8ce4608af957a3a38444512c14713bc9fc0d60308f228c61be4c83f
+      name: git-clone
+      terminated:
+        containerID: containerd://a538a92371774aee2632bc56c5ae0967c780c760edf269b09e6f45a8945ac35f
+        exitCode: 0
+        finishedAt: "2022-06-29T18:11:11Z"
+        reason: Completed
+        startedAt: "2022-06-29T18:11:10Z"
+    - container: step-git-merge
+      imageID: ghcr.io/jenkins-x/jx-boot@sha256:f9f48fb7d49346ef98619ea4f6e8fac2c2b7f38deab1cff5842aa2ae0f68116c
+      name: git-merge
+      terminated:
+        containerID: containerd://26cc2f071facc10934d0cc0910f3932305e97e22e99b1d87f80552ceaf2980cb
+        exitCode: 0
+        finishedAt: "2022-06-29T18:11:14Z"
+        reason: Completed
+        startedAt: "2022-06-29T18:11:12Z"
+    - container: step-jx-variables
+      imageID: ghcr.io/jenkins-x/jx-boot@sha256:91347869979d08701be81ed363a39b846fdedb3cb772bb2beccb8b3209c25a5f
+      name: jx-variables
+      terminated:
+        containerID: containerd://9733092175e78c6b6997d8a03c3da4d27c29b171aa16bdc078b22681759249ae
+        exitCode: 0
+        finishedAt: "2022-06-29T18:11:17Z"
+        reason: Completed
+        startedAt: "2022-06-29T18:11:14Z"
+    - container: step-build-make-linux
+      imageID: docker.io/library/golang@sha256:724abf4dd44985d060f7aa91af5211eb2052491424bd497ba3ddc31f7cee969d
+      name: build-make-linux
+      terminated:
+        containerID: containerd://7b6e68c374ea1e8acc730a7d542e393592044da06a076c14b8873b4419699c55
+        exitCode: 0
+        finishedAt: "2022-06-29T18:11:21Z"
+        reason: Completed
+        startedAt: "2022-06-29T18:11:17Z"
