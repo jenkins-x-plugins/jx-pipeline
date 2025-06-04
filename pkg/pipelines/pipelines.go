@@ -79,7 +79,7 @@ func ToPipelineActivityName(pr *pipelinev1.PipelineRun, paList []v1.PipelineActi
 	return naming.ToValidName(prefix + build)
 }
 
-func ToPipelineActivity(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
+func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
 	annotations := pr.Annotations
 	labels := pr.Labels
 	if pa.APIVersion == "" {
@@ -140,8 +140,6 @@ func ToPipelineActivity(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, ove
 			ps.GitURL = annotations["lighthouse.jenkins-x.io/cloneURI"]
 		}
 	}
-
-	var tektonclient tektonversioned.Interface
 
 	podName := ""
 	stageNames := map[string]bool{}

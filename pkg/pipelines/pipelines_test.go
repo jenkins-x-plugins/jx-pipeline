@@ -1,6 +1,7 @@
 package pipelines_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -8,8 +9,10 @@ import (
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/testpipelines"
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	tektonfake "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,9 +45,22 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to unmarshal %s", prFile)
 
+	// getting path of trfile
+	trFile := filepath.Join("testdata", folder, "taskrun.yaml")
+	require.FileExists(t, trFile)
+
+	// loading a trfile
+	tektonfakeClient := tektonfake.NewSimpleClientset()
+	tr := &pipelinev1.TaskRun{}
+	err = yamls.LoadFile(trFile, tr)
+	require.NoError(t, err, "failed to unmarshal %s", trFile)
+
+	_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
+	assert.NoError(t, err, "Failed to create TaskRun %s in the fake client", tr.Name)
+
 	// generating pa from pr
 	pa := &v1.PipelineActivity{}
-	pipelines.ToPipelineActivity(pr, pa, false)
+	pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
 
 	// removing timestamps
 	testpipelines.ClearTimestamps(pa)
@@ -65,6 +81,10 @@ func TestMergePipelineActivity(t *testing.T) {
 	prFile := filepath.Join("testdata", "merge", "pipelinerun.yaml")
 	require.FileExists(t, prFile)
 
+	// copying tr path
+	trFile := filepath.Join("testdata", "merge", "taskrun.yaml")
+	require.FileExists(t, trFile)
+
 	// copying expected pa path
 	expectedFile := filepath.Join("testdata", "merge", "expected.yaml")
 	require.FileExists(t, expectedFile)
@@ -74,6 +94,15 @@ func TestMergePipelineActivity(t *testing.T) {
 	err := yamls.LoadFile(prFile, pr)
 	require.NoError(t, err, "failed to load %s", prFile)
 
+	// loading a trfile
+	tektonfakeClient := tektonfake.NewSimpleClientset()
+	tr := &pipelinev1.TaskRun{}
+	err = yamls.LoadFile(trFile, tr)
+	require.NoError(t, err, "failed to unmarshal %s", trFile)
+
+	_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
+	assert.NoError(t, err, "Failed to create TaskRun %s in the fake client", tr.Name)
+
 	// loading expectedPa
 	expectedPa := &v1.PipelineActivity{}
 	err = yamls.LoadFile(expectedFile, expectedPa)
@@ -81,7 +110,7 @@ func TestMergePipelineActivity(t *testing.T) {
 
 	// creating pa from pr
 	pa := &v1.PipelineActivity{}
-	pipelines.ToPipelineActivity(pr, pa, false)
+	pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
 
 	// removing the timestamp from pa
 	testpipelines.ClearTimestamps(pa)
@@ -261,13 +290,24 @@ func TestPipelineActivityStatus(t *testing.T) {
 		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
 		require.FileExists(t, prFile)
 
+		trFile := filepath.Join("testdata", v.folder, "tr.yaml")
+		require.FileExists(t, trFile)
+
 		pr := &pipelinev1.PipelineRun{}
 		err := yamls.LoadFile(prFile, pr)
 		require.NoError(t, err, "failed to load %s", prFile)
 
+		tr := &pipelinev1.TaskRun{}
+		assert.NoError(t, err, "Failed to create TaskRun %s in the fake client", tr.Name)
+		err = yamls.LoadFile(trFile, tr)
+		require.NoError(t, err, "failed to load %s", trFile)
+
 		pa := &v1.PipelineActivity{}
 
-		pipelines.ToPipelineActivity(pr, pa, false)
+		tektonfakeClient := tektonfake.NewSimpleClientset()
+		_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
+
+		pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
 		require.Equal(t, v.expectedStatus, pa.Spec.Status.String())
 	}
 }
@@ -309,15 +349,23 @@ func TestPipelineActivityMessage(t *testing.T) {
 		t.Logf("Running test case %d: %s", k+1, v.description)
 		prFile := filepath.Join("testdata", v.folder, "pr.yaml")
 		require.FileExists(t, prFile)
+		trFile := filepath.Join("testdata", v.folder, "tr.yaml")
+		require.FileExists(t, trFile)
 
 		pr := &pipelinev1.PipelineRun{}
 		err := yamls.LoadFile(prFile, pr)
 		require.NoError(t, err, "failed to load %s", prFile)
 
+		tr := &pipelinev1.TaskRun{}
+		err = yamls.LoadFile(trFile, tr)
+
 		pa := &v1.PipelineActivity{}
 
 		pa.Name = v.name
-		pipelines.ToPipelineActivity(pr, pa, false)
+		tektonfakeClient := tektonfake.NewSimpleClientset()
+		_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
+		assert.NoError(t, err, "Failed to create TaskRun %s in the fake client", tr.Name)
+		pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
 
 		for k2 := range pa.Spec.Steps {
 			require.NotEqual(t, "", pa.Spec.Steps[k2].Stage.Message.String())

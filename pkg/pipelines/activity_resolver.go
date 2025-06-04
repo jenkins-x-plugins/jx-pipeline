@@ -2,6 +2,7 @@ package pipelines
 
 import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
+	"github.com/jenkins-x/lighthouse/pkg/clients"
 	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
@@ -36,6 +37,10 @@ func (r *ActivityResolver) ToPipelineActivity(pr *pipelinev1.PipelineRun) *v1.Pi
 		pa.Name = paName
 		r.index[paName] = pa
 	}
-	ToPipelineActivity(pr, pa, false)
+	tektonclient, _, _, _, err := clients.GetAPIClients()
+	if err != nil {
+		return nil
+	}
+	ToPipelineActivity(tektonclient, pr, pa, false)
 	return pa
 }

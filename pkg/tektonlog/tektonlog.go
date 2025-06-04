@@ -20,8 +20,7 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-	tektonversioned "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
-
+	"github.com/jenkins-x/lighthouse/pkg/clients"
 	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
@@ -110,7 +109,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 			pa.Name = paName
 			paNameMap[paName] = pa
 		}
-		pipelines.ToPipelineActivity(p, pa, false)
+		pipelines.ToPipelineActivity(t.TektonClient, p, pa, false)
 
 		fullBuildName := createPipelineActivityName(pa)
 		prMap[fullBuildName] = append(prMap[fullBuildName], p)
@@ -334,7 +333,10 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipeli
 }
 
 func findExecutedOrSkippedStagesStage(taskName string, pr *pipelinev1.PipelineRun) stageTime {
-	var tektonclient tektonversioned.Interface
+	tektonclient, _, _, _, err := clients.GetAPIClients()
+	if err != nil {
+		return stageTime{}
+	}
 	for _, childReference := range pr.Status.ChildReferences {
 		taskrun, err := tektonclient.TektonV1().TaskRuns("jx").Get(context.TODO(), childReference.Name, metav1.GetOptions{})
 		if err != nil {
