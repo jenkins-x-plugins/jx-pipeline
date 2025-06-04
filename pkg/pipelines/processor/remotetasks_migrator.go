@@ -175,7 +175,7 @@ func (p *RemoteTasksMigrator) migrateToNewPipelineRun(prs *pipelinev1.PipelineRu
 	steps := prs.Spec.PipelineSpec.Tasks[0].TaskSpec.Steps
 	newPrs := pipelinev1.PipelineRun{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "tekton.dev/v1beta1",
+			APIVersion: "tekton.dev/v1",
 			Kind:       "PipelineRun",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -354,7 +354,7 @@ func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *pipelinev1.Ste
 	newTask := pipelinev1.Task{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Task",
-			APIVersion: "tekton.dev/v1beta1",
+			APIVersion: "tekton.dev/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: step.Name,
