@@ -1,0 +1,74 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: release-jtzr9-from-build-pack-xdkxc
+status:
+  conditions:
+  - lastTransitionTime: "2020-09-29T12:40:42Z"
+    message: 'pod status "Ready":"False"; message: "containers with unready
+      status: [step-git-clone step-git-setup step-git-merge step-next-version
+      step-tag-version step-setup-builder-home step-jx-variables step-build-npmrc
+      step-build-npm-install step-build-npm-test step-build-container-build
+      step-promote-changelog step-promote-helm-release step-promote-jx-promote]"'
+    reason: Pending
+    status: Unknown
+    type: Succeeded
+  podName: release-jtzr9-from-build-pack-xdkxc-pod-fw8tz
+  startTime: "2020-09-29T12:40:38Z"
+  steps:
+  - container: step-git-clone
+    name: git-clone
+    waiting:
+      reason: PodInitializing
+  - container: step-git-setup
+    name: git-setup
+    waiting:
+      reason: PodInitializing
+  - container: step-git-merge
+    name: git-merge
+    waiting:
+      reason: PodInitializing
+  - container: step-next-version
+    name: next-version
+    waiting:
+      reason: PodInitializing
+  - container: step-tag-version
+    name: tag-version
+    waiting:
+      reason: PodInitializing
+  - container: step-setup-builder-home
+    name: setup-builder-home
+    waiting:
+      reason: PodInitializing
+  - container: step-jx-variables
+    name: jx-variables
+    waiting:
+      reason: PodInitializing
+  - container: step-build-npmrc
+    name: build-npmrc
+    waiting:
+      reason: PodInitializing
+  - container: step-build-npm-install
+    name: build-npm-install
+    waiting:
+      reason: PodInitializing
+  - container: step-build-npm-test
+    name: build-npm-test
+    waiting:
+      reason: PodInitializing
+  - container: step-build-container-build
+    name: build-container-build
+    waiting:
+      reason: PodInitializing
+  - container: step-promote-changelog
+    name: promote-changelog
+    waiting:
+      reason: PodInitializing
+  - container: step-promote-helm-release
+    name: promote-helm-release
+    waiting:
+      reason: PodInitializing
+  - container: step-promote-jx-promote
+    name: promote-jx-promote
+    waiting:
+      reason: PodInitializing

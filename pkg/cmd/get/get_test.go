@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 package get_test
 
 import (
@@ -9,19 +6,17 @@ import (
 
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/cmd/get"
 	"github.com/jenkins-x-plugins/jx-pipeline/pkg/tektonlog"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
-	"k8s.io/client-go/kubernetes/fake"
-
 	"github.com/stretchr/testify/assert"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	faketekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const testDevNameSpace = "jx-test"
 
-func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tektonv1beta1.PipelineRun {
-	return &v1beta1.PipelineRun{
+func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *pipelinev1.PipelineRun {
+	return &pipelinev1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "PR1",
 			Namespace: ns,
@@ -32,26 +27,26 @@ func pipelineRun(ns, repo, branch, owner, context string, now metav1.Time) *tekt
 				tektonlog.LabelContext: context,
 			},
 		},
-		Spec: v1beta1.PipelineRunSpec{
-			Params: []v1beta1.Param{
+		Spec: pipelinev1.PipelineRunSpec{
+			Params: []pipelinev1.Param{
 				{
 					Name: "version",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ParamValue{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "v1",
 					},
 				},
 				{
 					Name: "build_id",
-					Value: v1beta1.ArrayOrString{
-						Type:      v1beta1.ParamTypeString,
+					Value: pipelinev1.ParamValue{
+						Type:      pipelinev1.ParamTypeString,
 						StringVal: "1",
 					},
 				},
 			},
 		},
-		Status: v1beta1.PipelineRunStatus{
-			PipelineRunStatusFields: tektonv1beta1.PipelineRunStatusFields{
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
 				CompletionTime: &now,
 			},
 		},

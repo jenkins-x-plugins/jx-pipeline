@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
+	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,18 +24,15 @@ func PipelineRunIsNotPending(pr *pipelineapi.PipelineRun) bool {
 	if pr.Status.CompletionTime != nil {
 		return true
 	}
-	if len(pr.Status.TaskRuns) > 0 {
-		for _, v := range pr.Status.TaskRuns {
-			if v.Status != nil {
-				for _, stepState := range v.Status.Steps {
-					if stepState.Waiting == nil || stepState.Waiting.Reason == "PodInitializing" {
-						return true
-					}
-				}
-			}
+
+	if len(pr.Status.Conditions) > 0 {
+		c := pr.Status.Conditions[0]
+		if c.Status == corev1.ConditionUnknown && c.Reason == v1.ActivityStatusTypePending.String() {
+			return false
 		}
 	}
-	return false
+
+	return true
 }
 
 // PipelineRunIsComplete returns true if the PipelineRun has completed or has running steps.
@@ -45,12 +44,12 @@ func PipelineRunIsComplete(pr *pipelineapi.PipelineRun) bool {
 func CancelPipelineRun(ctx context.Context, tektonClient tektonclient.Interface, ns string, pr *pipelineapi.PipelineRun) error {
 	prName := pr.Name
 	var err error
-	pr, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
+	pr, err = tektonClient.TektonV1().PipelineRuns(ns).Get(ctx, prName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get PipelineRun %s in namespace %s: %w", prName, ns, err)
 	}
 	pr.Spec.Status = pipelineapi.PipelineRunSpecStatusCancelled
-	_, err = tektonClient.TektonV1beta1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
+	_, err = tektonClient.TektonV1().PipelineRuns(ns).Update(ctx, pr, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update PipelineRun %s in namespace %s to mark it as cancelled: %w", prName, ns, err)
 	}

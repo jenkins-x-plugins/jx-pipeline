@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -8,37 +8,37 @@ spec:
   pipelineSpec:
     tasks:
     - name: chart
-      resources: {}
+      computeResources: {}
       taskSpec:
         metadata: {}
         stepTemplate:
           name: ""
-          resources: {}
+          computeResources: {}
           workingDir: /workspace/source
         steps:
         - image: gcr.io/jenkinsxio/use-different0-image:1.0.42
           name: next-version
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env bash
             VERSION=$(jx-release-version)
             echo $VERSION > VERSION
         - image: gcr.io/jenkinsxio/jx-boot:3.0.773
           name: jx-variables
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             jx gitops variables
         - image: golang:1.15
           name: release-binary
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
             make release
         - image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-and-push-image
-          resources: {}
+          computeResources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
@@ -46,7 +46,7 @@ spec:
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=/workspace/source/Dockerfile --destination=gcr.io/$DOCKER_REGISTRY_ORG/$REPO_NAME:$VERSION --destination=gcr.io/$DOCKER_REGISTRY_ORG/$REPO_NAME:latest
         - image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-and-push-image-bdd
-          resources: {}
+          computeResources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
@@ -54,7 +54,7 @@ spec:
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=/workspace/source/Dockerfile-bdd --destination=gcr.io/$DOCKER_REGISTRY_ORG/jx-bdd:$VERSION --destination=gcr.io/$DOCKER_REGISTRY_ORG/jx-bdd:latest
         - image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-and-push-image-go
-          resources: {}
+          computeResources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
@@ -62,7 +62,7 @@ spec:
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=/workspace/source/Dockerfile-go --destination=gcr.io/$DOCKER_REGISTRY_ORG/jx-go:$VERSION --destination=gcr.io/$DOCKER_REGISTRY_ORG/jx-go:latest
         - image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-and-push-image-go-maven
-          resources: {}
+          computeResources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
@@ -71,14 +71,14 @@ spec:
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=/workspace/source/Dockerfile --destination=gcr.io/$DOCKER_REGISTRY_ORG/$REPO_NAME:$VERSION
         - image: jnorwood/helm-docs:v1.4.0
           name: chart-docs
-          resources: {}
+          computeResources: {}
           script: |
             #!/bin/ash
             if [ -d "/workspace/source/charts/$REPO_NAME" ]; then cd /workspace/source/charts/$REPO_NAME
             helm-docs; else echo no charts; fi
         - image: gcr.io/jenkinsxio/jx-cli:3.0.773
           name: release-chart
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env bash
             if [ -d "/workspace/source/charts/$REPO_NAME" ]; then source .jx/variables.sh
@@ -103,7 +103,7 @@ spec:
             jx changelog create --verbose --header-file=hack/changelog-header.md --version=$VERSION --rev=$PULL_BASE_SHA --output-markdown=changelog.md --update-release=false
         - image: gcr.io/jenkinsxio/step-go-releaser:0.0.14
           name: upload-binaries
-          resources: {}
+          computeResources: {}
           script: |
             #!/bin/bash
             source .jx/variables.sh
@@ -119,6 +119,8 @@ spec:
           - pr
           image: gcr.io/jenkinsxio/jx-updatebot:latest
           name: promote-release
-  serviceAccountName: tekton-bot
-  timeout: 240h0m0s
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 240h0m0s
 status: {}

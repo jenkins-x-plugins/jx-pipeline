@@ -1,7 +1,7 @@
 package processor
 
 import (
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -16,29 +16,29 @@ func NewModifier(templateEnvs map[string]string) *modifier { //nolint:revive
 	}
 }
 
-func (p *modifier) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) {
+func (p *modifier) ProcessPipeline(pipeline *pipelinev1.Pipeline, path string) (bool, error) {
 	return p.processPipelineSpec(&pipeline.Spec, path)
 }
 
-func (p *modifier) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
+func (p *modifier) ProcessPipelineRun(prs *pipelinev1.PipelineRun, path string) (bool, error) {
 	return p.processPipelineSpec(prs.Spec.PipelineSpec, path)
 }
 
-func (p *modifier) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
+func (p *modifier) ProcessTask(task *pipelinev1.Task, path string) (bool, error) {
 	return p.processTaskSpec(&task.Spec, path, task.Name)
 }
 
-func (p *modifier) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
+func (p *modifier) ProcessTaskRun(tr *pipelinev1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
-func (p *modifier) processPipelineSpec(ps *v1beta1.PipelineSpec, path string) (bool, error) {
+func (p *modifier) processPipelineSpec(ps *pipelinev1.PipelineSpec, path string) (bool, error) {
 	return ProcessPipelineSpec(ps, path, p.processTaskSpec)
 }
 
-func (p *modifier) processTaskSpec(ts *v1beta1.TaskSpec, path, name string) (bool, error) { //nolint:revive
+func (p *modifier) processTaskSpec(ts *pipelinev1.TaskSpec, path, name string) (bool, error) { //nolint:revive
 	if ts.StepTemplate == nil {
-		ts.StepTemplate = &v1beta1.StepTemplate{}
+		ts.StepTemplate = &pipelinev1.StepTemplate{}
 	}
 	modified := false
 	if p.templateEnvs != nil {

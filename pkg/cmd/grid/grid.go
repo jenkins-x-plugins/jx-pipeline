@@ -21,7 +21,7 @@ import (
 	"github.com/jenkins-x/jx-kube-client/v3/pkg/kubeclient"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
-	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -151,8 +151,8 @@ func (o *Options) Run() error {
 				m.onPipelineActivity(e)
 			}
 		},
-		UpdateFunc: func(_, new interface{}) {
-			e := new.(*v1.PipelineActivity)
+		UpdateFunc: func(_, obj interface{}) {
+			e := obj.(*v1.PipelineActivity)
 			if e != nil {
 				m.onPipelineActivity(e)
 			}
@@ -200,7 +200,7 @@ func (o *Options) viewLogsFor(act *v1.PipelineActivity, paList []v1.PipelineActi
 	}
 	ctx := context.TODO()
 
-	resources, err := o.TektonClient.TektonV1beta1().PipelineRuns(ns).List(ctx, metav1.ListOptions{})
+	resources, err := o.TektonClient.TektonV1().PipelineRuns(ns).List(ctx, metav1.ListOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		err = nil
 	}
@@ -211,7 +211,7 @@ func (o *Options) viewLogsFor(act *v1.PipelineActivity, paList []v1.PipelineActi
 		return fmt.Errorf("no PipelineRun resources found for namespace %s", ns)
 	}
 
-	var prList []*tektonapis.PipelineRun
+	var prList []*pipelinev1.PipelineRun
 	for i := range resources.Items {
 		pr := &resources.Items[i]
 

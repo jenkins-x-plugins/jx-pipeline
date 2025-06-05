@@ -1,0 +1,34 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: repo-pr-2093-jenkinsx-rt7gh-pullrequestfirstt-7lbhx
+status:
+  completionTime: "2022-03-31T15:01:04Z"
+  conditions:
+  - lastTransitionTime: "2022-03-31T15:01:04Z"
+    message: TaskRun "repo-pr-2093-jenkinsx-rt7gh-pullrequestfirstt-7lbhx"
+      was cancelled
+    reason: TaskRunCancelled
+    status: "False"
+    type: Succeeded
+  podName: repo-pr-2093-jenkinsx-rt7gh-pullrequestfirstt-w6mb5
+  startTime: "2022-03-31T14:41:45Z"
+  steps:
+  - container: step-git-clone
+    imageID: docker-pullable://gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init@sha256:db3e7431b11917f21c6978f478298dcb5b2b4048e9f1ec5c0246d72b66c820c7
+    name: git-clone
+    terminated:
+      containerID: docker://11fa61069f7b5e28b5b8fba69d8ec94590bdeb54ed17e90ec8859a7b38a8f881
+      exitCode: 0
+      finishedAt: "2022-03-31T14:41:54Z"
+      reason: Completed
+      startedAt: "2022-03-31T14:41:53Z"
+  - container: step-git-merge
+    imageID: docker-pullable://ghcr.io/jenkins-x/jx-boot@sha256:4e357af6235f614eac32ee42162926b06cad0113e6668b3341fabbf971a02f45
+    name: git-merge
+    terminated:
+      containerID: docker://93910df3c677793ed80c11509ebdf0021dc179484f2623ab9ca74644ee7dbc22
+      exitCode: 1
+      finishedAt: "2022-03-31T15:01:04Z"
+      reason: TaskRunCancelled
+      startedAt: "2022-03-31T14:41:51Z"

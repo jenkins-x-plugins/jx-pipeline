@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
@@ -7,13 +7,13 @@ spec:
   pipelineSpec:
     tasks:
     - name: from-build-pack
-      resources: {}
+      computeResources: {}
       taskSpec:
         metadata: {}
         stepTemplate:
           image: uses:jenkins-x/jx3-pipeline-catalog/tasks/javascript/pullrequest.yaml@versionStream
           name: ""
-          resources:
+          computeResources:
             requests:
               cpu: 400m
               memory: 512Mi
@@ -21,18 +21,18 @@ spec:
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
           name: ""
-          resources: {}
+          computeResources: {}
         - name: jx-variables
-          resources: {}
+          computeResources: {}
         - name: build-npm-install
-          resources: {}
+          computeResources: {}
         - name: build-npm-test
-          resources: {}
+          computeResources: {}
         - name: build-container-build
-          resources: {}
+          computeResources: {}
         - name: promote-jx-preview
-          resources: {}
-  podTemplate: {}
-  serviceAccountName: tekton-bot
-  timeout: 240h0m0s
-status: {}
+          computeResources: {}
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 240h0m0s

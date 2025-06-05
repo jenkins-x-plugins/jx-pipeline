@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   creationTimestamp: null
@@ -81,12 +81,12 @@ spec:
         name: jx-boot-job-env-vars
         optional: true
     name: ""
-    resources: {}
+    computeResources: {}
     workingDir: /workspace/source
   steps:
   - image: golangci/golangci-lint:v1.50.1-alpine@sha256:a392d4e44049a444a927878792dae9534075ec57880e0657647ce818bd8278c2
     name: make-lint
-    resources: {}
+    computeResources: {}
     script: |
       #!/bin/sh
       golangci-lint run --deadline 30m0s

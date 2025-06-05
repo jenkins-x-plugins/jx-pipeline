@@ -8,15 +8,15 @@ import (
 
 	"github.com/jenkins-x/jx-helpers/v3/pkg/yamls"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
-	LighthouseTaskParams = []v1beta1.ParamSpec{
+	LighthouseTaskParams = []pipelinev1.ParamSpec{
 		{
 			Name:        "BUILD_ID",
 			Type:        "string",
@@ -57,13 +57,13 @@ var (
 			Name:        "PULL_NUMBER",
 			Type:        "string",
 			Description: "The git pull request number",
-			Default:     &v1beta1.ParamValue{Type: "string", StringVal: ""},
+			Default:     &pipelinev1.ParamValue{Type: "string", StringVal: ""},
 		},
 		{
 			Name:        "PULL_PULL_REF",
 			Type:        "string",
 			Description: "The git pull request ref in the form 'refs/pull/$PULL_NUMBER/head'",
-			Default:     &v1beta1.ParamValue{Type: "string", StringVal: ""},
+			Default:     &pipelinev1.ParamValue{Type: "string", StringVal: ""},
 		},
 		{
 			Name:        "PULL_PULL_SHA",
@@ -132,13 +132,13 @@ func NewRemoteTasksMigrator(overrideSHA string, workspaceVolumeQuantity resource
 	}
 }
 
-func (p *RemoteTasksMigrator) ProcessPipeline(pipeline *v1beta1.Pipeline, path string) (bool, error) { //nolint:revive
+func (p *RemoteTasksMigrator) ProcessPipeline(pipeline *pipelinev1.Pipeline, path string) (bool, error) { //nolint:revive
 	return false, nil
 }
 
 // ProcessPipelineRun processes a PipelineRun and migrates it to either a new PipelineRun or to individual Tasks
 // based on whether it is a parent or child PipelineRun
-func (p *RemoteTasksMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path string) (bool, error) {
+func (p *RemoteTasksMigrator) ProcessPipelineRun(prs *pipelinev1.PipelineRun, path string) (bool, error) {
 	log.Logger().Infof("Processing pipeline run %s", path)
 	if taskCount := len(prs.Spec.PipelineSpec.Tasks); taskCount != 1 {
 		// All jx pipelines should only have one task
@@ -171,27 +171,31 @@ func (p *RemoteTasksMigrator) ProcessPipelineRun(prs *v1beta1.PipelineRun, path 
 
 // migrateToNewPipelineRun takes a PipelineRun and migrates it to a native Tekton PipelineRun converting the steps
 // of the original to individual Tasks within the new PipelineRun. This overwrites the original PipelineRun found at path.
-func (p *RemoteTasksMigrator) migrateToNewPipelineRun(prs *v1beta1.PipelineRun) (bool, error) {
+func (p *RemoteTasksMigrator) migrateToNewPipelineRun(prs *pipelinev1.PipelineRun) (bool, error) {
 	steps := prs.Spec.PipelineSpec.Tasks[0].TaskSpec.Steps
-	newPrs := v1beta1.PipelineRun{
+	newPrs := pipelinev1.PipelineRun{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "tekton.dev/v1beta1",
+			APIVersion: "tekton.dev/v1",
 			Kind:       "PipelineRun",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: prs.Name,
 		},
-		Spec: v1beta1.PipelineRunSpec{
-			PipelineSpec: &v1beta1.PipelineSpec{
-				Workspaces: []v1beta1.PipelineWorkspaceDeclaration{
+		Spec: pipelinev1.PipelineRunSpec{
+			PipelineSpec: &pipelinev1.PipelineSpec{
+				Workspaces: []pipelinev1.PipelineWorkspaceDeclaration{
 					{
 						Name: "pipeline-ws",
 					},
 				},
 			},
-			ServiceAccountName: serviceAccountName,
-			Timeout:            prs.Spec.Timeout,
-			Workspaces: []v1beta1.WorkspaceBinding{
+			TaskRunTemplate: pipelinev1.PipelineTaskRunTemplate{
+				ServiceAccountName: serviceAccountName,
+			},
+			Timeouts: &pipelinev1.TimeoutFields{
+				Pipeline: prs.Spec.Timeouts.Pipeline,
+			},
+			Workspaces: []pipelinev1.WorkspaceBinding{
 				{
 					Name: "pipeline-ws",
 					VolumeClaimTemplate: &v1.PersistentVolumeClaim{
@@ -211,7 +215,7 @@ func (p *RemoteTasksMigrator) migrateToNewPipelineRun(prs *v1beta1.PipelineRun) 
 		},
 	}
 
-	pipelineTasks := make([]v1beta1.PipelineTask, len(steps))
+	pipelineTasks := make([]pipelinev1.PipelineTask, len(steps))
 	for idx := range steps {
 		newPipelineTask, err := p.NewPipelineTaskFromStepAndPipelineRun(&steps[idx], prs)
 		if err != nil {
@@ -235,7 +239,7 @@ func (p *RemoteTasksMigrator) migrateToNewPipelineRun(prs *v1beta1.PipelineRun) 
 // migrateToTasks takes a PipelineRun and migrates the steps of the original to individual Tasks. This writes the
 // new Tasks to a subdirectory in path named the same as the original PipelineRun. The original PipelineRun is not
 // modified.
-func (p *RemoteTasksMigrator) migrateToTasks(prs *v1beta1.PipelineRun, path string) (bool, error) {
+func (p *RemoteTasksMigrator) migrateToTasks(prs *pipelinev1.PipelineRun, path string) (bool, error) {
 	steps := prs.Spec.PipelineSpec.Tasks[0].TaskSpec.Steps
 
 	subDir := filepath.Join(filepath.Dir(path), prs.Name)
@@ -244,7 +248,7 @@ func (p *RemoteTasksMigrator) migrateToTasks(prs *v1beta1.PipelineRun, path stri
 		return false, err
 	}
 
-	tasks := make([]v1beta1.Task, len(steps))
+	tasks := make([]pipelinev1.Task, len(steps))
 	for idx := range steps {
 		newTask, err := p.NewTaskFromStepAndPipelineRun(&steps[idx], prs, false)
 		if err != nil {
@@ -259,9 +263,9 @@ func (p *RemoteTasksMigrator) migrateToTasks(prs *v1beta1.PipelineRun, path stri
 	return false, nil
 }
 
-func (p *RemoteTasksMigrator) populateTaskValuesFromPipelineRun(task *v1beta1.Task, pr *v1beta1.PipelineRun, isEmbeddedTask bool) {
+func (p *RemoteTasksMigrator) populateTaskValuesFromPipelineRun(task *pipelinev1.Task, pr *pipelinev1.PipelineRun, isEmbeddedTask bool) {
 	if task.Spec.StepTemplate == nil {
-		task.Spec.StepTemplate = &v1beta1.StepTemplate{}
+		task.Spec.StepTemplate = &pipelinev1.StepTemplate{}
 	}
 
 	task.Spec.StepTemplate.WorkingDir = pr.Spec.PipelineSpec.Tasks[0].TaskSpec.TaskSpec.StepTemplate.WorkingDir
@@ -272,9 +276,9 @@ func (p *RemoteTasksMigrator) populateTaskValuesFromPipelineRun(task *v1beta1.Ta
 	}
 }
 
-func (p *RemoteTasksMigrator) appendDefaultValues(task *v1beta1.Task) {
+func (p *RemoteTasksMigrator) appendDefaultValues(task *pipelinev1.Task) {
 	if task.Spec.StepTemplate == nil {
-		task.Spec.StepTemplate = &v1beta1.StepTemplate{}
+		task.Spec.StepTemplate = &pipelinev1.StepTemplate{}
 	}
 
 	task.Spec.Params = AppendParamsIfNotPresent(task.Spec.Params, LighthouseTaskParams)
@@ -287,10 +291,10 @@ func (p *RemoteTasksMigrator) appendDefaultValues(task *v1beta1.Task) {
 
 }
 
-func (p *RemoteTasksMigrator) NewPipelineTaskFromStepAndPipelineRun(step *v1beta1.Step, prs *v1beta1.PipelineRun) (v1beta1.PipelineTask, error) {
+func (p *RemoteTasksMigrator) NewPipelineTaskFromStepAndPipelineRun(step *pipelinev1.Step, prs *pipelinev1.PipelineRun) (pipelinev1.PipelineTask, error) {
 	stepParentRef, err := p.gitResolver.NewRefFromUsesImage(step.Image, step.Name)
 	if err != nil {
-		return v1beta1.PipelineTask{}, err
+		return pipelinev1.PipelineTask{}, err
 	}
 
 	if stepParentRef != nil {
@@ -306,39 +310,39 @@ func (p *RemoteTasksMigrator) NewPipelineTaskFromStepAndPipelineRun(step *v1beta
 	// Otherwise it's a child step and is inherited from the parent pipelineRun in the stepTemplate
 	stepTemplateParentRef, err := p.gitResolver.NewRefFromUsesImage(prs.Spec.PipelineSpec.Tasks[0].TaskSpec.StepTemplate.Image, step.Name)
 	if err != nil {
-		return v1beta1.PipelineTask{}, err
+		return pipelinev1.PipelineTask{}, err
 	}
 
 	return p.pipelineTaskFromParentRef(step.Name, stepTemplateParentRef), nil
 }
 
-func (p *RemoteTasksMigrator) pipelineTaskFromStep(step *v1beta1.Step, prs *v1beta1.PipelineRun) (v1beta1.PipelineTask, error) {
+func (p *RemoteTasksMigrator) pipelineTaskFromStep(step *pipelinev1.Step, prs *pipelinev1.PipelineRun) (pipelinev1.PipelineTask, error) {
 	task, err := p.NewTaskFromStepAndPipelineRun(step, prs, true)
 	if err != nil {
-		return v1beta1.PipelineTask{}, err
+		return pipelinev1.PipelineTask{}, err
 	}
-	return v1beta1.PipelineTask{
+	return pipelinev1.PipelineTask{
 		Name: step.Name,
-		TaskSpec: &v1beta1.EmbeddedTask{
+		TaskSpec: &pipelinev1.EmbeddedTask{
 			TaskSpec: task.Spec,
 		},
 	}, nil
 }
 
-func (p *RemoteTasksMigrator) pipelineTaskFromParentRef(name string, ref *GitRef) v1beta1.PipelineTask {
-	return v1beta1.PipelineTask{
+func (p *RemoteTasksMigrator) pipelineTaskFromParentRef(name string, ref *GitRef) pipelinev1.PipelineTask {
+	return pipelinev1.PipelineTask{
 		Name: name,
-		TaskRef: &v1beta1.TaskRef{
+		TaskRef: &pipelinev1.TaskRef{
 			ResolverRef: ref.ToResolverRef(),
 		},
-		Workspaces: []v1beta1.WorkspacePipelineTaskBinding{
+		Workspaces: []pipelinev1.WorkspacePipelineTaskBinding{
 			{Name: "output", Workspace: "pipeline-ws"},
 		},
 	}
 }
 
 // NewTaskFromStepAndPipelineRun takes a step and a PipelineRun and creates a Task from them.
-func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *v1beta1.Step, prs *v1beta1.PipelineRun, isEmbeddedTask bool) (v1beta1.Task, error) {
+func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *pipelinev1.Step, prs *pipelinev1.PipelineRun, isEmbeddedTask bool) (pipelinev1.Task, error) {
 	taskStep := step
 
 	workingDir := step.WorkingDir
@@ -347,22 +351,22 @@ func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *v1beta1.Step, 
 		workingDir = prs.Spec.PipelineSpec.Tasks[0].TaskSpec.TaskSpec.StepTemplate.WorkingDir
 	}
 
-	newTask := v1beta1.Task{
+	newTask := pipelinev1.Task{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Task",
-			APIVersion: "tekton.dev/v1beta1",
+			APIVersion: "tekton.dev/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: step.Name,
 		},
-		Spec: v1beta1.TaskSpec{
-			Steps: []v1beta1.Step{
+		Spec: pipelinev1.TaskSpec{
+			Steps: []pipelinev1.Step{
 				*taskStep,
 			},
-			StepTemplate: &v1beta1.StepTemplate{
+			StepTemplate: &pipelinev1.StepTemplate{
 				WorkingDir: workingDir,
 			},
-			Workspaces: []v1beta1.WorkspaceDeclaration{
+			Workspaces: []pipelinev1.WorkspaceDeclaration{
 				{
 					Name:        "output",
 					MountPath:   "/workspace",
@@ -374,13 +378,13 @@ func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *v1beta1.Step, 
 
 	p.populateTaskValuesFromPipelineRun(&newTask, prs, isEmbeddedTask)
 	if err := newTask.DeepCopy().Validate(context.Background()); err != nil {
-		return v1beta1.Task{}, fmt.Errorf("failed to validate new task: %w", err)
+		return pipelinev1.Task{}, fmt.Errorf("failed to validate new task: %w", err)
 	}
 	return newTask, nil
 }
 
 // ProcessTask processes a task and appends the default params and environment variables to it
-func (p *RemoteTasksMigrator) ProcessTask(task *v1beta1.Task, path string) (bool, error) {
+func (p *RemoteTasksMigrator) ProcessTask(task *pipelinev1.Task, path string) (bool, error) {
 	log.Logger().Infof("Processing task %s", path)
 	// We need to add all the default params to the task
 	p.appendDefaultValues(task)
@@ -391,6 +395,6 @@ func (p *RemoteTasksMigrator) ProcessTask(task *v1beta1.Task, path string) (bool
 	return true, nil
 }
 
-func (p *RemoteTasksMigrator) ProcessTaskRun(tr *v1beta1.TaskRun, path string) (bool, error) { //nolint:revive
+func (p *RemoteTasksMigrator) ProcessTaskRun(tr *pipelinev1.TaskRun, path string) (bool, error) { //nolint:revive
 	return false, nil
 }

@@ -21,7 +21,7 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 
 	"github.com/spf13/cobra"
-	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelineapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -169,7 +169,7 @@ func (o *Options) renderPipelineRuns(ctx context.Context) error {
 	ns := o.Namespace
 	tektonClient := o.TektonClient
 
-	pipelineRuns := tektonClient.TektonV1beta1().PipelineRuns(ns)
+	pipelineRuns := tektonClient.TektonV1().PipelineRuns(ns)
 	prList, err := pipelineRuns.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list PipelineRuns in namespace %s: %w", ns, err)

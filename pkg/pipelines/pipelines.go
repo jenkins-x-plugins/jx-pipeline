@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,7 +10,8 @@ import (
 	v1 "github.com/jenkins-x/jx-api/v4/pkg/apis/jenkins.io/v1"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/activities"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/naming"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	tektonversioned "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +20,7 @@ import (
 )
 
 // ToPipelineActivityName creates an activity name from a pipeline run
-func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivity) string {
+func ToPipelineActivityName(pr *pipelinev1.PipelineRun, paList []v1.PipelineActivity) string {
 	labels := pr.Labels
 	if labels == nil {
 		return ""
@@ -77,7 +79,7 @@ func ToPipelineActivityName(pr *v1beta1.PipelineRun, paList []v1.PipelineActivit
 	return naming.ToValidName(prefix + build)
 }
 
-func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
+func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
 	annotations := pr.Annotations
 	labels := pr.Labels
 	if pa.APIVersion == "" {
@@ -142,118 +144,121 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 	podName := ""
 	stageNames := map[string]bool{}
 	var steps []v1.PipelineActivityStep
-	if pr.Status.TaskRuns != nil {
-		for _, v := range pr.Status.TaskRuns {
-			stageName := strings.ReplaceAll(v.PipelineTaskName, "-", " ")
-			stageNames[stageName] = true
-			var stage *v1.PipelineActivityStep
-			if v.Status == nil {
-				continue
-			}
-			if podName == "" {
-				podName = v.Status.PodName
-			}
+	var taskruns []pipelinev1.TaskRun
+	for _, childReference := range pr.Status.ChildReferences {
+		taskrun, err := tektonclient.TektonV1().TaskRuns(pa.Namespace).Get(context.TODO(), childReference.Name, metav1.GetOptions{})
+		if err != nil {
+			continue
+		}
+		taskruns = append(taskruns, *taskrun)
+		cleanedUpTaskName := strings.TrimPrefix(taskrun.Name[:len(taskrun.Name)-6], pr.Name+"-")
+		stageName := strings.ReplaceAll(cleanedUpTaskName, "-", " ")
+		stageNames[stageName] = true
+		var stage *v1.PipelineActivityStep
+		if podName == "" {
+			podName = taskrun.Status.PodName
+		}
 
-			previousStepTerminated := false
-			for _, step := range v.Status.Steps {
-				name := step.Name
-				var started *metav1.Time
-				var completed *metav1.Time
-				status := v1.ActivityStatusTypePending
+		previousStepTerminated := false
+		for i := range taskrun.Status.Steps {
+			step := &taskrun.Status.Steps[i]
+			name := step.Name
+			var started *metav1.Time
+			var completed *metav1.Time
+			status := v1.ActivityStatusTypePending
 
-				terminated := step.Terminated
-				if terminated != nil {
-					if terminated.ExitCode == 0 {
-						status = v1.ActivityStatusTypeSucceeded
-					} else if !terminated.FinishedAt.IsZero() {
-						switch terminated.Reason {
-						case v1beta1.TaskRunReasonTimedOut.String():
-							status = v1.ActivityStatusTypeTimedOut
-						case v1beta1.TaskRunReasonCancelled.String():
-							status = v1.ActivityStatusTypeCancelled
-						default:
-							status = v1.ActivityStatusTypeFailed
-						}
+			terminated := step.Terminated
+			if terminated != nil {
+				if terminated.ExitCode == 0 {
+					status = v1.ActivityStatusTypeSucceeded
+				} else if !terminated.FinishedAt.IsZero() {
+					switch terminated.Reason {
+					case pipelinev1.TaskRunReasonTimedOut.String():
+						status = v1.ActivityStatusTypeTimedOut
+					case pipelinev1.TaskRunReasonCancelled.String():
+						status = v1.ActivityStatusTypeCancelled
+					default:
+						status = v1.ActivityStatusTypeFailed
 					}
-					started = &terminated.StartedAt
-					completed = &terminated.FinishedAt
-					previousStepTerminated = true
-				} else if step.Running != nil {
-					if previousStepTerminated {
-						started = &step.Running.StartedAt
-						status = v1.ActivityStatusTypeRunning
-					}
-					previousStepTerminated = false
 				}
+				started = &terminated.StartedAt
+				completed = &terminated.FinishedAt
+				previousStepTerminated = true
+			} else if step.Running != nil {
+				if previousStepTerminated {
+					started = &step.Running.StartedAt
+					status = v1.ActivityStatusTypeRunning
+				}
+				previousStepTerminated = false
+			}
 
-				if status.IsTerminated() && completed == nil {
-					completed = &metav1.Time{
+			if status.IsTerminated() && completed == nil {
+				completed = &metav1.Time{
+					Time: time.Now(),
+				}
+			}
+
+			coreActivityStep := v1.CoreActivityStep{
+				Name:               Humanize(name),
+				Description:        "",
+				Status:             status,
+				StartedTimestamp:   started,
+				CompletedTimestamp: completed,
+			}
+
+			if stage == nil {
+				stage = &v1.PipelineActivityStep{
+					Kind: v1.ActivityStepKindTypeStage,
+					Stage: &v1.StageActivityStep{
+						CoreActivityStep: v1.CoreActivityStep{
+							// Name:               Humanize(stageName),
+							Name:             stageName,
+							Description:      "",
+							Status:           status,
+							StartedTimestamp: started,
+						},
+					},
+				}
+			}
+			stage.Stage.Steps = append(stage.Stage.Steps, coreActivityStep)
+		}
+		if len(taskrun.Status.Steps) == 0 {
+			for _, m := range taskrun.Status.Conditions {
+				// Only set the stage if the tekton pipeline run has succeeded and status is not unknown
+				if m.Type == apis.ConditionSucceeded && m.Status != corev1.ConditionUnknown {
+					// By default lets set the status to failed
+					// This is ok as a pipeline that has succeeded will have steps and status set to true
+					status := v1.ActivityStatusTypeFailed
+					switch m.Reason {
+					case pipelinev1.TaskRunReasonTimedOut.String():
+						status = v1.ActivityStatusTypeTimedOut
+					case pipelinev1.TaskRunReasonFailed.String():
+						status = v1.ActivityStatusTypeFailed
+					case pipelinev1.TaskRunReasonCancelled.String():
+						status = v1.ActivityStatusTypeCancelled
+					}
+					stage = createStep(stageName, taskrun.Status.StartTime, status)
+				}
+			}
+		}
+		if stage != nil {
+			// lets check we have a started time if we have at least 1 step
+			if stage.Stage != nil && len(stage.Stage.Steps) > 0 {
+				if stage.Stage.Steps[0].StartedTimestamp == nil {
+					stage.Stage.Steps[0].StartedTimestamp = &metav1.Time{
 						Time: time.Now(),
 					}
 				}
-
-				step := v1.CoreActivityStep{
-					Name:               Humanize(name),
-					Description:        "",
-					Status:             status,
-					StartedTimestamp:   started,
-					CompletedTimestamp: completed,
+				if stage.Stage.StartedTimestamp == nil {
+					stage.Stage.StartedTimestamp = stage.Stage.Steps[0].StartedTimestamp
 				}
-
-				if stage == nil {
-					stage = &v1.PipelineActivityStep{
-						Kind: v1.ActivityStepKindTypeStage,
-						Stage: &v1.StageActivityStep{
-							CoreActivityStep: v1.CoreActivityStep{
-								// Name:               Humanize(stageName),
-								Name:             stageName,
-								Description:      "",
-								Status:           status,
-								StartedTimestamp: started,
-							},
-						},
-					}
-				}
-				stage.Stage.Steps = append(stage.Stage.Steps, step)
-			}
-			if len(v.Status.Steps) == 0 {
-				for _, m := range v.Status.Conditions {
-					// Only set the stage if the tekton pipeline run has succeeded and status is not unknown
-					if m.Type == apis.ConditionSucceeded && m.Status != corev1.ConditionUnknown {
-						// By default lets set the status to failed
-						// This is ok as a pipeline that has succeeded will have steps and status set to true
-						status := v1.ActivityStatusTypeFailed
-						switch m.Reason {
-						case v1beta1.TaskRunReasonTimedOut.String():
-							status = v1.ActivityStatusTypeTimedOut
-						case v1beta1.TaskRunReasonFailed.String():
-							status = v1.ActivityStatusTypeFailed
-						case v1beta1.TaskRunReasonCancelled.String():
-							status = v1.ActivityStatusTypeCancelled
-						}
-						stage = createStep(stageName, v.Status.StartTime, status)
-					}
+				// lets check the last step
+				lastStep := stage.Stage.Steps[len(stage.Stage.Steps)-1]
+				if stage.Stage.CompletedTimestamp == nil {
+					stage.Stage.CompletedTimestamp = lastStep.CompletedTimestamp
 				}
 			}
-			if stage != nil {
-				// lets check we have a started time if we have at least 1 step
-				if stage.Stage != nil && len(stage.Stage.Steps) > 0 {
-					if stage.Stage.Steps[0].StartedTimestamp == nil {
-						stage.Stage.Steps[0].StartedTimestamp = &metav1.Time{
-							Time: time.Now(),
-						}
-					}
-					if stage.Stage.StartedTimestamp == nil {
-						stage.Stage.StartedTimestamp = stage.Stage.Steps[0].StartedTimestamp
-					}
-					// lets check the last step
-					lastStep := stage.Stage.Steps[len(stage.Stage.Steps)-1]
-					if stage.Stage.CompletedTimestamp == nil {
-						stage.Stage.CompletedTimestamp = lastStep.CompletedTimestamp
-					}
-				}
-				steps = append(steps, *stage)
-			}
+			steps = append(steps, *stage)
 		}
 	}
 
@@ -343,13 +348,13 @@ func ToPipelineActivity(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity, overwr
 	activities.UpdateStatus(pa, false, nil)
 
 	addConditionsMessage(pr, pa)
-	addTaskRunsMessage(pr, pa)
+	addTaskRunsMessage(taskruns, pa)
 }
 
 // addConditionsMessage reads the pr and gets the message for each condition then add it to the pa as Spec.Message
 // It also edit the message so that it says PipelineActivity instead of PipelineRun
 // It also replaces the pr.name with pa.name
-func addConditionsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+func addConditionsMessage(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity) {
 	for k := range pr.Status.Conditions {
 		msg := pr.Status.Conditions[k].GetMessage()
 
@@ -367,15 +372,14 @@ func addConditionsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
 
 // addConditionsMessage reads the pr and gets the message for each taskrun then add it to the pa as Spec.Steps[k].Stage.Message
 // It replace TaskRun with Stage
-func addTaskRunsMessage(pr *v1beta1.PipelineRun, pa *v1.PipelineActivity) {
+func addTaskRunsMessage(taskruns []pipelinev1.TaskRun, pa *v1.PipelineActivity) {
 	k1 := 0
-	for k := range pr.Status.TaskRuns {
+	for i := range taskruns {
+		taskrun := taskruns[i]
 		msg := ""
-
-		for k2 := range pr.Status.TaskRuns[k].Status.Conditions {
-			msg = pr.Status.TaskRuns[k].Status.Conditions[k2].Message
+		for k2 := range taskrun.Status.Conditions {
+			msg = taskrun.Status.Conditions[k2].Message
 		}
-
 		msg = strings.ReplaceAll(msg, "TaskRun", "Stage")
 		// Without this check, there is a panic in the codebase
 		// ToDo(@maintainers): Test case for this

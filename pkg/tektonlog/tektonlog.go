@@ -20,8 +20,8 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/pods"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/termcolor"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
-
-	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/jenkins-x/lighthouse/pkg/clients"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -63,7 +63,7 @@ type LogLine struct {
 	ShouldMask bool
 }
 
-func (t *TektonLogger) GetLogsForActivity(ctx context.Context, out io.Writer, pa *v1.PipelineActivity, name string, prList []*tektonapis.PipelineRun) error {
+func (t *TektonLogger) GetLogsForActivity(ctx context.Context, out io.Writer, pa *v1.PipelineActivity, name string, prList []*pipelinev1.PipelineRun) error {
 	if pa.Spec.BuildLogsURL != "" && pa.Spec.Status != v1.ActivityStatusTypeRunning {
 		for line := range t.StreamPipelinePersistentLogs(pa.Spec.BuildLogsURL) {
 			fmt.Fprintln(out, line.Line)
@@ -81,7 +81,7 @@ func (t *TektonLogger) GetLogsForActivity(ctx context.Context, out io.Writer, pa
 }
 
 // GetTektonPipelinesWithActivePipelineActivity returns list of all PipelineActivities with corresponding Tekton PipelineRuns ordered by the PipelineRun creation timestamp and a map to obtain its reference once a name has been selected
-func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.Context, filter *BuildPodInfoFilter) ([]string, map[string]*v1.PipelineActivity, map[string][]*tektonapis.PipelineRun, error) {
+func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.Context, filter *BuildPodInfoFilter) ([]string, map[string]*v1.PipelineActivity, map[string][]*pipelinev1.PipelineRun, error) {
 	paList, err := t.JXClient.JenkinsV1().PipelineActivities(t.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, nil, nil, fmt.Errorf("there was a problem getting the PipelineActivities: %w", err)
@@ -93,10 +93,10 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 		paNameMap[p.Name] = p
 	}
 
-	tektonPRs, _ := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).List(ctx, metav1.ListOptions{})
+	tektonPRs, _ := t.TektonClient.TektonV1().PipelineRuns(t.Namespace).List(ctx, metav1.ListOptions{})
 	log.Logger().Debugf("found %d PipelineRuns in namespace %s", len(tektonPRs.Items), t.Namespace)
 
-	prMap := make(map[string][]*tektonapis.PipelineRun)
+	prMap := make(map[string][]*pipelinev1.PipelineRun)
 	for i := range tektonPRs.Items {
 		p := &tektonPRs.Items[i]
 		paName := pipelines.ToPipelineActivityName(p, paList.Items)
@@ -109,7 +109,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 			pa.Name = paName
 			paNameMap[paName] = pa
 		}
-		pipelines.ToPipelineActivity(p, pa, false)
+		pipelines.ToPipelineActivity(t.TektonClient, p, pa, false)
 
 		fullBuildName := createPipelineActivityName(pa)
 		prMap[fullBuildName] = append(prMap[fullBuildName], p)
@@ -154,7 +154,7 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 }
 
 // GetPipelineActivityForPipelineRun returns the PipelineActivity for the PipelineRun if it can be found
-func GetPipelineActivityForPipelineRun(ctx context.Context, activityInterface typev1.PipelineActivityInterface, pr *tektonapis.PipelineRun) (*v1.PipelineActivity, error) {
+func GetPipelineActivityForPipelineRun(ctx context.Context, activityInterface typev1.PipelineActivityInterface, pr *pipelinev1.PipelineRun) (*v1.PipelineActivity, error) {
 	resources, err := activityInterface.List(ctx, metav1.ListOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to load PipelineActivity resources: %w", err)
@@ -198,7 +198,7 @@ func createPipelineActivityName(pa *v1.PipelineActivity) string {
 }
 
 // GetRunningBuildLogs obtains the logs of the provided PipelineActivity and streams the running build pods' logs using the provided LogWriter
-func (t *TektonLogger) GetRunningBuildLogs(ctx context.Context, pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string) <-chan LogLine {
+func (t *TektonLogger) GetRunningBuildLogs(ctx context.Context, pa *v1.PipelineActivity, pipelineRuns []*pipelinev1.PipelineRun, buildName string) <-chan LogLine {
 	ch := make(chan LogLine)
 	go func() {
 		defer close(ch)
@@ -219,7 +219,7 @@ type stageTime struct {
 	completed bool
 }
 
-func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineActivity, pipelineRuns []*tektonapis.PipelineRun, buildName string, out chan<- LogLine) error {
+func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineActivity, pipelineRuns []*pipelinev1.PipelineRun, buildName string, out chan<- LogLine) error {
 	loggedAllRunsForActivity := false
 	foundLogs := false
 	completedStages := map[string]bool{}
@@ -285,11 +285,11 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 	return nil
 }
 
-func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tektonapis.PipelineRun) ([]stageTime, error) {
+func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipelinev1.PipelineRun) ([]stageTime, error) {
 	var stageTimes []stageTime
 	for _, pr := range pipelineRuns {
 		// we need fresh pipeline to be able consume newly executed tasks/pods
-		refreshedPr, err := t.TektonClient.TektonV1beta1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
+		refreshedPr, err := t.TektonClient.TektonV1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -301,7 +301,7 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 			}
 		} else if refreshedPr.Spec.PipelineRef != nil && refreshedPr.Spec.PipelineRef.Name != "" {
 			// if the tasks definition is not available in the PipelineRun, let's retrieve it from the Pipeline itself
-			pipeline, err := t.TektonClient.TektonV1beta1().Pipelines(t.Namespace).Get(ctx, refreshedPr.Spec.PipelineRef.Name, metav1.GetOptions{})
+			pipeline, err := t.TektonClient.TektonV1().Pipelines(t.Namespace).Get(ctx, refreshedPr.Spec.PipelineRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -332,15 +332,24 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*tekton
 	return stageTimes, nil
 }
 
-func findExecutedOrSkippedStagesStage(taskName string, pr *tektonapis.PipelineRun) stageTime {
-	for _, taskStatus := range pr.Status.TaskRuns {
-		if taskName == taskStatus.PipelineTaskName {
+func findExecutedOrSkippedStagesStage(taskName string, pr *pipelinev1.PipelineRun) stageTime {
+	tektonclient, _, _, _, err := clients.GetAPIClients()
+	if err != nil {
+		return stageTime{}
+	}
+	for _, childReference := range pr.Status.ChildReferences {
+		taskrun, err := tektonclient.TektonV1().TaskRuns("jx").Get(context.TODO(), childReference.Name, metav1.GetOptions{})
+		if err != nil {
+			return stageTime{}
+		}
+		cleanedUpTaskName := strings.TrimPrefix(taskrun.Name[:len(taskrun.Name)-6], pr.Name+"-")
+		if taskName == cleanedUpTaskName {
 			return stageTime{
-				podName:   taskStatus.Status.PodName,
-				startTime: taskStatus.Status.StartTime,
+				podName:   taskrun.Status.PodName,
+				startTime: taskrun.Status.StartTime,
 				task:      taskName,
-				podExists: taskStatus.Status.PodName != "",
-				completed: taskStatus.Status.CompletionTime != nil,
+				podExists: taskrun.Status.PodName != "",
+				completed: taskrun.Status.CompletionTime != nil,
 			}
 		}
 	}

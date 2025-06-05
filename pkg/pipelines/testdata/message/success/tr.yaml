@@ -1,0 +1,42 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: x-plugins-jx-registry-pr-8-lint-dbqqf-jx-secret-lint-fv64p
+status:
+  completionTime: "2022-06-15T11:09:56Z"
+  conditions:
+    - lastTransitionTime: "2022-06-15T11:09:56Z"
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: "True"
+      type: Succeeded
+  podName: x-plugins-jx-registry-pr-8-lint-dbqqf-jx-secret-lint-fv64-vpvmv
+  startTime: "2022-06-15T11:06:34Z"
+  steps:
+    - container: step-git-clone
+      imageID: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init@sha256:8bfb6edbd8ce4608af957a3a38444512c14713bc9fc0d60308f228c61be4c83f
+      name: git-clone
+      terminated:
+        containerID: containerd://2efca690307362dbacf30c59b71115d0f160c95545f83f571034c82c631578bf
+        exitCode: 0
+        finishedAt: "2022-06-15T11:06:41Z"
+        reason: Completed
+        startedAt: "2022-06-15T11:06:40Z"
+    - container: step-git-merge
+      imageID: ghcr.io/jenkins-x/jx-boot@sha256:29453a2fe6dd5ffef6ad564687864ffc1c01637b32cb77c9f86ef9f2dcc8c626
+      name: git-merge
+      terminated:
+        containerID: containerd://3f3d6b66c8c2371511f4a56dd52121333918bb0027bfeb3482fe5499d3dfecad
+        exitCode: 0
+        finishedAt: "2022-06-15T11:06:44Z"
+        reason: Completed
+        startedAt: "2022-06-15T11:06:42Z"
+    - container: step-make-lint
+      imageID: docker.io/golangci/golangci-lint@sha256:e32b22eaceaf8872a2cbd0f48ea96cd71a7530f98081914b7b23a795f4e4df1a
+      name: make-lint
+      terminated:
+        containerID: containerd://93a89a85df02f4e99ecf4ca2f51fc3ea23498bdc1243946ec0c369b0f199429c
+        exitCode: 0
+        finishedAt: "2022-06-15T11:09:55Z"
+        reason: Completed
+        startedAt: "2022-06-15T11:06:44Z"

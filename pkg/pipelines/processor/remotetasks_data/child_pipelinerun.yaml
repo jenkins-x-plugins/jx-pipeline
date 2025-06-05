@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
@@ -7,22 +7,22 @@ spec:
   pipelineSpec:
     tasks:
       - name: from-build-pack
-        resources: {}
+        computeResources: {}
         taskSpec:
           metadata: {}
           stepTemplate:
             image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go/pullrequest.yaml@versionStream
             name: ""
-            resources:
+            computeResources:
               # override limits for all containers here
               limits: {}
             workingDir: /workspace/source
           steps:
             - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
               name: ""
-              resources: {}
+              computeResources: {}
             - name: jx-variables
-              resources:
+              computeResources:
                 # override requests for the pod here
                 requests:
                   cpu: 400m
@@ -33,14 +33,15 @@ spec:
                   #!/usr/bin/env sh
                   echo "hello world"
             - name: build-make-linux
-              resources: {}
+              computeResources: {}
             - name: check-registry
-              resources: {}
+              computeResources: {}
             - name: build-container-build
-              resources: {}
+              computeResources: {}
             - name: promote-jx-preview
-              resources: {}
-  podTemplate: {}
-  serviceAccountName: tekton-bot
-  timeout: 1h0m0s
+              computeResources: {}
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 1h0m0s
 status: {}

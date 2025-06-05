@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
@@ -7,27 +7,26 @@ spec:
   pipelineSpec:
     tasks:
     - name: from-build-pack
-      resources: {}
       taskSpec:
         metadata: {}
         spec: null
         stepTemplate:
+          computeResources:
+            requests:
+              cpu: 400m
+              memory: 512Mi
           env:
           - name: NPM_CONFIG_USERCONFIG
             value: /tekton/home/npm/.npmrc
           - name: HOME
             value: /tekton/home
-          name: ""
-          resources:
-            requests:
-              cpu: 400m
-              memory: 512Mi
           volumeMounts:
           - mountPath: /tekton/home/npm
             name: npmrc
           workingDir: /workspace/source
         steps:
-        - env:
+        - computeResources: {}
+          env:
           - name: GIT_TOKEN
             valueFrom:
               secretKeyRef:
@@ -40,42 +39,41 @@ spec:
                 name: tekton-git
           image: gcr.io/jenkinsxio/jx-release-version:2.4.4
           name: next-version
-          resources: {}
           script: |
             #!/usr/bin/env sh
             jx-release-version --tag > VERSION
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.100
+        - computeResources: {}
+          image: ghcr.io/jenkins-x/jx-boot:3.2.100
           name: jx-variables
-          resources: {}
           script: |
             #!/usr/bin/env sh
             jx gitops variables
-        - image: node:12-slim
+        - computeResources: {}
+          image: node:12-slim
           name: build-npm-install
-          resources: {}
           script: |
             #!/bin/sh
             npm install
-        - image: node:12-slim
+        - computeResources: {}
+          image: node:12-slim
           name: build-npm-test
-          resources: {}
           script: |
             #!/bin/sh
             CI=true DISPLAY=:99 npm test
-        - image: gcr.io/jenkinsxio/jx-registry:0.0.12
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-registry:0.0.12
           name: check-registry
-          resources: {}
-        - image: gcr.io/kaniko-project/executor:debug-v1.3.0
+        - computeResources: {}
+          image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-container-build
-          resources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
             cp /tekton/creds-secrets/tekton-container-registry-auth/.dockerconfigjson /kaniko/.docker/config.json
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
-        - image: gcr.io/jenkinsxio/jx-changelog:0.0.42
+        - computeResources: {}
+          image: gcr.io/jenkinsxio/jx-changelog:0.0.42
           name: promote-changelog
-          resources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
@@ -93,16 +91,16 @@ spec:
             git push --force origin v$VERSION
 
             jx changelog create --version v${VERSION}
-        - image: ghcr.io/jenkins-x/jx-boot:3.2.100
+        - computeResources: {}
+          image: ghcr.io/jenkins-x/jx-boot:3.2.100
           name: promote-helm-release
-          resources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
             jx gitops helm release
-        - image: ghcr.io/jenkins-x-plugins/jx-promote:0.0.265
+        - computeResources: {}
+          image: ghcr.io/jenkins-x-plugins/jx-promote:0.0.265
           name: promote-jx-promote
-          resources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
@@ -112,7 +110,8 @@ spec:
           secret:
             optional: true
             secretName: npmrc
-  podTemplate: {}
-  serviceAccountName: tekton-bot
-  timeout: 12h0m0s
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 12h0m0s
 status: {}

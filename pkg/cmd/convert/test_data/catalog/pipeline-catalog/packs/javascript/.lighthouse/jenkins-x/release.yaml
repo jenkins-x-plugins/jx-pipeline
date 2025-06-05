@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -8,14 +8,14 @@ spec:
   pipelineSpec:
     tasks:
     - name: from-build-pack
-      resources: {}
+      computeResources: {}
       taskSpec:
         metadata: {}
         stepTemplate:
           env:
           - name: NPM_CONFIG_USERCONFIG
             value: /tekton/home/npm/.npmrc
-          resources:
+          computeResources:
             requests:
               cpu: 400m
               memory: 512Mi
@@ -26,31 +26,31 @@ spec:
         steps:
         - image: gcr.io/jenkinsxio/jx-release-version:1.0.42
           name: next-version
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env bash
             jx-release-version > VERSION
         - image: gcr.io/jenkinsxio/jx-boot:3.1.156
           name: jx-variables
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             jx gitops variables
         - image: node:12-slim
           name: build-npm-install
-          resources: {}
+          computeResources: {}
           script: |
             #!/bin/sh
             npm install
         - image: node:12-slim
           name: build-npm-test
-          resources: {}
+          computeResources: {}
           script: |
             #!/bin/sh
             CI=true DISPLAY=:99 npm test
         - image: gcr.io/kaniko-project/executor:debug-v1.3.0
           name: build-container-build
-          resources: {}
+          computeResources: {}
           script: |
             #!/busybox/sh
             source .jx/variables.sh
@@ -58,7 +58,7 @@ spec:
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=Dockerfile --destination=$DOCKER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
         - image: gcr.io/jenkinsxio/jx-changelog:0.0.25
           name: promote-changelog
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
@@ -76,13 +76,13 @@ spec:
             jx changelog create --version v${VERSION}
         - image: gcr.io/jenkinsxio/jx-boot:3.1.156
           name: promote-helm-release
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             jx gitops helm release
         - image: gcr.io/jenkinsxio/jx-promote:0.0.179
           name: promote-jx-promote
-          resources: {}
+          computeResources: {}
           script: |
             #!/usr/bin/env sh
             source .jx/variables.sh
@@ -92,7 +92,7 @@ spec:
           secret:
             secretName: npmrc
             optional: true
-  podTemplate: {}
-  serviceAccountName: tekton-bot
-  timeout: 240h0m0s
-status: {}
+  taskRunTemplate:
+    serviceAccountName: tekton-bot
+  timeouts:
+    pipeline: 240h0m0s

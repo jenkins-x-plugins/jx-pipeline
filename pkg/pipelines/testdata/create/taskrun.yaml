@@ -1,0 +1,107 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: main-rvs7k-from-build-pack-6n942
+status:
+  conditions:
+  - lastTransitionTime: "2020-09-20T11:58:06Z"
+    message: Not all Steps in the Task have finished executing
+    reason: Running
+    status: Unknown
+    type: Succeeded
+  podName: main-rvs7k-from-build-pack-6n942-pod-j8l2d
+  startTime: "2020-09-20T11:57:58Z"
+  steps:
+  - container: step-git-clone
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-jx@sha256:ae504f2426df367f426b255e359d03e25e5bd137d846a422432d2d405c85598a
+    name: git-clone
+    terminated:
+      containerID: docker://e3ad120a66fb88f340c0f24ddec2ae740f24ccf1314e8975f36390f30b888096
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:08Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:08Z"
+  - container: step-git-setup
+    imageID: docker-pullable://gcr.io/jenkinsxio/jx-cli@sha256:69dca4c8b349fba21d5471ec589378a1bf171ae9ffcc400e5e00e926418a17f4
+    name: git-setup
+    terminated:
+      containerID: docker://44a78a101791e0c317e9aa915a42162f181b82399c3d770d80610ab4698e1848
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:09Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:09Z"
+  - container: step-next-version
+    imageID: docker-pullable://gcr.io/jenkinsxio-labs-private/jxl@sha256:cdb9d377623da0cfba77f2be2c8ea544e03df76cd88e5a63af3ed6dc027e599c
+    name: next-version
+    terminated:
+      containerID: docker://8012dec16cda68d81fdc876607d84c2d5c0aff413cb9ef6727ac12abcea85676
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:11Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:09Z"
+  - container: step-tag-version
+    imageID: docker-pullable://gcr.io/jenkinsxio-labs-private/jxl@sha256:cdb9d377623da0cfba77f2be2c8ea544e03df76cd88e5a63af3ed6dc027e599c
+    name: tag-version
+    terminated:
+      containerID: docker://0aa954638ef846e6a10003a4cdc806d6df7572b9582c91fa05b5c2df03fe53a8
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:14Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:11Z"
+  - container: step-setup-builder-home
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-jx@sha256:40c90b3a199f3c10780b68fe855956fd7f694907f62ff4c263f0cbb2fa89a023
+    name: setup-builder-home
+    terminated:
+      containerID: docker://1502d791557541fc317965b32eb6d5a2b800c5c40a2cba10d449cbb5ac88630d
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:15Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:15Z"
+  - container: step-git-merge
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-jx@sha256:40c90b3a199f3c10780b68fe855956fd7f694907f62ff4c263f0cbb2fa89a023
+    name: git-merge
+    terminated:
+      containerID: docker://dc45ee6a2737599f37990827f0bdda0bb26fa4e550419920c46e4548b5e28688
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:17Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:16Z"
+  - container: step-build-npmrc
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-nodejs@sha256:9fc9d4532c5193188cfb70744148c1ac932d1a395f309e33d107e1580c603580
+    name: build-npmrc
+    terminated:
+      containerID: docker://e291e2ac31e64f9762108ad50a09d5f4af75ef860fe7e2b7478dc98306b27b56
+      exitCode: 0
+      finishedAt: "2020-09-20T11:58:18Z"
+      reason: Completed
+      startedAt: "2020-09-20T11:58:17Z"
+  - container: step-build-npm-install
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-nodejs@sha256:9fc9d4532c5193188cfb70744148c1ac932d1a395f309e33d107e1580c603580
+    name: build-npm-install
+    running:
+      startedAt: "2020-09-20T11:58:05Z"
+  - container: step-build-npm-test
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-nodejs@sha256:9fc9d4532c5193188cfb70744148c1ac932d1a395f309e33d107e1580c603580
+    name: build-npm-test
+    running:
+      startedAt: "2020-09-20T11:58:05Z"
+  - container: step-build-container-build
+    imageID: docker-pullable://gcr.io/kaniko-project/executor@sha256:be318701bf818b309cb5b6bcbc709e88161db4229d105423abe5b66948a2f676
+    name: build-container-build
+    running:
+      startedAt: "2020-09-20T11:58:05Z"
+  - container: step-promote-changelog
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-go@sha256:c157d03686df5b6799afa4ce224c0d734090463e0d62031272377abd429ffab8
+    name: promote-changelog
+    running:
+      startedAt: "2020-09-20T11:58:05Z"
+  - container: step-promote-helm-release
+    imageID: docker-pullable://gcr.io/jenkinsxio/builder-go@sha256:c157d03686df5b6799afa4ce224c0d734090463e0d62031272377abd429ffab8
+    name: promote-helm-release
+    running:
+      startedAt: "2020-09-20T11:58:05Z"
+  - container: step-promote-jx-promote
+    imageID: docker-pullable://gcr.io/jenkinsxio/jx-cli@sha256:0ffd71d0bafaa41e6dbad8724f3a7605695d2f87278e55346447ab2b8d88f600
+    name: promote-jx-promote
+    running:
+      startedAt: "2020-09-20T11:58:06Z"

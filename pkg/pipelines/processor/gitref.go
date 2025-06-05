@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 )
 
 // GitRef is a representation of the Tekton git resolver params
@@ -22,48 +22,48 @@ func (g *GitRef) GetParentFileName() string {
 	return strings.TrimSuffix(filepath.Base(g.PathInRepo), ".yaml")
 }
 
-// ToParams converts the GitRef to a slice of v1beta1.Param. If the GitRef is public, the URL param is used, otherwise
+// ToParams converts the GitRef to a slice of pipelinev1.Param. If the GitRef is public, the URL param is used, otherwise
 // the org and repo params are used
-func (g *GitRef) ToParams() []v1beta1.Param {
+func (g *GitRef) ToParams() []pipelinev1.Param {
 	if g.IsPublic {
-		return []v1beta1.Param{
+		return []pipelinev1.Param{
 			{
 				Name:  "url",
-				Value: v1beta1.ParamValue{StringVal: g.URL, Type: v1beta1.ParamTypeString},
+				Value: pipelinev1.ParamValue{StringVal: g.URL, Type: pipelinev1.ParamTypeString},
 			},
 			{
 				Name:  "revision",
-				Value: v1beta1.ParamValue{StringVal: g.Revision, Type: v1beta1.ParamTypeString},
+				Value: pipelinev1.ParamValue{StringVal: g.Revision, Type: pipelinev1.ParamTypeString},
 			},
 			{
 				Name:  "pathInRepo",
-				Value: v1beta1.ParamValue{StringVal: g.PathInRepo, Type: v1beta1.ParamTypeString},
+				Value: pipelinev1.ParamValue{StringVal: g.PathInRepo, Type: pipelinev1.ParamTypeString},
 			},
 		}
 	}
-	return []v1beta1.Param{
+	return []pipelinev1.Param{
 		{
 			Name:  "org",
-			Value: v1beta1.ParamValue{StringVal: g.Org, Type: v1beta1.ParamTypeString},
+			Value: pipelinev1.ParamValue{StringVal: g.Org, Type: pipelinev1.ParamTypeString},
 		},
 		{
 			Name:  "repo",
-			Value: v1beta1.ParamValue{StringVal: g.Repository, Type: v1beta1.ParamTypeString},
+			Value: pipelinev1.ParamValue{StringVal: g.Repository, Type: pipelinev1.ParamTypeString},
 		},
 		{
 			Name:  "revision",
-			Value: v1beta1.ParamValue{StringVal: g.Revision, Type: v1beta1.ParamTypeString},
+			Value: pipelinev1.ParamValue{StringVal: g.Revision, Type: pipelinev1.ParamTypeString},
 		},
 		{
 			Name:  "pathInRepo",
-			Value: v1beta1.ParamValue{StringVal: g.PathInRepo, Type: v1beta1.ParamTypeString},
+			Value: pipelinev1.ParamValue{StringVal: g.PathInRepo, Type: pipelinev1.ParamTypeString},
 		},
 	}
 }
 
-// ToResolverRef converts the GitRef to a v1beta1.ResolverRef
-func (g *GitRef) ToResolverRef() v1beta1.ResolverRef {
-	return v1beta1.ResolverRef{
+// ToResolverRef converts the GitRef to a pipelinev1.ResolverRef
+func (g *GitRef) ToResolverRef() pipelinev1.ResolverRef {
+	return pipelinev1.ResolverRef{
 		Resolver: "git",
 		Params:   g.ToParams(),
 	}
