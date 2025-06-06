@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -316,3 +316,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: ics-test-repo-pr-537-jenkinsx-ffptp-test-repo-pr-bllpp
+    pipelineTaskName: test-repo-pr

@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -33,7 +33,7 @@ metadata:
     name: 868a17ab-fb38-11ea-a434-5e87fb7da1e8
     uid: 1d128375-81cb-4477-939b-6fdce7dc6790
   resourceVersion: "1632120"
-  selfLink: /apis/tekton.dev/v1beta1/namespaces/jx/pipelineruns/main-rvs7k
+  selfLink: /apis/tekton.dev/v1/namespaces/jx/pipelineruns/main-rvs7k
   uid: a71fb1ee-8039-4981-b331-438b05f26372
 spec:
   params:
@@ -806,3 +806,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: main-rvs7k-from-build-pack-6n942
+    pipelineTaskName: from-build-pack

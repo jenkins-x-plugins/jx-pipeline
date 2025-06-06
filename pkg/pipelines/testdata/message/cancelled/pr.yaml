@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -23,7 +23,7 @@ metadata:
     lighthouse.jenkins-x.io/type: presubmit
     tekton.dev/pipeline: s-x-plugins-jx-project-pr-464-pr-m2z8c
   managedFields:
-    - apiVersion: tekton.dev/v1beta1
+    - apiVersion: tekton.dev/v1
       fieldsType: FieldsV1
       fieldsV1:
         f:metadata:
@@ -71,7 +71,7 @@ metadata:
       manager: lighthouse-tekton-controller
       operation: Update
       time: "2022-06-13T20:59:06Z"
-    - apiVersion: tekton.dev/v1beta1
+    - apiVersion: tekton.dev/v1
       fieldsType: FieldsV1
       fieldsV1:
         f:metadata:
@@ -118,7 +118,7 @@ metadata:
       manager: controller
       operation: Update
       time: "2022-06-13T21:35:25Z"
-    - apiVersion: tekton.dev/v1beta1
+    - apiVersion: tekton.dev/v1
       fieldsType: FieldsV1
       fieldsV1:
         f:spec:
@@ -442,3 +442,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: s-x-plugins-jx-project-pr-464-pr-m2z8c-from-build-pack-m5gk2
+    pipelineTaskName: from-build-pack

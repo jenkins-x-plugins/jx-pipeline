@@ -151,8 +151,10 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 			continue
 		}
 		taskruns = append(taskruns, *taskrun)
-		cleanedUpTaskName := strings.TrimPrefix(taskrun.Name[:len(taskrun.Name)-6], pr.Name+"-")
-		stageName := strings.ReplaceAll(cleanedUpTaskName, "-", " ")
+		stageName := childReference.DisplayName
+		if stageName == "" {
+			stageName = strings.ReplaceAll(childReference.PipelineTaskName, "-", " ")
+		}
 		stageNames[stageName] = true
 		var stage *v1.PipelineActivityStep
 		if podName == "" {

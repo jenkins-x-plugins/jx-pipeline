@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -265,3 +265,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: repo-pr-2093-jenkinsx-rt7gh-pullrequestfirstt-7lbhx
+    pipelineTaskName: pullrequestfirsttask
