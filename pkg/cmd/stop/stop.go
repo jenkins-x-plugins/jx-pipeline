@@ -201,7 +201,10 @@ func (o *Options) cancelPipelineRun() error {
 				continue
 			}
 
-			pa := activityResolver.ToPipelineActivity(pr)
+			pa, err := activityResolver.ToPipelineActivity(pr)
+			if err != nil {
+				log.Logger().Warnf("failed to get PipelineActivity: %v", err)
+			}
 			if pa == nil {
 				continue
 			}

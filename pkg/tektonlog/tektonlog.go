@@ -109,7 +109,10 @@ func (t *TektonLogger) GetTektonPipelinesWithActivePipelineActivity(ctx context.
 			pa.Name = paName
 			paNameMap[paName] = pa
 		}
-		pipelines.ToPipelineActivity(t.TektonClient, p, pa, false)
+		err = pipelines.ToPipelineActivity(t.TektonClient, p, pa, false)
+		if err != nil {
+			log.Logger().Warnf("failed to get PipelineActivity: %v", err)
+		}
 
 		fullBuildName := createPipelineActivityName(pa)
 		prMap[fullBuildName] = append(prMap[fullBuildName], p)
@@ -291,7 +294,10 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipeli
 		if pr.Status.PipelineSpec != nil {
 			for k := range pr.Status.PipelineSpec.Tasks {
 				taskStatus := pr.Status.PipelineSpec.Tasks[k]
-				podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, pr)
+				podTime, err := findExecutedOrSkippedStagesStage(t.Namespace, taskStatus.Name, pr)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get stage %s: %w", taskStatus.Name, err)
+				}
 				stageTimes = append(stageTimes, podTime)
 			}
 		} else if pr.Spec.PipelineRef != nil && pr.Spec.PipelineRef.Name != "" {
@@ -302,7 +308,10 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipeli
 			}
 			for k := range pipeline.Spec.Tasks {
 				task := pipeline.Spec.Tasks[k]
-				podTime := findExecutedOrSkippedStagesStage(task.Name, pr)
+				podTime, err := findExecutedOrSkippedStagesStage(t.Namespace, task.Name, pr)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get stage %s: %w", task.Name, err)
+				}
 				stageTimes = append(stageTimes, podTime)
 			}
 		} else {
@@ -327,16 +336,16 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipeli
 	return stageTimes, nil
 }
 
-func findExecutedOrSkippedStagesStage(taskName string, pr *pipelinev1.PipelineRun) stageTime {
+func findExecutedOrSkippedStagesStage(namespace, taskName string, pr *pipelinev1.PipelineRun) (stageTime, error) {
 	tektonClient, _, _, _, err := clients.GetAPIClients()
 	if err != nil {
-		return stageTime{}
+		return stageTime{}, err
 	}
 	for _, childReference := range pr.Status.ChildReferences {
 		if taskName == childReference.PipelineTaskName {
-			taskrun, err := tektonClient.TektonV1().TaskRuns("jx").Get(context.TODO(), childReference.Name, metav1.GetOptions{})
+			taskrun, err := tektonClient.TektonV1().TaskRuns(namespace).Get(context.TODO(), childReference.Name, metav1.GetOptions{})
 			if err != nil {
-				return stageTime{}
+				return stageTime{}, fmt.Errorf("failed to get TaskRun %s in namespace %s: %w", childReference.Name, namespace, err)
 			}
 			return stageTime{
 				podName:   taskrun.Status.PodName,
@@ -344,7 +353,7 @@ func findExecutedOrSkippedStagesStage(taskName string, pr *pipelinev1.PipelineRu
 				task:      taskName,
 				podExists: taskrun.Status.PodName != "",
 				completed: taskrun.Status.CompletionTime != nil,
-			}
+			}, nil
 		}
 	}
 	for _, taskStatus := range pr.Status.SkippedTasks {
@@ -352,12 +361,12 @@ func findExecutedOrSkippedStagesStage(taskName string, pr *pipelinev1.PipelineRu
 			return stageTime{
 				skipped: true,
 				task:    taskName,
-			}
+			}, nil
 		}
 	}
 	return stageTime{
 		task: taskName,
-	}
+	}, nil
 }
 
 func (t *TektonLogger) getContainerLogsFromPod(ctx context.Context, pod *corev1.Pod, pa *v1.PipelineActivity, buildName, stageName string, out chan<- LogLine) error {
