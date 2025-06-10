@@ -288,26 +288,21 @@ func (t *TektonLogger) getRunningBuildLogs(ctx context.Context, pa *v1.PipelineA
 func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipelinev1.PipelineRun) ([]stageTime, error) {
 	var stageTimes []stageTime
 	for _, pr := range pipelineRuns {
-		// we need fresh pipeline to be able consume newly executed tasks/pods
-		refreshedPr, err := t.TektonClient.TektonV1().PipelineRuns(t.Namespace).Get(ctx, pr.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		if refreshedPr.Status.PipelineSpec != nil {
-			for k := range refreshedPr.Status.PipelineSpec.Tasks {
-				taskStatus := refreshedPr.Status.PipelineSpec.Tasks[k]
-				podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, refreshedPr)
+		if pr.Status.PipelineSpec != nil {
+			for k := range pr.Status.PipelineSpec.Tasks {
+				taskStatus := pr.Status.PipelineSpec.Tasks[k]
+				podTime := findExecutedOrSkippedStagesStage(taskStatus.Name, pr)
 				stageTimes = append(stageTimes, podTime)
 			}
-		} else if refreshedPr.Spec.PipelineRef != nil && refreshedPr.Spec.PipelineRef.Name != "" {
+		} else if pr.Spec.PipelineRef != nil && pr.Spec.PipelineRef.Name != "" {
 			// if the tasks definition is not available in the PipelineRun, let's retrieve it from the Pipeline itself
-			pipeline, err := t.TektonClient.TektonV1().Pipelines(t.Namespace).Get(ctx, refreshedPr.Spec.PipelineRef.Name, metav1.GetOptions{})
+			pipeline, err := t.TektonClient.TektonV1().Pipelines(t.Namespace).Get(ctx, pr.Spec.PipelineRef.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
 			for k := range pipeline.Spec.Tasks {
 				task := pipeline.Spec.Tasks[k]
-				podTime := findExecutedOrSkippedStagesStage(task.Name, refreshedPr)
+				podTime := findExecutedOrSkippedStagesStage(task.Name, pr)
 				stageTimes = append(stageTimes, podTime)
 			}
 		} else {
