@@ -12,6 +12,7 @@ spec:
               - "pkg/plugins/versions.go"
     - urls:
       - https://github.com/jenkins-x-plugins/jx-build-controller
+      - https://github.com/jenkins-x/jx-pipelines-visualizer
       changes:
       - regex:
           pattern: |

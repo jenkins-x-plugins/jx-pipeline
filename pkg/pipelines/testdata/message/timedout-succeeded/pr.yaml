@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -490,3 +490,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: atgupta24-quickstart-004-pr-1-pr-qtgrn-from-build-pack-1-gf6ks
+    pipelineTaskName: from-build-pack-1

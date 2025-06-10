@@ -333,17 +333,16 @@ func (t *TektonLogger) collectStages(ctx context.Context, pipelineRuns []*pipeli
 }
 
 func findExecutedOrSkippedStagesStage(taskName string, pr *pipelinev1.PipelineRun) stageTime {
-	tektonclient, _, _, _, err := clients.GetAPIClients()
+	tektonClient, _, _, _, err := clients.GetAPIClients()
 	if err != nil {
 		return stageTime{}
 	}
 	for _, childReference := range pr.Status.ChildReferences {
-		taskrun, err := tektonclient.TektonV1().TaskRuns("jx").Get(context.TODO(), childReference.Name, metav1.GetOptions{})
-		if err != nil {
-			return stageTime{}
-		}
-		cleanedUpTaskName := strings.TrimPrefix(taskrun.Name[:len(taskrun.Name)-6], pr.Name+"-")
-		if taskName == cleanedUpTaskName {
+		if taskName == childReference.PipelineTaskName {
+			taskrun, err := tektonClient.TektonV1().TaskRuns("jx").Get(context.TODO(), childReference.Name, metav1.GetOptions{})
+			if err != nil {
+				return stageTime{}
+			}
 			return stageTime{
 				podName:   taskrun.Status.PodName,
 				startTime: taskrun.Status.StartTime,

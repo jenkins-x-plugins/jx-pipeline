@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -327,3 +327,5 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: test-repo-pr-321-pr-dng5w-test-pr-p47l7
+    pipelineTaskName: test-pr
+

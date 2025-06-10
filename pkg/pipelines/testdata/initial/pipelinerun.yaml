@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -33,7 +33,7 @@ metadata:
     name: fa629a47-0250-11eb-a015-5ab53a0cb27b
     uid: 436c6d43-0ad1-44a5-9f71-f2165d3d8f02
   resourceVersion: "9263039"
-  selfLink: /apis/tekton.dev/v1beta1/namespaces/jx/pipelineruns/release-jtzr9
+  selfLink: /apis/tekton.dev/v1/namespaces/jx/pipelineruns/release-jtzr9
   uid: b7a04e9e-466b-4193-8a84-7704249a611b
 spec:
   params:
@@ -384,3 +384,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: release-jtzr9-from-build-pack-xdkxc
+    pipelineTaskName: from-build-pack

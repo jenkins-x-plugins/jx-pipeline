@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
@@ -263,3 +263,4 @@ status:
   - apiVersion: tekton.dev/v1
     kind: TaskRun
     name: jenkins-x-repo-pr-2075-jenkinsx-4rslp-pullrequest-cuda-t-tmstg
+    pipelineTaskName: pullrequest-cuda-task
