@@ -60,7 +60,8 @@ func AssertPipelineActivityMapping(t *testing.T, folder string) {
 
 	// generating pa from pr
 	pa := &v1.PipelineActivity{}
-	pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+	err = pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+	require.NoError(t, err, "failed to generate PipelineActivity")
 
 	// removing timestamps
 	testpipelines.ClearTimestamps(pa)
@@ -110,7 +111,8 @@ func TestMergePipelineActivity(t *testing.T) {
 
 	// creating pa from pr
 	pa := &v1.PipelineActivity{}
-	pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+	err = pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+	require.NoError(t, err, "failed to generate PipelineActivity")
 
 	// removing the timestamp from pa
 	testpipelines.ClearTimestamps(pa)
@@ -308,7 +310,8 @@ func TestPipelineActivityStatus(t *testing.T) {
 		_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
 		require.NoError(t, err, "failed to get tekton client")
 
-		pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+		err = pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+		require.NoError(t, err, "failed to generate PipelineActivity")
 		require.Equal(t, v.expectedStatus, pa.Spec.Status.String())
 	}
 }
@@ -367,7 +370,8 @@ func TestPipelineActivityMessage(t *testing.T) {
 		tektonfakeClient := tektonfake.NewSimpleClientset()
 		_, err = tektonfakeClient.TektonV1().TaskRuns("jx").Create(context.Background(), tr, metav1.CreateOptions{})
 		assert.NoError(t, err, "Failed to create TaskRun %s in the fake client", tr.Name)
-		pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+		err = pipelines.ToPipelineActivity(tektonfakeClient, pr, pa, false)
+		require.NoError(t, err, "failed to generate PipelineActivity")
 
 		for k2 := range pa.Spec.Steps {
 			require.NotEqual(t, "", pa.Spec.Steps[k2].Stage.Message.String())

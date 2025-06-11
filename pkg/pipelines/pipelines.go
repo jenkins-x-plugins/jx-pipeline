@@ -79,7 +79,7 @@ func ToPipelineActivityName(pr *pipelinev1.PipelineRun, paList []v1.PipelineActi
 	return naming.ToValidName(prefix + build)
 }
 
-func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) {
+func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity, overwriteSteps bool) error {
 	annotations := pr.Annotations
 	labels := pr.Labels
 	if pa.APIVersion == "" {
@@ -148,7 +148,7 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 	for _, childReference := range pr.Status.ChildReferences {
 		taskrun, err := tektonclient.TektonV1().TaskRuns(pa.Namespace).Get(context.TODO(), childReference.Name, metav1.GetOptions{})
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to get TaskRun %s in namespace %s: %w", childReference.Name, pa.Namespace, err)
 		}
 		taskruns = append(taskruns, *taskrun)
 		stageName := childReference.DisplayName
@@ -351,6 +351,7 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 
 	addConditionsMessage(pr, pa)
 	addTaskRunsMessage(taskruns, pa)
+	return nil
 }
 
 // addConditionsMessage reads the pr and gets the message for each condition then add it to the pa as Spec.Message

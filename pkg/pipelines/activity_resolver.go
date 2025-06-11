@@ -26,10 +26,10 @@ func NewActivityResolver(activities []v1.PipelineActivity) *ActivityResolver {
 }
 
 // ToPipelineActivity converts the given PipelineRun to a PipelineActivity
-func (r *ActivityResolver) ToPipelineActivity(pr *pipelinev1.PipelineRun) *v1.PipelineActivity {
+func (r *ActivityResolver) ToPipelineActivity(pr *pipelinev1.PipelineRun) (*v1.PipelineActivity, error) {
 	paName := ToPipelineActivityName(pr, r.activities)
 	if paName == "" {
-		return nil
+		return nil, nil
 	}
 	pa := r.index[paName]
 	if pa == nil {
@@ -39,8 +39,8 @@ func (r *ActivityResolver) ToPipelineActivity(pr *pipelinev1.PipelineRun) *v1.Pi
 	}
 	tektonclient, _, _, _, err := clients.GetAPIClients()
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	ToPipelineActivity(tektonclient, pr, pa, false)
-	return pa
+	err = ToPipelineActivity(tektonclient, pr, pa, false)
+	return pa, err
 }
