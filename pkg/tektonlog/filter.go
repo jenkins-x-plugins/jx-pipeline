@@ -33,6 +33,9 @@ func (o *BuildPodInfoFilter) Matches(pa *v1.PipelineActivity) bool {
 	}
 	ps := &pa.Spec
 
+	if o.Pod != "" && o.Pod != pa.Labels["podName"] {
+		return false
+	}
 	if o.Owner != "" && o.Owner != ps.GitOwner {
 		return false
 	}
