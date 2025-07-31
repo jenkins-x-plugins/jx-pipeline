@@ -13,7 +13,7 @@ require (
 	github.com/jenkins-x/jx-api/v4 v4.8.1
 	github.com/jenkins-x/jx-helpers/v3 v3.9.8
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.8
-	github.com/jenkins-x/jx-logging/v3 v3.1.0
+	github.com/jenkins-x/jx-logging/v3 v3.1.1
 	github.com/jenkins-x/lighthouse v1.24.2
 	github.com/jenkins-x/lighthouse-client v0.0.1608
 	github.com/sirupsen/logrus v1.9.3
