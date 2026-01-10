@@ -176,6 +176,10 @@ func (o *Options) Validate() error {
 	if o.Input == nil {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
+
+	if o.GitUsername != "" || o.GitToken != "" {
+		o.BatchMode = true
+	}
 	o.customParameterMap = map[string]string{}
 	for _, cp := range o.CustomParameters {
 		paths := strings.SplitN(cp, "=", 2)
