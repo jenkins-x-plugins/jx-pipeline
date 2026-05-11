@@ -288,35 +288,30 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 				if idx < 0 {
 					ps.Steps = append(ps.Steps, stage)
 				} else {
-					// lets add the new stage before the preview/promote stages
-					var remaining []v1.PipelineActivityStep
-					if idx < len(ps.Steps) {
-						remaining = ps.Steps[idx:]
-					}
-					ps.Steps = append(ps.Steps[0:idx], stage)
-					ps.Steps = append(ps.Steps, remaining...)
+					// Insert the new stage before the first Preview/Promote.
+					// Build a brand-new slice instead of reslicing in place:
+					// ps.Steps[idx:] aliases the same backing array as
+					// append(ps.Steps[0:idx], stage), so the append overwrites
+					// slot idx and the captured tail then re-reads the new
+					// stage — duplicating it and losing the Preview/Promote.
+					newSteps := make([]v1.PipelineActivityStep, 0, len(ps.Steps)+1)
+					newSteps = append(newSteps, ps.Steps[:idx]...)
+					newSteps = append(newSteps, stage)
+					newSteps = append(newSteps, ps.Steps[idx:]...)
+					ps.Steps = newSteps
 				}
 			}
 		}
-	} else {
+	} else if len(pipelineStages(pa)) == 0 {
 		// if the PipelineActivity has some real steps lets trust it; otherwise lets merge any preview/promote steps
 		// with steps from the PipelineRun
 		// lets add any missing steps from the PipelineActivity as they may have been created via a `jx promote` step
-		hasStep := false
 		for _, s := range ps.Steps {
-			if s.Kind == v1.ActivityStepKindTypeStage && s.Stage != nil && s.Stage.Name != "Release" {
-				hasStep = true
-				break
+			if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
+				steps = append(steps, s)
 			}
 		}
-		if !hasStep {
-			for _, s := range ps.Steps {
-				if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
-					steps = append(steps, s)
-				}
-			}
-			ps.Steps = steps
-		}
+		ps.Steps = steps
 	}
 
 	if len(ps.Steps) > 0 && ps.StartedTimestamp == nil {
@@ -373,37 +368,44 @@ func addConditionsMessage(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity) {
 	}
 }
 
-// addTaskRunsMessage reads the TaskRun conditions and copies their message onto the
-// corresponding PipelineActivity step message. It replaces "TaskRun" with
-// "Stage" (or "Preview"/"Promote" for those step kinds) to match the
-// PipelineActivity terminology.
+// pipelineStages returns Spec.Steps entries that correspond to real Tekton
+// pipeline tasks. Skips Preview/Promote (Stage is nil) and the legacy
+// "Release" placeholder from jx-helpers' GetOrCreatePreview/Promote — a
+// follow-up PR removes the producer; the Release branch here can go once
+// old PAs have been recycled.
+//
+// Returned pointers reference entries inside pa.Spec.Steps so callers can
+// mutate the underlying stage.
+func pipelineStages(pa *v1.PipelineActivity) []*v1.PipelineActivityStep {
+	out := make([]*v1.PipelineActivityStep, 0, len(pa.Spec.Steps))
+	for i := range pa.Spec.Steps {
+		s := &pa.Spec.Steps[i]
+		if s.Stage == nil || s.Stage.Name == "Release" {
+			continue
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
+// addTaskRunsMessage reads the TaskRun conditions and copies their message onto
+// the matching pipeline stage in pa.Spec.Steps, replacing "TaskRun" with
+// "Stage" to match the PipelineActivity terminology. TaskRuns only ever map to
+// real stages, so Preview/Promote steps are filtered out first rather than
+// indexed into: they shift the positions of the stages that follow them and
+// their Stage field is nil.
 func addTaskRunsMessage(taskruns []pipelinev1.TaskRun, pa *v1.PipelineActivity) {
+	stages := pipelineStages(pa)
 	for i := range taskruns {
-		taskrun := taskruns[i]
+		if i >= len(stages) {
+			break
+		}
 		msg := ""
-		for j := range taskrun.Status.Conditions {
-			msg = taskrun.Status.Conditions[j].Message
+		for j := range taskruns[i].Status.Conditions {
+			msg = taskruns[i].Status.Conditions[j].Message
 		}
-		// Without this check, there is a panic in the codebase
-		// ToDo(@maintainers): Test case for this
-		if len(pa.Spec.Steps) > i {
-			step := &pa.Spec.Steps[i]
-			repl := "Stage"
-			switch step.Kind {
-			case v1.ActivityStepKindTypePreview:
-				repl = "Preview"
-			case v1.ActivityStepKindTypePromote:
-				repl = "Promote"
-			}
-			updated := v1.ActivityMessageType(strings.ReplaceAll(msg, "TaskRun", repl))
-			if step.Stage != nil {
-				step.Stage.Message = updated
-			} else if step.Preview != nil {
-				step.Preview.Message = updated
-			} else if step.Promote != nil {
-				step.Promote.Message = updated
-			}
-		}
+		msg = strings.ReplaceAll(msg, "TaskRun", "Stage")
+		stages[i].Stage.Message = v1.ActivityMessageType(msg)
 	}
 }
 
