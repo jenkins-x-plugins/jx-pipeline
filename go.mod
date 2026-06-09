@@ -13,13 +13,13 @@ require (
 	github.com/jenkins-x/jx-api/v4 v4.8.1
 	github.com/jenkins-x/jx-helpers/v3 v3.10.3
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.8
-	github.com/jenkins-x/jx-logging/v3 v3.1.3
+	github.com/jenkins-x/jx-logging/v3 v3.1.4
 	github.com/jenkins-x/lighthouse v1.24.2
 	github.com/jenkins-x/lighthouse-client v0.0.1608
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tektoncd/pipeline v1.1.0
 	gocloud.dev v0.40.0
 	golang.org/x/text v0.31.0
