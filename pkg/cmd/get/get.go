@@ -78,7 +78,7 @@ func NewCmdPipelineGet() (*cobra.Command, *Options) {
 	cmd.Flags().BoolVarP(&o.ViewPostsubmits, "postsubmit", "", false, "Views the available lighthouse postsubmit triggers rather than just the current PipelineRuns")
 	cmd.Flags().BoolVarP(&o.ViewPresubmits, "presubmit", "", false, "Views the available lighthouse presubmit triggers rather than just the current PipelineRuns")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 

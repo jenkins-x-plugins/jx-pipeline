@@ -78,7 +78,7 @@ func NewCmdPipelineOverride() (*cobra.Command, *Options) {
 		},
 	}
 
-	o.ResolverOptions.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	cmd.Flags().StringVarP(&o.File, "file", "f", "", "The pipeline file to render")
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
@@ -87,7 +87,7 @@ func NewCmdPipelineOverride() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "a", "HEAD", "The default catalog SHA to use when resolving catalog pipelines to reuse")
 	cmd.Flags().StringArrayVarP(&o.InlineProperties, "properties", "P", nil, "The property names to override in the step. e.g. 'script' will just override the script tag")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 
@@ -101,7 +101,7 @@ func (o *Options) Validate() error {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
 	if o.Resolver == nil {
-		o.Resolver, err = o.ResolverOptions.CreateResolver()
+		o.Resolver, err = o.CreateResolver()
 		if err != nil {
 			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}

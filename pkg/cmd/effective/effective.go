@@ -101,7 +101,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 		},
 	}
 
-	o.ResolverOptions.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	cmd.Flags().StringVarP(&o.File, "file", "f", "", "The pipeline file to render")
 	cmd.Flags().StringVarP(&o.TriggerName, "trigger", "t", "", "The path to the trigger file. If not specified you will be prompted to choose one")
@@ -112,7 +112,7 @@ func NewCmdPipelineEffective() (*cobra.Command, *Options) {
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false, "Recurisvely find all '.lighthouse' folders such as if linting a Pipeline Catalog")
 	cmd.Flags().BoolVarP(&o.AddDefaults, "add-defaults", "", false, "Adds default parameters to the effective pipeline")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 
@@ -126,7 +126,7 @@ func (o *Options) Validate() error {
 		o.Input = inputfactory.NewInput(&o.BaseOptions)
 	}
 	if o.Resolver == nil {
-		o.Resolver, err = o.ResolverOptions.CreateResolver()
+		o.Resolver, err = o.CreateResolver()
 		if err != nil {
 			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}

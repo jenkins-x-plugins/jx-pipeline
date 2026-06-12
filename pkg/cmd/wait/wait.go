@@ -78,7 +78,7 @@ func NewCmdPipelineWait() (*cobra.Command, *Options) {
 	cmd.Flags().DurationVarP(&o.WaitDuration, "duration", "", time.Minute*20, "Maximum duration to wait for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
 	cmd.Flags().DurationVarP(&o.PollPeriod, "poll-period", "", time.Second*2, "Poll period when waiting for one or more matching triggers to be setup in Lighthouse. Useful for when a new repository is being imported via GitOps")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 
@@ -239,7 +239,7 @@ func (o *Options) containsRepositoryTrigger(cfg *config.Config, owner, repo stri
 		if f != nil {
 			return *f
 		}
-		f = cfg.InRepoConfig.Enabled[scm.Join(owner, strings.Replace(repo, "-", "_", -1))]
+		f = cfg.InRepoConfig.Enabled[scm.Join(owner, strings.ReplaceAll(repo, "-", "_"))]
 		if f != nil {
 			log.Logger().Info("found trigger after converting dash to underscore in formatted repository name")
 			return *f

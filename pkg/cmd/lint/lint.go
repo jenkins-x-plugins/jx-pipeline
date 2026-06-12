@@ -88,7 +88,7 @@ func (o *Options) Validate() error {
 	}
 
 	if o.Resolver == nil {
-		o.Resolver, err = o.ResolverOptions.CreateResolver()
+		o.Resolver, err = o.CreateResolver()
 		if err != nil {
 			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}

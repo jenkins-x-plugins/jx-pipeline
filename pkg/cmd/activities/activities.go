@@ -91,7 +91,7 @@ func NewCmdActivities() (*cobra.Command, *Options) {
 	cmd.Flags().BoolVarP(&o.Watch, "watch", "w", false, "Whether to watch the activities for changes")
 	cmd.Flags().BoolVarP(&o.Sort, "sort", "s", false, "Sort activities by timestamp")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 

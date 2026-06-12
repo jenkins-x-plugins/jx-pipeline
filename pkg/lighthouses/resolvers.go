@@ -35,8 +35,8 @@ func (o *ResolverOptions) AddFlags(cmd *cobra.Command) {
 
 // CreateResolver creates the resolver from the available options
 func (o *ResolverOptions) CreateResolver() (*inrepo.UsesResolver, error) {
-	if o.Factory.GitServerURL == "" {
-		o.Factory.GitServerURL = "https://github.com"
+	if o.GitServerURL == "" {
+		o.GitServerURL = "https://github.com"
 	}
 
 	f := o.Factory

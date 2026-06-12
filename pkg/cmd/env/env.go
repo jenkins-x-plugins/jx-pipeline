@@ -95,7 +95,7 @@ func NewCmdPipelineEnv() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.Format, "format", "t", "shell", "The output format. Valid values are 'shell' or 'idea'")
 	cmd.Flags().StringArrayVarP(&o.Exclude, "exclude", "x", nil, "The environment variable names to exclude.")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	o.BuildFilter.AddFlags(cmd)
 	return cmd, o
 }
@@ -221,7 +221,7 @@ func (o *Options) viewEnvironment(name string, pp *PipelinePod) error {
 
 	ps := pr.Spec.PipelineSpec
 	if ps == nil {
-		return fmt.Errorf("Pipeline: %s has no PipelineSpec for PipelineRun: %s pod: %s", name, pr.Name, pp.PodName)
+		return fmt.Errorf("pipeline %s has no PipelineSpec for PipelineRun: %s pod: %s", name, pr.Name, pp.PodName)
 	}
 
 	var taskNames []string
@@ -304,7 +304,7 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 		if from != nil {
 			if from.ConfigMapKeyRef != nil {
 				optional := asBool(from.ConfigMapKeyRef.Optional)
-				refName := from.ConfigMapKeyRef.LocalObjectReference.Name
+				refName := from.ConfigMapKeyRef.Name
 				data, err := o.getConfigData(refName, optional)
 				if err != nil {
 					return err
@@ -317,7 +317,7 @@ func (o *Options) addEnvVarValues(m map[string]string, env []corev1.EnvVar, from
 			}
 			if from.SecretKeyRef != nil {
 				optional := asBool(from.SecretKeyRef.Optional)
-				refName := from.SecretKeyRef.LocalObjectReference.Name
+				refName := from.SecretKeyRef.Name
 				data, err := o.getSecretData(refName, optional)
 				if err != nil {
 					return err

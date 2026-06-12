@@ -92,7 +92,7 @@ func NewCmdPipelineStop() (*cobra.Command, *Options) {
 			helper.CheckErr(err)
 		},
 	}
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 
 	cmd.Flags().StringVarP(&o.Branch, "branch", "r", "", "The branch to filter by")
 	cmd.Flags().StringVarP(&o.Context, "context", "c", "", "The context to filter by")

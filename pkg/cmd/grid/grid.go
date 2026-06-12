@@ -86,7 +86,7 @@ func NewCmdPipelineGrid() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.Filter, "filter", "f", "", "Text to filter the pipeline names")
 	cmd.Flags().BoolVarP(&o.FailIfPodFails, "fail-with-pod", "", false, "Return an error if the pod fails")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 
@@ -174,10 +174,8 @@ func (o *Options) Run() error {
 	}
 
 	p := tea.NewProgram(m)
-	if err := p.Start(); err != nil {
-		if err != nil {
-			return fmt.Errorf("failed to start viewer: %w", err)
-		}
+	if _, err := p.Run(); err != nil {
+		return fmt.Errorf("failed to start viewer: %w", err)
 	}
 	return nil
 }

@@ -67,7 +67,7 @@ func NewCmdPipelineConvertRemoteTasks() (*cobra.Command, *RemoteTasksOptions) {
 			helper.CheckErr(err)
 		},
 	}
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 
 	cmd.Flags().StringVarP(&o.OverrideSHA, "sha", "s", "", "Overrides the SHA taken from \"image:uses:\" with the given value")
 	cmd.Flags().StringVarP(&o.Dir, "dir", "d", ".", "The directory to look for the pipeline files. Defaults to the current directory")
