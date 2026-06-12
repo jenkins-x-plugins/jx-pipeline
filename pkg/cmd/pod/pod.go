@@ -78,7 +78,7 @@ func NewCmdGetBuildPods() (*cobra.Command, *Options) {
 	}
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "The namespace to look for the build pods. Defaults to the current namespace")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	o.BuildFilter.AddFlags(cmd)
 	return cmd, o
 }

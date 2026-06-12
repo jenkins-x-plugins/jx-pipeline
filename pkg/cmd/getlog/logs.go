@@ -105,7 +105,7 @@ func NewCmdGetBuildLogs() (*cobra.Command, *Options) {
 	cmd.Flags().DurationVarP(&o.WaitForPipelineDuration, "wait-duration", "d", time.Minute*20, "Timeout period waiting for the given pipeline to be created")
 	cmd.Flags().BoolVarP(&o.CurrentFolder, "current", "c", false, "Display logs using current folder as repo name, and parent folder as owner")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	o.BuildFilter.AddFlags(cmd)
 	return cmd, o
 }

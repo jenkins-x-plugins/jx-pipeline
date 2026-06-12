@@ -37,16 +37,17 @@ func (t *TektonLogger) CreateBucketHTTPFn() func(string) (string, func(*http.Req
 		gitToken := f.GitToken
 		tokenPrefix := ""
 		if gitToken != "" {
-			if gitKind == giturl.KindBitBucketServer {
+			switch gitKind {
+			case giturl.KindBitBucketServer:
 				if f.GitUsername == "" {
 					return "", headerFunc, fmt.Errorf("no git username configured for git URL %s: %w", urlText, err)
 				}
 				tokenPrefix = fmt.Sprintf("%s:%s", f.GitUsername, gitToken)
-			} else if gitKind == giturl.KindGitlab {
+			case giturl.KindGitlab:
 				headerFunc = func(r *http.Request) {
 					r.Header.Set("PRIVATE-TOKEN", gitToken)
 				}
-			} else {
+			default:
 				tokenPrefix = gitToken
 			}
 		}

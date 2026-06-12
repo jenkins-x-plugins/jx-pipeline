@@ -80,7 +80,7 @@ func NewCmdPipelineBreakpoint() (*cobra.Command, *Options) {
 	cmd.Flags().StringVarP(&o.Namespace, "namespace", "n", "", "The kubernetes namespace to use. If not specified the default namespace is used")
 	cmd.Flags().StringArrayVarP(&o.BreakpointNames, "breakpoints", "p", []string{"onFailure"}, "The breakpoint names to use when creating a new breakpoint")
 
-	o.BaseOptions.AddBaseFlags(cmd)
+	o.AddBaseFlags(cmd)
 	return cmd, o
 }
 

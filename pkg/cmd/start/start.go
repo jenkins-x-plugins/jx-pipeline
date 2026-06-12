@@ -268,7 +268,7 @@ func (o *Options) getFilteredTriggerNames(ctx context.Context, kubeClient kubern
 func (o *Options) processFile(path string) error {
 	var err error
 	if o.Resolver == nil {
-		o.Resolver, err = o.ResolverOptions.CreateResolver()
+		o.Resolver, err = o.CreateResolver()
 		if err != nil {
 			return fmt.Errorf("failed to create a UsesResolver: %w", err)
 		}

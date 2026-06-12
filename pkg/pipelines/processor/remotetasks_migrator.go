@@ -268,7 +268,7 @@ func (p *RemoteTasksMigrator) populateTaskValuesFromPipelineRun(task *pipelinev1
 		task.Spec.StepTemplate = &pipelinev1.StepTemplate{}
 	}
 
-	task.Spec.StepTemplate.WorkingDir = pr.Spec.PipelineSpec.Tasks[0].TaskSpec.TaskSpec.StepTemplate.WorkingDir
+	task.Spec.StepTemplate.WorkingDir = pr.Spec.PipelineSpec.Tasks[0].TaskSpec.StepTemplate.WorkingDir
 
 	if !isEmbeddedTask {
 		// Embedded tasks don't need to have the default params added as they get populated by lighthouse
@@ -348,7 +348,7 @@ func (p *RemoteTasksMigrator) NewTaskFromStepAndPipelineRun(step *pipelinev1.Ste
 	workingDir := step.WorkingDir
 	if workingDir == "" {
 		// if the step does not have a working dir then we need to use the working dir from the parent pipeline run
-		workingDir = prs.Spec.PipelineSpec.Tasks[0].TaskSpec.TaskSpec.StepTemplate.WorkingDir
+		workingDir = prs.Spec.PipelineSpec.Tasks[0].TaskSpec.StepTemplate.WorkingDir
 	}
 
 	newTask := pipelinev1.Task{

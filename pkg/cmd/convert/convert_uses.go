@@ -83,8 +83,8 @@ func NewCmdPipelineConvertUses() (*cobra.Command, *UsesOptions) {
 			helper.CheckErr(err)
 		},
 	}
-	o.BaseOptions.AddBaseFlags(cmd)
-	o.ResolverOptions.AddFlags(cmd)
+	o.AddBaseFlags(cmd)
+	o.AddFlags(cmd)
 
 	cmd.Flags().StringVarP(&o.TasksFolder, "tasks-dir", "", "tasks", "The directory name to store the original tasks before we convert to uses: notation")
 	cmd.Flags().StringVarP(&o.CatalogSHA, "sha", "s", "", "The default catalog SHA to use when resolving catalog pipelines to reuse")
@@ -103,7 +103,7 @@ func (o *UsesOptions) Validate() error {
 	}
 	if o.Resolver == nil {
 		if o.Catalog {
-			o.Resolver, err = o.ResolverOptions.CreateResolver()
+			o.Resolver, err = o.CreateResolver()
 			if err != nil {
 				return fmt.Errorf("failed to create a UsesResolver: %w", err)
 			}
@@ -339,13 +339,13 @@ func (o *UsesOptions) createNonCatalogResolver(triggerDir string) (*inrepo.UsesR
 	}
 
 	if gitInfo != nil {
-		o.ResolverOptions.CatalogOwner = gitInfo.Organisation
-		o.ResolverOptions.CatalogRepository = gitInfo.Name
+		o.CatalogOwner = gitInfo.Organisation
+		o.CatalogRepository = gitInfo.Name
 		o.Processor.Owner = gitInfo.Organisation
 		o.Processor.Repository = gitInfo.Name
 	}
 
-	resolver, err := o.ResolverOptions.CreateResolver()
+	resolver, err := o.CreateResolver()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the resolver: %w", err)
 	}

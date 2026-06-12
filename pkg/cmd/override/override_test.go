@@ -10,7 +10,6 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/testhelpers"
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser"
 	"github.com/jenkins-x/lighthouse-client/pkg/filebrowser/fake"
-	fakefb "github.com/jenkins-x/lighthouse-client/pkg/filebrowser/fake"
 	"github.com/jenkins-x/lighthouse-client/pkg/triggerconfig/inrepo"
 	"github.com/stretchr/testify/require"
 )
@@ -37,7 +36,7 @@ func TestPipelineOverrideStep(t *testing.T) {
 	o.Step = "build-container-build"
 	fakeBrowserDir := filepath.Join("test_data", "jenkins-x", "jx3-pipeline-catalog", "refs", o.CatalogSHA)
 	require.DirExists(t, fakeBrowserDir, "should have fake dir")
-	o.FileBrowser = fakefb.NewFakeFileBrowser(fakeBrowserDir, true)
+	o.FileBrowser = fake.NewFakeFileBrowser(fakeBrowserDir, true)
 	o.GitServerURL = filebrowser.GitHubURL
 	err = o.Run()
 	require.NoError(t, err, "Failed to run linter")
@@ -69,7 +68,7 @@ func TestPipelineOverrideStepProperty(t *testing.T) {
 	o.Step = "build-container-build"
 	fakeBrowserDir := filepath.Join("test_data", "jenkins-x", "jx3-pipeline-catalog", "refs", o.CatalogSHA)
 	require.DirExists(t, fakeBrowserDir, "should have fake dir")
-	o.FileBrowser = fakefb.NewFakeFileBrowser(fakeBrowserDir, true)
+	o.FileBrowser = fake.NewFakeFileBrowser(fakeBrowserDir, true)
 	o.GitServerURL = filebrowser.GitHubURL
 	err = o.Run()
 	require.NoError(t, err, "Failed to run linter")
