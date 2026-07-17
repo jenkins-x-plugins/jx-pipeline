@@ -31,7 +31,7 @@ func Main() *cobra.Command {
 		Annotations: map[string]string{
 			cobra.CommandDisplayNameAnnotation: common.TopLevelCommand,
 		},
-		Short: "commands for working with Jenkins X Pipelines",
+		Short: "commands for working with JayeX Pipelines",
 		Run: func(cmd *cobra.Command, _ []string) {
 			err := cmd.Help()
 			if err != nil {
