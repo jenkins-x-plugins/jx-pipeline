@@ -7,7 +7,7 @@
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://slack.k8s.io/)
 [![codecov](https://codecov.io/gh/jenkins-x-plugins/jx-pipeline/branch/main/graph/badge.svg?token=85L2GNA1AM)](https://codecov.io/gh/jenkins-x-plugins/jx-pipeline)
 
-`jx-pipeline` is a small command line tool for working with [Jenkins X](https://jenkins-x.io/) pipelines.
+`jx-pipeline` is a small command line tool for working with [JayeX](https://jayex.io/) pipelines.
 
 ## Commands
 

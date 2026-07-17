@@ -323,25 +323,25 @@ var activityMessageTestCases = []struct {
 	expectedMessage string
 }{
 	{
-		description:     "Jenkins X PipelineActivity has been successful run and message exists",
+		description:     "JayeX PipelineActivity has been successful run and message exists",
 		folder:          "message/success",
 		name:            "jx-test-project-repo-pr-1-7",
 		expectedMessage: `Tasks Completed: 1 (Failed: 0, Cancelled 0), Skipped: 0`,
 	},
 	{
-		description:     "Jenkins X PipelineActivity has been timedout and message exists",
+		description:     "JayeX PipelineActivity has been timedout and message exists",
 		folder:          "message/timeout",
 		name:            "jx-test-project-repo-pr-1-7",
 		expectedMessage: `PipelineActivity "jx-test-project-repo-pr-1-7" failed to finish within "1h0m0s"`,
 	},
 	{
-		description:     "Jenkins X PipelineActivity has been cancelled and message exists",
+		description:     "JayeX PipelineActivity has been cancelled and message exists",
 		folder:          "message/cancelled",
 		name:            "jx-test-project-repo-pr-2-7",
 		expectedMessage: `PipelineActivity "jx-test-project-repo-pr-2-7" was cancelled`,
 	},
 	{
-		description:     "Jenkins X PipelineActivity has two steps, one step that been timedout and other Succeeded",
+		description:     "JayeX PipelineActivity has two steps, one step that been timedout and other Succeeded",
 		folder:          "message/timedout-succeeded",
 		name:            "jx-test-project-repo-pr-2-7",
 		expectedMessage: `PipelineActivity "jx-test-project-repo-pr-2-7" failed to finish within "1m0s"`,
