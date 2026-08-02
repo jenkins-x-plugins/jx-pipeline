@@ -288,13 +288,17 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 				if idx < 0 {
 					ps.Steps = append(ps.Steps, stage)
 				} else {
-					// lets add the new stage before the preview/promote stages
-					var remaining []v1.PipelineActivityStep
-					if idx < len(ps.Steps) {
-						remaining = ps.Steps[idx:]
-					}
-					ps.Steps = append(ps.Steps[0:idx], stage)
-					ps.Steps = append(ps.Steps, remaining...)
+					// Insert the new stage before the first Preview/Promote.
+					// Build a brand-new slice instead of reslicing in place:
+					// ps.Steps[idx:] aliases the same backing array as
+					// append(ps.Steps[0:idx], stage), so the append overwrites
+					// slot idx and the captured tail then re-reads the new
+					// stage — duplicating it and losing the Preview/Promote.
+					newSteps := make([]v1.PipelineActivityStep, 0, len(ps.Steps)+1)
+					newSteps = append(newSteps, ps.Steps[:idx]...)
+					newSteps = append(newSteps, stage)
+					newSteps = append(newSteps, ps.Steps[idx:]...)
+					ps.Steps = newSteps
 				}
 			}
 		}
@@ -302,14 +306,7 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 		// if the PipelineActivity has some real steps lets trust it; otherwise lets merge any preview/promote steps
 		// with steps from the PipelineRun
 		// lets add any missing steps from the PipelineActivity as they may have been created via a `jx promote` step
-		hasStep := false
-		for _, s := range ps.Steps {
-			if s.Kind == v1.ActivityStepKindTypeStage && s.Stage != nil && s.Stage.Name != "Release" {
-				hasStep = true
-				break
-			}
-		}
-		if !hasStep {
+		if len(pipelineStages(pa)) == 0 {
 			for _, s := range ps.Steps {
 				if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
 					steps = append(steps, s)
@@ -373,23 +370,40 @@ func addConditionsMessage(pr *pipelinev1.PipelineRun, pa *v1.PipelineActivity) {
 	}
 }
 
+// pipelineStages returns Spec.Steps entries that correspond to real Tekton
+// pipeline tasks. Skips Preview/Promote (Stage is nil) and the legacy
+// "Release" placeholder from jx-helpers' GetOrCreatePreview/Promote — a
+// follow-up PR removes the producer; the Release branch here can go once
+// old PAs have been recycled.
+//
+// Returned pointers reference entries inside pa.Spec.Steps so callers can
+// mutate the underlying stage.
+func pipelineStages(pa *v1.PipelineActivity) []*v1.PipelineActivityStep {
+	out := make([]*v1.PipelineActivityStep, 0, len(pa.Spec.Steps))
+	for i := range pa.Spec.Steps {
+		s := &pa.Spec.Steps[i]
+		if s.Stage == nil || s.Stage.Name == "Release" {
+			continue
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
 // addConditionsMessage reads the pr and gets the message for each taskrun then add it to the pa as Spec.Steps[k].Stage.Message
 // It replace TaskRun with Stage
 func addTaskRunsMessage(taskruns []pipelinev1.TaskRun, pa *v1.PipelineActivity) {
-	k1 := 0
+	stages := pipelineStages(pa)
 	for i := range taskruns {
-		taskrun := taskruns[i]
+		if i >= len(stages) {
+			break
+		}
 		msg := ""
-		for k2 := range taskrun.Status.Conditions {
-			msg = taskrun.Status.Conditions[k2].Message
+		for k := range taskruns[i].Status.Conditions {
+			msg = taskruns[i].Status.Conditions[k].Message
 		}
 		msg = strings.ReplaceAll(msg, "TaskRun", "Stage")
-		// Without this check, there is a panic in the codebase
-		// ToDo(@maintainers): Test case for this
-		if len(pa.Spec.Steps) > k1 {
-			pa.Spec.Steps[k1].Stage.Message = v1.ActivityMessageType(msg)
-		}
-		k1++
+		stages[i].Stage.Message = v1.ActivityMessageType(msg)
 	}
 }
 
