@@ -3,7 +3,7 @@ kind: PipelineRun
 metadata:
   labels:
     build: "4"
-    lighthouse.jenkins-x.io/branch: main
+    lighthouse.jenkins-x.io/branch: HEAD
     lighthouse.jenkins-x.io/lastCommitSHA: abc1234
     lighthouse.jenkins-x.io/refs.org: jstrachan
     lighthouse.jenkins-x.io/refs.repo: nodey560
@@ -19,7 +19,7 @@ spec:
   - name: JOB_TYPE
     value: ""
   - name: PULL_BASE_REF
-    value: main
+    value: HEAD
   - name: PULL_BASE_SHA
     value: ""
   - name: PULL_NUMBER
