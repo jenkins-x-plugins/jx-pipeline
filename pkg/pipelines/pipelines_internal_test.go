@@ -246,3 +246,117 @@ func TestToPipelineActivityIsIdempotent(t *testing.T) {
 			"Steps[%d].Kind diverged across reconciles", i)
 	}
 }
+
+// A PipelineActivity can hold more than one Preview/Promote step: jx-helpers'
+// GetOrCreatePreview/GetOrCreatePromote match on Environment and append a new
+// step per environment, so promoting to staging and production yields two
+// Promote entries. A Stage discovered by a later reconcile must be inserted
+// ahead of all of them, not between them.
+func TestToPipelineActivityInsertsStageBeforeAllPromotes(t *testing.T) {
+	ns := testNS
+	client := tektonfake.NewSimpleClientset()
+	_, err := client.TektonV1().TaskRuns(ns).Create(
+		context.Background(),
+		makeTerminatedTaskRun("tr-build", "build"),
+		metav1.CreateOptions{},
+	)
+	require.NoError(t, err)
+
+	pa := &v1.PipelineActivity{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns},
+		Spec: v1.PipelineActivitySpec{
+			Steps: []v1.PipelineActivityStep{
+				{
+					Kind:    v1.ActivityStepKindTypePromote,
+					Promote: &v1.PromoteActivityStep{Environment: "staging"},
+				},
+				{
+					Kind:    v1.ActivityStepKindTypePromote,
+					Promote: &v1.PromoteActivityStep{Environment: "production"},
+				},
+			},
+		},
+	}
+	pr := &pipelinev1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{Name: "pr-test", Namespace: ns},
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
+				ChildReferences: []pipelinev1.ChildStatusReference{
+					{Name: "tr-build", PipelineTaskName: "build"},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, ToPipelineActivity(client, pr, pa, true))
+
+	var order []string
+	for _, s := range pa.Spec.Steps {
+		switch {
+		case s.Stage != nil:
+			order = append(order, "stage:"+s.Stage.Name)
+		case s.Promote != nil:
+			order = append(order, "promote:"+s.Promote.Environment)
+		}
+	}
+	assert.Equal(t,
+		[]string{"stage:build", "promote:staging", "promote:production"},
+		order,
+		"the new Stage belongs before every Promote step")
+}
+
+// Kind is `json:"kind,omitempty"` and its zero value is documented as "no
+// kind yet", so a Preview/Promote step can reach us with Kind unset. The
+// insert position must therefore be found by Stage == nil — the same way the
+// name lookup above it identifies stages — and not by Kind.
+func TestToPipelineActivityInsertsStageBeforeKindlessPreview(t *testing.T) {
+	ns := testNS
+	client := tektonfake.NewSimpleClientset()
+	_, err := client.TektonV1().TaskRuns(ns).Create(
+		context.Background(),
+		makeTerminatedTaskRun("tr-build", "build"),
+		metav1.CreateOptions{},
+	)
+	require.NoError(t, err)
+
+	pa := &v1.PipelineActivity{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns},
+		Spec: v1.PipelineActivitySpec{
+			Steps: []v1.PipelineActivityStep{
+				{
+					// Kind deliberately left as ActivityStepKindTypeNone
+					Preview: &v1.PreviewActivityStep{
+						Environment:    "preview",
+						ApplicationURL: "https://preview.example",
+					},
+				},
+			},
+		},
+	}
+	pr := &pipelinev1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{Name: "pr-test", Namespace: ns},
+		Status: pipelinev1.PipelineRunStatus{
+			PipelineRunStatusFields: pipelinev1.PipelineRunStatusFields{
+				ChildReferences: []pipelinev1.ChildStatusReference{
+					{Name: "tr-build", PipelineTaskName: "build"},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, ToPipelineActivity(client, pr, pa, true))
+
+	var order []string
+	for _, s := range pa.Spec.Steps {
+		switch {
+		case s.Stage != nil:
+			order = append(order, "stage:"+s.Stage.Name)
+		case s.Preview != nil:
+			order = append(order, "preview:"+s.Preview.Environment)
+		}
+	}
+	assert.Equal(t,
+		[]string{"stage:build", "preview:preview"},
+		order,
+		"an unset Kind must not hide the Preview step from the insert position")
+}

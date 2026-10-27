@@ -278,10 +278,12 @@ func ToPipelineActivity(tektonclient tektonversioned.Interface, pr *pipelinev1.P
 					found = true
 					break
 				}
-				if s.Kind == v1.ActivityStepKindTypePreview || s.Kind == v1.ActivityStepKindTypePromote {
-					if idx < 9 {
-						idx = i
-					}
+				// Remember where the non-stage tail starts so a new stage is
+				// inserted ahead of all of it. Preview/Promote steps have a
+				// nil Stage and there is one per environment, so an activity
+				// routinely holds several.
+				if idx < 0 && s.Stage == nil {
+					idx = i
 				}
 			}
 			if !found {
